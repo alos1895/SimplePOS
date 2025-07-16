@@ -10,19 +10,20 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.alos895.simplepos.viewmodel.MenuViewModel
 import com.alos895.simplepos.viewmodel.CartViewModel
-import com.alos895.simplepos.ui.cart.CartScreen
 
 @Composable
 fun MenuScreen() {
-    var showCart by remember { mutableStateOf(false) }
     val menuViewModel: MenuViewModel = viewModel()
     val cartViewModel: CartViewModel = viewModel()
     val pizzas by menuViewModel.pizzas.collectAsState()
+    val cartItems by cartViewModel.cartItems.collectAsState()
+    val total = cartViewModel.total
 
-    if (showCart) {
-        CartScreen(onFinishOrder = { showCart = false })
-    } else {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Row(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+        // Menú (izquierda)
+        Column(
+            modifier = Modifier.weight(1f).padding(8.dp)
+        ) {
             Text("Menú de Pizzas", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(16.dp))
             LazyColumn(
@@ -35,9 +36,7 @@ fun MenuScreen() {
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(text = pizza.nombre, style = MaterialTheme.typography.titleLarge)
-                            Text(text = "Tamaño: ${pizza.tamano}")
-                            Text(text = "Precio base: $${"%.2f".format(pizza.precioBase)}")
-                            Text(text = "Ingredientes: ${pizza.ingredientes.joinToString { it.nombre }}")
+                            // Aquí podrías mostrar tamaños e ingredientes si lo deseas
                             Spacer(modifier = Modifier.height(8.dp))
                             Button(onClick = { cartViewModel.addToCart(pizza) }) {
                                 Text("Agregar al carrito")
@@ -46,9 +45,39 @@ fun MenuScreen() {
                     }
                 }
             }
+        }
+        // Carrito (derecha)
+        Column(
+            modifier = Modifier.weight(1f).padding(8.dp)
+        ) {
+            Text("Carrito de compras", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = { showCart = true }, modifier = Modifier.fillMaxWidth()) {
-                Text("Ver carrito")
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                items(cartItems) { item ->
+                    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(item.pizza.nombre)
+                                // Aquí podrías mostrar tamaño si lo deseas
+                            }
+                            Text("x${item.cantidad}")
+                            Text("$${"%.2f".format(item.subtotal)}")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(onClick = { cartViewModel.removeFromCart(item.pizza) }) {
+                                Text("-")
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Total: $${"%.2f".format(total)}", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = { /* Acción de finalizar e imprimir */ }, enabled = cartItems.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
+                Text("Finalizar e imprimir ticket")
             }
         }
     }
