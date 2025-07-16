@@ -33,7 +33,7 @@ fun CartScreen(onFinishOrder: () -> Unit) {
                     ) {
                         Column {
                             Text(item.pizza.nombre)
-                            Text("Tamaño: ${item.pizza.tamano}")
+                            Text("Tamaño: ${item.pizza.tamanos}")
                         }
                         Text("x${item.cantidad}")
                         Text("$${"%.2f".format(item.subtotal)}")
