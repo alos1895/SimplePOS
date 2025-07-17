@@ -1,5 +1,10 @@
 package com.alos895.simplepos.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -34,6 +39,19 @@ sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Solicitar permisos Bluetooth en Android 12+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val permissions = mutableListOf<String>()
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+            }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+                permissions.add(Manifest.permission.BLUETOOTH_SCAN)
+            }
+            if (permissions.isNotEmpty()) {
+                ActivityCompat.requestPermissions(this, permissions.toTypedArray(), 1001)
+            }
+        }
         setContent {
             SimplePOSTheme {
                 val navController = rememberNavController()
@@ -41,6 +59,8 @@ class MainActivity : ComponentActivity() {
                     BottomNavItem.Menu,
                     BottomNavItem.Print
                 )
+                // ViewModel compartido a nivel de actividad
+                val bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel(factory = BluetoothPrinterViewModelFactory(application))
                 Scaffold(
                     bottomBar = {
                         NavigationBar {
@@ -71,12 +91,11 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         composable(BottomNavItem.Menu.route) {
-                            MenuScreen(onPrintRequested = { navController.navigate(BottomNavItem.Print.route) })
+                            MenuScreen(onPrintRequested = { navController.navigate(BottomNavItem.Print.route) }, bluetoothPrinterViewModel = bluetoothPrinterViewModel)
                         }
                         composable(BottomNavItem.Print.route) @androidx.annotation.RequiresPermission(
                             android.Manifest.permission.BLUETOOTH_CONNECT
                         ) {
-                            val bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel(factory = BluetoothPrinterViewModelFactory(application))
                             val printTicketViewModel: com.alos895.simplepos.viewmodel.PrintTicketViewModel = viewModel()
                             val isConnected by bluetoothPrinterViewModel.isConnected.collectAsState(initial = false)
                             val selectedDevice by bluetoothPrinterViewModel.selectedDevice.collectAsState(initial = null)
@@ -101,6 +120,17 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 1001) {
+            if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                // Permisos concedidos
+            } else {
+                // Permisos denegados, puedes mostrar un mensaje o cerrar la funcionalidad
             }
         }
     }
