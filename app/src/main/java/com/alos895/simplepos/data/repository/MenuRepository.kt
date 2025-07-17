@@ -1,5 +1,6 @@
-package com.alos895.simplepos.data
+package com.alos895.simplepos.data.repository
 
+import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.model.Pizza
 
 class MenuRepository {

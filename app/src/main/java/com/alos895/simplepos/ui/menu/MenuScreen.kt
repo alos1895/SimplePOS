@@ -24,6 +24,8 @@ fun MenuScreen() {
     val pizzas by menuViewModel.pizzas.collectAsState()
     val cartItems by cartViewModel.cartItems.collectAsState()
     val total = cartViewModel.total
+    val isPrinting by bluetoothPrinterViewModel.isPrinting.collectAsState()
+    val message by bluetoothPrinterViewModel.message.collectAsState()
 
     fun buildTicket(): String {
         val sb = StringBuilder()
@@ -134,12 +136,15 @@ fun MenuScreen() {
                     val ticket = buildTicket()
                     bluetoothPrinterViewModel.printText(ticket)
                 },
-                enabled = cartItems.isNotEmpty(),
+                enabled = cartItems.isNotEmpty() && !isPrinting,
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
             ) {
-                Text("Finalizar e imprimir ticket")
+                Text(if (isPrinting) "Imprimiendo..." else "Finalizar e imprimir ticket")
+            }
+            if (message.isNotEmpty()) {
+                Text(message)
             }
         }
     }

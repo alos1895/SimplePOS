@@ -1,7 +1,7 @@
 package com.alos895.simplepos.viewmodel
 
 import androidx.lifecycle.ViewModel
-import com.alos895.simplepos.data.MenuRepository
+import com.alos895.simplepos.data.repository.MenuRepository
 import com.alos895.simplepos.model.Pizza
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

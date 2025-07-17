@@ -1,4 +1,4 @@
-package com.alos895.simplepos.data
+package com.alos895.simplepos.data.datasource
 
 import com.alos895.simplepos.model.Pizza
 import com.alos895.simplepos.model.Ingrediente
