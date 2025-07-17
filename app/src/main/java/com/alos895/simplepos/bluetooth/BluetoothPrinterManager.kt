@@ -95,11 +95,30 @@ object BluetoothPrinterManager {
             scope.launch {
                 try {
                     val outputStream = socket!!.outputStream
-                    val selectCharset = byteArrayOf(0x1B, 0x74, 0x02) // PC850
-                    outputStream.write(selectCharset)
+                    // Prueba 1: CP850
+                    val selectCP850 = byteArrayOf(0x1B, 0x74, 0x02)
+                    outputStream.write(selectCP850)
+                    outputStream.write("[CP850]\n".toByteArray(Charsets.ISO_8859_1))
                     outputStream.write(text.toByteArray(Charsets.ISO_8859_1))
+                    outputStream.write("\n\n".toByteArray())
+                    // Prueba 2: CP437
+                    val selectCP437 = byteArrayOf(0x1B, 0x74, 0x00)
+                    outputStream.write(selectCP437)
+                    outputStream.write("[CP437]\n".toByteArray(Charsets.ISO_8859_1))
+                    outputStream.write(text.toByteArray(Charsets.ISO_8859_1))
+                    outputStream.write("\n\n".toByteArray())
+                    // Prueba 3: ISO-8859-1
+                    val selectISO = byteArrayOf(0x1B, 0x74, 0x13)
+                    outputStream.write(selectISO)
+                    outputStream.write("[ISO-8859-1]\n".toByteArray(Charsets.ISO_8859_1))
+                    outputStream.write(text.toByteArray(Charsets.ISO_8859_1))
+                    outputStream.write("\n\n".toByteArray())
+                    // Prueba 4: UTF-8 (sin comando de charset)
+                    outputStream.write("[UTF-8]\n".toByteArray(Charsets.UTF_8))
+                    outputStream.write(text.toByteArray(Charsets.UTF_8))
+                    outputStream.write("\n\n".toByteArray())
                     outputStream.flush()
-                    onResult(true, "¡Impresión exitosa!")
+                    onResult(true, "¡Impresión de prueba enviada con 4 charsets!")
                 } catch (e: IOException) {
                     _isConnected.value = false
                     onResult(false, "Error al imprimir: ${e.localizedMessage}")
