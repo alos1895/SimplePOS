@@ -68,6 +68,8 @@ fun MenuScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(text = pizza.nombre, style = MaterialTheme.typography.titleLarge)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(text = pizza.ingredientesBase.joinToString(", ") { it.nombre }, style = MaterialTheme.typography.bodyMedium)
                             Spacer(modifier = Modifier.height(8.dp))
                             ExposedDropdownMenuBox(
                                 expanded = expanded,
