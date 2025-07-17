@@ -14,4 +14,4 @@ class BluetoothPrinterViewModelFactory(
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
-} 
+}

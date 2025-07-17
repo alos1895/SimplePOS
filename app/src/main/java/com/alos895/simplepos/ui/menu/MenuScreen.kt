@@ -10,7 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.alos895.simplepos.BluetoothPrinterViewModel
+import com.alos895.simplepos.viewmodel.BluetoothPrinterViewModel
 import com.alos895.simplepos.viewmodel.MenuViewModel
 import com.alos895.simplepos.viewmodel.CartViewModel
 import androidx.compose.material3.MenuAnchorType
