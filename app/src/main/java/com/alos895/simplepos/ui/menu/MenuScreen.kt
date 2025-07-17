@@ -14,10 +14,11 @@ import com.alos895.simplepos.BluetoothPrinterViewModel
 import com.alos895.simplepos.viewmodel.MenuViewModel
 import com.alos895.simplepos.viewmodel.CartViewModel
 import androidx.compose.material3.MenuAnchorType
+import com.alos895.simplepos.data.PizzeriaData
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MenuScreen() {
+fun MenuScreen(onPrintRequested: (() -> Unit)? = null) {
     val menuViewModel: MenuViewModel = viewModel()
     val cartViewModel: CartViewModel = viewModel()
     val bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel()
@@ -26,10 +27,15 @@ fun MenuScreen() {
     val total = cartViewModel.total
     val isPrinting by bluetoothPrinterViewModel.isPrinting.collectAsState()
     val message by bluetoothPrinterViewModel.message.collectAsState()
-
+    
+    @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
     fun buildTicket(): String {
+        val info = PizzeriaData.info
         val sb = StringBuilder()
-        sb.appendLine("PIZZERIA LA ITALIANA")
+        sb.appendLine(info.logoAscii)
+        sb.appendLine(info.nombre)
+        sb.appendLine(info.telefono)
+        sb.appendLine(info.direccion)
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
             sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}   $${"%.2f".format(item.subtotal)}")
@@ -133,8 +139,7 @@ fun MenuScreen() {
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
-                    val ticket = buildTicket()
-                    bluetoothPrinterViewModel.printText(ticket)
+                    onPrintRequested?.invoke()
                 },
                 enabled = cartItems.isNotEmpty() && !isPrinting,
                 modifier = Modifier

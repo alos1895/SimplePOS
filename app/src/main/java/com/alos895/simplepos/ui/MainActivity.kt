@@ -72,7 +72,9 @@ class MainActivity : ComponentActivity() {
                         startDestination = BottomNavItem.Menu.route,
                         modifier = Modifier.padding(innerPadding)
                     ) {
-                        composable(BottomNavItem.Menu.route) { MenuScreen() }
+                        composable(BottomNavItem.Menu.route) {
+                            MenuScreen(onPrintRequested = { navController.navigate(BottomNavItem.Print.route) })
+                        }
                         composable(BottomNavItem.Print.route) {
                             val bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel(factory = BluetoothPrinterViewModelFactory(application))
                             val hasPermissions by bluetoothPrinterViewModel.hasPermissions.collectAsState(initial = false)

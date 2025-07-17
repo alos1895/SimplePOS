@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
 fun BluetoothPrinterScreenMVVM(
     hasPermissions: Boolean,
     onRequestPermissions: () -> Unit,
