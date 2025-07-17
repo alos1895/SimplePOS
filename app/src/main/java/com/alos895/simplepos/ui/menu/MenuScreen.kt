@@ -18,15 +18,18 @@ import com.alos895.simplepos.data.PizzeriaData
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MenuScreen(onPrintRequested: (() -> Unit)? = null) {
+fun MenuScreen(
+    onPrintRequested: ((String) -> Unit)? = null,
+    bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel()
+) {
     val menuViewModel: MenuViewModel = viewModel()
     val cartViewModel: CartViewModel = viewModel()
-    val bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel()
     val pizzas by menuViewModel.pizzas.collectAsState()
     val cartItems by cartViewModel.cartItems.collectAsState()
     val total = cartViewModel.total
-    val isPrinting by bluetoothPrinterViewModel.isPrinting.collectAsState()
-    val message by bluetoothPrinterViewModel.message.collectAsState()
+    // Elimina referencias a isPrinting y message del ViewModel
+    var isPrinting by remember { mutableStateOf(false) }
+    var lastMessage by remember { mutableStateOf("") }
     
     @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
     fun buildTicket(): String {
@@ -139,17 +142,19 @@ fun MenuScreen(onPrintRequested: (() -> Unit)? = null) {
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
-                    onPrintRequested?.invoke()
+                    isPrinting = true
+                    onPrintRequested?.invoke(buildTicket())
+                    isPrinting = false
                 },
-                enabled = cartItems.isNotEmpty() && !isPrinting,
+                enabled = cartItems.isNotEmpty() && isPrinting,
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
             ) {
                 Text(if (isPrinting) "Imprimiendo..." else "Finalizar e imprimir ticket")
             }
-            if (message.isNotEmpty()) {
-                Text(message)
+            if (lastMessage.isNotEmpty()) {
+                Text(lastMessage)
             }
         }
     }

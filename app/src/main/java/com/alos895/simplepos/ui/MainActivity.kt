@@ -3,8 +3,6 @@ package com.alos895.simplepos.ui
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -16,7 +14,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -26,6 +23,7 @@ import com.alos895.simplepos.ui.menu.MenuScreen
 import com.alos895.simplepos.viewmodel.BluetoothPrinterViewModel
 import com.alos895.simplepos.viewmodel.BluetoothPrinterViewModelFactory
 import com.alos895.simplepos.ui.theme.SimplePOSTheme
+import com.alos895.simplepos.ui.print.BluetoothPrinterScreen
 
 sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
     object Menu : BottomNavItem("menu", Icons.Filled.Home, "Menú")
@@ -75,29 +73,30 @@ class MainActivity : ComponentActivity() {
                         composable(BottomNavItem.Menu.route) {
                             MenuScreen(onPrintRequested = { navController.navigate(BottomNavItem.Print.route) })
                         }
-                        composable(BottomNavItem.Print.route) {
+                        composable(BottomNavItem.Print.route) @androidx.annotation.RequiresPermission(
+                            android.Manifest.permission.BLUETOOTH_CONNECT
+                        ) {
                             val bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel(factory = BluetoothPrinterViewModelFactory(application))
-                            val hasPermissions by bluetoothPrinterViewModel.hasPermissions.collectAsState(initial = false)
-                            val pairedDevices by bluetoothPrinterViewModel.pairedDevices.collectAsState(initial = emptyList())
+                            val printTicketViewModel: com.alos895.simplepos.viewmodel.PrintTicketViewModel = viewModel()
+                            val isConnected by bluetoothPrinterViewModel.isConnected.collectAsState(initial = false)
                             val selectedDevice by bluetoothPrinterViewModel.selectedDevice.collectAsState(initial = null)
-                            val isPrinting by bluetoothPrinterViewModel.isPrinting.collectAsState(initial = false)
-                            val message by bluetoothPrinterViewModel.message.collectAsState(initial = "")
-                            val context = LocalContext.current
-                            val requestPermissionLauncher = rememberLauncherForActivityResult(
-                                contract = ActivityResultContracts.RequestMultiplePermissions()
-                            ) { perms ->
-                                bluetoothPrinterViewModel.checkPermissions()
-                            }
-                            BluetoothPrinterScreenMVVM(
-                                hasPermissions = hasPermissions,
-                                onRequestPermissions = { requestPermissionLauncher.launch(bluetoothPrinterViewModel.permissions) },
-                                pairedDevices = pairedDevices,
-                                onLoadPairedDevices = { bluetoothPrinterViewModel.loadPairedDevices() },
+                            val pairedDevices = bluetoothPrinterViewModel.pairedDevices
+                            val snackbarHostState = remember { SnackbarHostState() }
+                            var lastMessage by remember { mutableStateOf("") }
+                            val ticket by printTicketViewModel.ticket.collectAsState()
+                            BluetoothPrinterScreen(
+                                isConnected = isConnected,
                                 selectedDevice = selectedDevice,
+                                pairedDevices = pairedDevices,
                                 onSelectDevice = { bluetoothPrinterViewModel.selectDevice(it) },
-                                isPrinting = isPrinting,
-                                onPrint = { bluetoothPrinterViewModel.printText("Ticket de prueba") },
-                                message = message
+                                onPrint = { ticketToPrint ->
+                                    bluetoothPrinterViewModel.print(ticketToPrint) { success, message ->
+                                        lastMessage = message
+                                    }
+                                },
+                                snackbarHostState = snackbarHostState,
+                                lastMessage = lastMessage,
+                                initialTicket = ticket
                             )
                         }
                     }
