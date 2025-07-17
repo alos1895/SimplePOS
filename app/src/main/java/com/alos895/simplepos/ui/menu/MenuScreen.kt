@@ -13,6 +13,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.alos895.simplepos.BluetoothPrinterViewModel
 import com.alos895.simplepos.viewmodel.MenuViewModel
 import com.alos895.simplepos.viewmodel.CartViewModel
+import androidx.compose.material3.MenuAnchorType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,7 +60,8 @@ fun MenuScreen() {
                             Spacer(modifier = Modifier.height(8.dp))
                             ExposedDropdownMenuBox(
                                 expanded = expanded,
-                                onExpandedChange = { expanded = !expanded }
+                                onExpandedChange = { expanded = !expanded },
+                                modifier = Modifier.navigationBarsPadding()
                             ) {
                                 TextField(
                                     value = selectedTamano.nombre,
@@ -133,7 +135,9 @@ fun MenuScreen() {
                     bluetoothPrinterViewModel.printText(ticket)
                 },
                 enabled = cartItems.isNotEmpty(),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
             ) {
                 Text("Finalizar e imprimir ticket")
             }
