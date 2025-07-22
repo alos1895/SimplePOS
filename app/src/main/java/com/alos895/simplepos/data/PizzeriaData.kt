@@ -4,7 +4,7 @@ import com.alos895.simplepos.model.PizzeriaInfo
 
 object PizzeriaData {
     val info = PizzeriaInfo(
-        nombre = "Comaleña Pizza",
+        nombre = "Comalena Pizza",
         telefono = "312 270 3873",
         direccion = "Comala, Col.",
         logoAscii = """
@@ -12,7 +12,7 @@ object PizzeriaData {
     |     |
    /       \
   /         \
- /  COMALEÑA \
+ /  COMALENA \
 /    PIZZA    \
 ---------------
 """.trimIndent()
