@@ -35,29 +35,6 @@ fun MenuScreen(
     val coroutineScope = rememberCoroutineScope()
 
 
-    @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
-    fun buildTicket(): String {
-        if (cartItems.isEmpty()) {
-            return "El carrito está vacío."
-        }
-        var result = 0.0
-        val info = PizzeriaData.info
-        val sb = StringBuilder()
-        sb.appendLine(info.logoAscii)
-        sb.appendLine(info.nombre)
-        sb.appendLine(info.telefono)
-        sb.appendLine(info.direccion)
-        sb.appendLine("-------------------------------")
-        cartItems.forEach { item ->
-            sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}   $${"%.2f".format(item.subtotal)}")
-            result += item.subtotal
-        }
-        sb.appendLine("-------------------------------")
-        sb.appendLine("TOTAL: $${"%.2f".format(result)}")
-        sb.appendLine("¡Gracias por su compra!")
-        return sb.toString()
-    }
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
@@ -157,7 +134,7 @@ fun MenuScreen(
                 Button(
                     onClick = {
                         isPrinting = true
-                        bluetoothPrinterViewModel.print(buildTicket()) { success, message ->
+                        bluetoothPrinterViewModel.print(cartViewModel.buildTicket()) { success, message ->
                             lastMessage = message
                             coroutineScope.launch {
                                 snackbarHostState.showSnackbar(message)
@@ -178,4 +155,4 @@ fun MenuScreen(
             }
         }
     }
-} 
+}
