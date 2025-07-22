@@ -29,10 +29,13 @@ import com.alos895.simplepos.viewmodel.BluetoothPrinterViewModel
 import com.alos895.simplepos.viewmodel.BluetoothPrinterViewModelFactory
 import com.alos895.simplepos.ui.theme.SimplePOSTheme
 import com.alos895.simplepos.ui.print.BluetoothPrinterScreen
+import com.alos895.simplepos.ui.orders.OrderListScreen
+import com.alos895.simplepos.viewmodel.OrderViewModel
 
 sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
     object Menu : BottomNavItem("menu", Icons.Filled.Home, "Menú")
     object Print : BottomNavItem("print", Icons.Filled.Print, "Impresión")
+    object Orders : BottomNavItem("orders", Icons.Filled.Home, "Órdenes") // Puedes cambiar el icono
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,7 +60,8 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val items = listOf(
                     BottomNavItem.Menu,
-                    BottomNavItem.Print
+                    BottomNavItem.Print,
+                    BottomNavItem.Orders
                 )
                 // ViewModel compartido a nivel de actividad
                 val bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel(factory = BluetoothPrinterViewModelFactory(application))
@@ -118,6 +122,10 @@ class MainActivity : ComponentActivity() {
                                 initialTicket = ticket
                             )
                         }
+                        composable(BottomNavItem.Orders.route) {
+                            val orderViewModel: OrderViewModel = viewModel()
+                            OrderListScreen(orderViewModel)
+                        }
                     }
                 }
             }
@@ -134,4 +142,4 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-} 
+}
