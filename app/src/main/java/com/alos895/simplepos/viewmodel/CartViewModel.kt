@@ -1,16 +1,24 @@
 package com.alos895.simplepos.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.PizzeriaData
 import com.alos895.simplepos.model.CartItem
+import com.alos895.simplepos.model.Order
 import com.alos895.simplepos.model.Pizza
 import com.alos895.simplepos.model.TamanoPizza
+import com.alos895.simplepos.data.repository.OrderRepository
+import com.alos895.simplepos.model.OrderEntity
+import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
-class CartViewModel : ViewModel() {
+class CartViewModel(application: Application) : AndroidViewModel(application) {
     private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
     val cartItems: StateFlow<List<CartItem>> = _cartItems
+    private val orderRepository = OrderRepository(application)
 
     fun addToCart(pizza: Pizza, tamano: TamanoPizza) {
         val current = _cartItems.value.toMutableList()
@@ -66,5 +74,20 @@ class CartViewModel : ViewModel() {
         sb.appendLine("TOTAL: $${"%.2f".format(result)}")
         sb.appendLine("¡Gracias por su compra!")
         return sb.toString()
+    }
+
+    fun saveOrder() {
+        val cartItems = _cartItems.value
+        if (cartItems.isEmpty()) return
+        val orderEntity = OrderEntity(
+            id = System.currentTimeMillis(),
+            itemsJson = Gson().toJson(cartItems),
+            total = total,
+            timestamp = System.currentTimeMillis()
+        )
+        viewModelScope.launch {
+            orderRepository.addOrder(orderEntity)
+            clearCart()
+        }
     }
 }

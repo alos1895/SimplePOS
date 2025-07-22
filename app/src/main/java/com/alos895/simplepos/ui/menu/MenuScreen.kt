@@ -133,21 +133,18 @@ fun MenuScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = {
-                        isPrinting = true
-                        bluetoothPrinterViewModel.print(cartViewModel.buildTicket()) { success, message ->
-                            lastMessage = message
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar(message)
-                            }
+                        cartViewModel.saveOrder()
+                        lastMessage = "Orden guardada exitosamente"
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(lastMessage)
                         }
-                        isPrinting = false
                     },
-                    enabled = cartItems.isNotEmpty() && !isPrinting,
+                    enabled = cartItems.isNotEmpty(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
                 ) {
-                    Text(if (isPrinting) "Imprimiendo..." else "Finalizar e imprimir ticket")
+                    Text("Finalizar y guardar orden")
                 }
                 if (lastMessage.isNotEmpty()) {
                     Text(lastMessage)

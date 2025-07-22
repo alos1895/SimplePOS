@@ -1,23 +1,22 @@
 package com.alos895.simplepos.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.repository.OrderRepository
-import com.alos895.simplepos.model.Order
+import com.alos895.simplepos.model.OrderEntity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
-class OrderViewModel : ViewModel() {
-    private val repository = OrderRepository()
-    private val _orders = MutableStateFlow<List<Order>>(emptyList())
-    val orders: StateFlow<List<Order>> = _orders
+class OrderViewModel(application: Application) : AndroidViewModel(application) {
+    private val repository = OrderRepository(application)
+    private val _orders = MutableStateFlow<List<OrderEntity>>(emptyList())
+    val orders: StateFlow<List<OrderEntity>> = _orders
 
     fun loadOrders() {
-        _orders.value = repository.getOrders()
-    }
-
-    fun addOrder(order: Order) {
-        repository.addOrder(order)
-        loadOrders()
+        viewModelScope.launch {
+            _orders.value = repository.getOrders()
+        }
     }
 }
-

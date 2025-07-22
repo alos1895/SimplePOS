@@ -7,18 +7,28 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.alos895.simplepos.viewmodel.CartViewModel
 import com.alos895.simplepos.viewmodel.OrderViewModel
+import com.alos895.simplepos.viewmodel.BluetoothPrinterViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 
 @Composable
-fun OrderListScreen(orderViewModel: OrderViewModel = viewModel()) {
+fun OrderListScreen(
+    orderViewModel: OrderViewModel = viewModel(),
+    bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel()
+) {
     val orders by orderViewModel.orders.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    var isPrinting by remember { mutableStateOf(false) }
+    var lastMessage by remember { mutableStateOf("") }
     LaunchedEffect(Unit) { orderViewModel.loadOrders() }
 
     Scaffold(
-
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             items(orders) { order ->
@@ -31,6 +41,27 @@ fun OrderListScreen(orderViewModel: OrderViewModel = viewModel()) {
                         order.items.forEach { item ->
                             Text("- ${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}")
                         }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                isPrinting = true
+                                val ticket = buildOrderTicket(order)
+                                bluetoothPrinterViewModel.print(ticket) { success, message ->
+                                    lastMessage = message
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar(message)
+                                    }
+                                    isPrinting = false
+                                }
+                            },
+                            enabled = !isPrinting,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (isPrinting) "Imprimiendo..." else "Imprimir")
+                        }
+                        if (lastMessage.isNotEmpty()) {
+                            Text(lastMessage)
+                        }
                     }
                 }
             }
@@ -38,3 +69,20 @@ fun OrderListScreen(orderViewModel: OrderViewModel = viewModel()) {
     }
 }
 
+// Utilidad para construir el ticket de una orden específica
+fun buildOrderTicket(order: com.alos895.simplepos.model.Order): String {
+    val info = com.alos895.simplepos.data.PizzeriaData.info
+    val sb = StringBuilder()
+    sb.appendLine(info.logoAscii)
+    sb.appendLine(info.nombre)
+    sb.appendLine(info.telefono)
+    sb.appendLine(info.direccion)
+    sb.appendLine("-------------------------------")
+    order.items.forEach { item ->
+        sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}   $${"%.2f".format(item.subtotal)}")
+    }
+    sb.appendLine("-------------------------------")
+    sb.appendLine("TOTAL: $${"%.2f".format(order.total)}")
+    sb.appendLine("¡Gracias por su compra!")
+    return sb.toString()
+}
