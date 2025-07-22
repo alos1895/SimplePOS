@@ -2,6 +2,8 @@ package com.alos895.simplepos.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.PizzeriaData
 import com.alos895.simplepos.model.CartItem
@@ -89,5 +91,16 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             orderRepository.addOrder(orderEntity)
             clearCart()
         }
+    }
+}
+
+// Factory para CartViewModel
+class CartViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(CartViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return CartViewModel(application) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
