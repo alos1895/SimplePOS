@@ -7,21 +7,38 @@ import com.alos895.simplepos.data.repository.OrderRepository
 import com.alos895.simplepos.model.OrderEntity
 import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.data.PizzeriaData
+import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import com.google.gson.Gson
+import java.util.Date
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Locale
 
 class OrderViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = OrderRepository(application)
     private val _orders = MutableStateFlow<List<OrderEntity>>(emptyList())
     val orders: StateFlow<List<OrderEntity>> = _orders
+    private val _selectedDate = MutableStateFlow<Date?>(getToday())
+    val selectedDate: StateFlow<Date?> = _selectedDate
 
     fun loadOrders() {
         viewModelScope.launch {
             _orders.value = repository.getOrders()
+        }
+    }
+
+    fun setSelectedDate(date: Date?) {
+        _selectedDate.value = date
+    }
+
+    fun ordersBySelectedDate(orders: List<OrderEntity>, selectedDate: Date?): List<OrderEntity> {
+        if (selectedDate == null) return orders
+        val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+        val selectedDay = sdf.format(selectedDate)
+        return orders.filter {
+            sdf.format(Date(it.timestamp)) == selectedDay
         }
     }
 
@@ -69,5 +86,16 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         }
         sb.appendLine("-------------------------------")
         return sb.toString()
+    }
+
+    companion object {
+        fun getToday(): Date {
+            return Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.time
+        }
     }
 }

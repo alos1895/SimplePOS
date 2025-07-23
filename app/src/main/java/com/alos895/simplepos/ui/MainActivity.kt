@@ -60,9 +60,9 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val items = listOf(
                     BottomNavItem.Menu,
-                    BottomNavItem.Print,
-                    BottomNavItem.Orders
-                )
+                    BottomNavItem.Orders,
+                    BottomNavItem.Print
+                    )
                 // ViewModel compartido a nivel de actividad
                 val bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel(factory = BluetoothPrinterViewModelFactory(application))
                 Scaffold(
