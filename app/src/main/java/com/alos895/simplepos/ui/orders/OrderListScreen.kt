@@ -76,6 +76,24 @@ fun OrderListScreen(
                         ) {
                             Text(if (isPrinting) "Imprimiendo..." else "Imprimir")
                         }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Button(
+                            onClick = {
+                                isPrinting = true
+                                val cocinaTicket = buildCocinaTicket(order)
+                                bluetoothPrinterViewModel.print(cocinaTicket) { success, message ->
+                                    lastMessage = message
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar(message)
+                                    }
+                                    isPrinting = false
+                                }
+                            },
+                            enabled = !isPrinting,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (isPrinting) "Imprimiendo..." else "Imprimir cocina")
+                        }
                         if (lastMessage.isNotEmpty()) {
                             Text(lastMessage)
                         }
@@ -102,5 +120,24 @@ fun buildOrderTicketEntity(order: OrderEntity): String {
     sb.appendLine("-------------------------------")
     sb.appendLine("TOTAL: $${"%.2f".format(order.total)}")
     sb.appendLine("¡Gracias por su compra!")
+    return sb.toString()
+}
+
+// Ticket para cocina: solo hora, pizzas y ingredientes
+fun buildCocinaTicket(order: OrderEntity): String {
+    val cartItems = parseCartItems(order.itemsJson)
+    val sb = StringBuilder()
+    sb.appendLine("ORDEN PARA COCINA")
+    sb.appendLine("Hora: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(order.timestamp))}")
+    sb.appendLine("-------------------------------")
+    cartItems.forEach { item ->
+        sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}")
+        sb.appendLine("Ingredientes:")
+        item.pizza.ingredientesBase.forEach { ingrediente ->
+            sb.appendLine("- ${ingrediente.nombre}")
+        }
+        sb.appendLine()
+    }
+    sb.appendLine("-------------------------------")
     return sb.toString()
 }
