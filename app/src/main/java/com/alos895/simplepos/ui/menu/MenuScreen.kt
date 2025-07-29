@@ -16,6 +16,7 @@ import com.alos895.simplepos.viewmodel.CartViewModel
 import androidx.compose.material3.MenuAnchorType
 import com.alos895.simplepos.data.PizzeriaData
 import com.alos895.simplepos.model.CartItem
+import com.alos895.simplepos.model.User
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,6 +35,8 @@ fun MenuScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
+    var nombre by remember { mutableStateOf("") }
+    var telefono by remember { mutableStateOf("") }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -131,9 +134,26 @@ fun MenuScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Total: $${"%.2f".format(total)}", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = nombre,
+                    onValueChange = { nombre = it },
+                    label = { Text("Nombre del cliente") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = telefono,
+                    onValueChange = { telefono = it },
+                    label = { Text("Teléfono") },
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Button(
                     onClick = {
-                        cartViewModel.saveOrder()
+                        val user = User(
+                            id = System.currentTimeMillis(), // CORREGIDO: id debe ser Long
+                            nombre = nombre,
+                            telefono = telefono
+                        )
+                        cartViewModel.saveOrder(user)
                         lastMessage = "Orden guardada exitosamente"
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar(lastMessage)
@@ -144,7 +164,7 @@ fun MenuScreen(
                         .fillMaxWidth()
                         .navigationBarsPadding()
                 ) {
-                    Text("Finalizar y guardar orden")
+                    Text("Guardar orden")
                 }
                 if (lastMessage.isNotEmpty()) {
                     Text(lastMessage)

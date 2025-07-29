@@ -12,6 +12,7 @@ import com.alos895.simplepos.model.Pizza
 import com.alos895.simplepos.model.TamanoPizza
 import com.alos895.simplepos.data.repository.OrderRepository
 import com.alos895.simplepos.model.OrderEntity
+import com.alos895.simplepos.model.User
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -78,17 +79,19 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         return sb.toString()
     }
 
-    fun saveOrder() {
-        val cartItems = _cartItems.value
-        if (cartItems.isEmpty()) return
-        val orderEntity = OrderEntity(
-            id = System.currentTimeMillis(),
-            itemsJson = Gson().toJson(cartItems),
-            total = total,
-            timestamp = System.currentTimeMillis()
-        )
+    fun saveOrder(user: User) {
         viewModelScope.launch {
-            orderRepository.addOrder(orderEntity)
+            val gson = Gson()
+            val itemsJson = gson.toJson(_cartItems.value) // CORREGIDO: serializa el valor actual
+            val userJson = gson.toJson(user)
+            val order = OrderEntity(
+                // id = System.currentTimeMillis(), // Room autogenera el id, no lo asignes aquí
+                itemsJson = itemsJson,
+                total = total,
+                timestamp = System.currentTimeMillis(),
+                userJson = userJson
+            )
+            orderRepository.addOrder(order)
             clearCart()
         }
     }

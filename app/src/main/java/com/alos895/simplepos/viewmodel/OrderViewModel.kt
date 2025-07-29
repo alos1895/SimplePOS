@@ -7,6 +7,7 @@ import com.alos895.simplepos.data.repository.OrderRepository
 import com.alos895.simplepos.model.OrderEntity
 import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.data.PizzeriaData
+import com.alos895.simplepos.model.User
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -52,14 +53,24 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         return gson.fromJson(order.itemsJson, type)
     }
 
+    fun getUser(order: OrderEntity): User {
+        val gson = Gson()
+        return gson.fromJson(order.userJson, User::class.java)
+    }
+
     fun buildOrderTicket(order: OrderEntity): String {
         val info = PizzeriaData.info
         val cartItems = getCartItems(order)
+        val user = getUser(order)
         val sb = StringBuilder()
         sb.appendLine(info.logoAscii)
         sb.appendLine(info.nombre)
         sb.appendLine(info.telefono)
         sb.appendLine(info.direccion)
+        sb.appendLine("-------------------------------")
+        //TODO: Preguntar a Monica si quiere mostrar el nombre del cliente
+        //sb.appendLine("Cliente: ${user.nombre}")
+        sb.appendLine("Teléfono: ${user.telefono}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
             sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}   $${"%.2f".format(item.subtotal)}")
