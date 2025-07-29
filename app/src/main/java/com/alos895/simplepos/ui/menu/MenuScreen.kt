@@ -13,12 +13,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.alos895.simplepos.viewmodel.BluetoothPrinterViewModel
 import com.alos895.simplepos.viewmodel.MenuViewModel
 import com.alos895.simplepos.viewmodel.CartViewModel
-import androidx.compose.material3.MenuAnchorType
-import com.alos895.simplepos.data.PizzeriaData
 import com.alos895.simplepos.data.datasource.MenuData
-import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.model.User
-import com.alos895.simplepos.model.DeliveryService
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,7 +68,12 @@ fun MenuScreen(
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(text = pizza.nombre, style = MaterialTheme.typography.titleLarge)
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(text = pizza.ingredientesBase.joinToString(", ") { it.nombre }, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    text = pizza.ingredientesBaseIds
+                                        .mapNotNull { id -> MenuData.ingredientes.find { it.id == id }?.nombre }
+                                        .joinToString(", "),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 ExposedDropdownMenuBox(
                                     expanded = expanded,

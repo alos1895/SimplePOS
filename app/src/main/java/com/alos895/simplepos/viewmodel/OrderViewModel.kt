@@ -16,6 +16,7 @@ import java.util.Date
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import com.alos895.simplepos.data.datasource.MenuData
 
 class OrderViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = OrderRepository(application)
@@ -90,8 +91,10 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         cartItems.forEach { item ->
             sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}")
             sb.appendLine("Ingredientes:")
-            item.pizza.ingredientesBase.forEach { ingrediente ->
-                sb.appendLine("- ${ingrediente.nombre}")
+            item.pizza.ingredientesBaseIds.forEach { ingredienteId ->
+                MenuData.ingredientes.find { it.id == ingredienteId }?.let { ingrediente ->
+                    sb.appendLine("- ${ingrediente.nombre}")
+                }
             }
             sb.appendLine()
         }

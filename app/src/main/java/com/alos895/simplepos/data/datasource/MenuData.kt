@@ -6,14 +6,42 @@ import com.alos895.simplepos.model.Ingrediente
 import com.alos895.simplepos.model.TamanoPizza
 
 object MenuData {
+    val ingredientes = listOf(
+        Ingrediente(1, "Queso", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(2, "Pepperoni", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(3, "Salsa", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(4, "Champiñones", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(5, "Jamón", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(6, "Piña", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(7, "Chorizo", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(8, "Jitomate", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(9, "Pimiento", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(10, "Cebolla", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(11, "Jalapeño", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(12, "Queso extra", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(13, "Jitomate cherry", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(14, "Albahaca", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(15, "Queso parmesano", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(16, "Jitomate deshidratado", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(17, "Albahaca fresca", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(18, "Salami", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(19, "Aceitunas negras", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(20, "Frijoles refritos", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(21, "Tocino", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(22, "Salchicha", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(23, "Frijoles fritos", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(24, "Chicharrón de cerdo", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(25, "Chile güero", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(26, "Búfalo boneless", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(27, "Apio", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(28, "Aderezo ranch", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0),
+        Ingrediente(29, "BBQ boneless", preciExtraChica = 0.0, precioExtraMediana = 0.0, precioExtraGrande = 0.0)
+    )
+
     val pizzas = listOf(
         Pizza(
             nombre = "Pepperoni",
-            ingredientesBase = listOf(
-                Ingrediente("Queso", 0.0, 0.0),
-                Ingrediente("Pepperoni", 0.0, 0.0),
-                Ingrediente("Salsa", 0.0, 0.0)
-            ),
+            ingredientesBaseIds = listOf(1, 2, 3),
             tamanos = listOf(
                 TamanoPizza("Chica", 69.0),
                 TamanoPizza("Mediana", 139.0),
@@ -22,12 +50,7 @@ object MenuData {
         ),
         Pizza(
             nombre = "Pepperoni Champiñones",
-            ingredientesBase = listOf(
-                Ingrediente("Queso", 0.0, 0.0),
-                Ingrediente("Pepperoni", 0.0, 0.0),
-                Ingrediente("Champiñones", 0.0, 0.0),
-                Ingrediente("Salsa", 0.0, 0.0)
-            ),
+            ingredientesBaseIds = listOf(1, 2, 4, 3),
             tamanos = listOf(
                 TamanoPizza("Chica", 79.0),
                 TamanoPizza("Mediana", 159.0),
@@ -36,12 +59,7 @@ object MenuData {
         ),
         Pizza(
             nombre = "Hawaiana",
-            ingredientesBase = listOf(
-                Ingrediente("Queso", 0.0, 0.0),
-                Ingrediente("Jamón", 0.0, 0.0),
-                Ingrediente("Piña", 0.0, 0.0),
-                Ingrediente("Salsa", 0.0, 0.0)
-            ),
+            ingredientesBaseIds = listOf(1, 5, 6, 3),
             tamanos = listOf(
                 TamanoPizza("Chica", 79.0),
                 TamanoPizza("Mediana", 159.0),
@@ -50,12 +68,7 @@ object MenuData {
         ),
         Pizza(
             nombre = "Red Hawaiana",
-            ingredientesBase = listOf(
-                Ingrediente("Queso", 0.0, 0.0),
-                Ingrediente("Pepperoni", 0.0, 0.0),
-                Ingrediente("Piña", 0.0, 0.0),
-                Ingrediente("Salsa", 0.0, 0.0)
-            ),
+            ingredientesBaseIds = listOf(1, 2, 6, 3),
             tamanos = listOf(
                 TamanoPizza("Chica", 79.0),
                 TamanoPizza("Mediana", 159.0),
@@ -64,15 +77,7 @@ object MenuData {
         ),
         Pizza(
             nombre = "Mexicana",
-            ingredientesBase = listOf(
-                Ingrediente("Queso", 0.0, 0.0),
-                Ingrediente("Chorizo", 0.0, 0.0),
-                Ingrediente("Jitomate", 0.0, 0.0),
-                Ingrediente("Pimiento", 0.0, 0.0),
-                Ingrediente("Cebolla", 0.0, 0.0),
-                Ingrediente("Jalapeño", 0.0, 0.0),
-                Ingrediente("Salsa", 0.0, 0.0)
-            ),
+            ingredientesBaseIds = listOf(1, 7, 8, 9, 10, 11, 3),
             tamanos = listOf(
                 TamanoPizza("Chica", 79.0),
                 TamanoPizza("Mediana", 169.0),
@@ -81,15 +86,7 @@ object MenuData {
         ),
         Pizza(
             nombre = "Vegetariana",
-            ingredientesBase = listOf(
-                Ingrediente("Queso", 0.0, 0.0),
-                Ingrediente("Pimiento", 0.0, 0.0),
-                Ingrediente("Champiñón", 0.0, 0.0),
-                Ingrediente("Cebolla", 0.0, 0.0),
-                Ingrediente("Jalapeño", 0.0, 0.0),
-                Ingrediente("Piña", 0.0, 0.0),
-                Ingrediente("Salsa", 0.0, 0.0)
-            ),
+            ingredientesBaseIds = listOf(1, 9, 4, 10, 11, 6, 3),
             tamanos = listOf(
                 TamanoPizza("Chica", 79.0),
                 TamanoPizza("Mediana", 169.0),
@@ -98,171 +95,88 @@ object MenuData {
         ),
         Pizza(
             nombre = "Margarita",
-            ingredientesBase = listOf(
-                Ingrediente("Queso extra", 0.0, 0.0),
-                Ingrediente("Jitomate cherry", 0.0, 0.0),
-                Ingrediente("Albahaca", 0.0, 0.0),
-                Ingrediente("Queso parmesano", 0.0, 0.0),
-                Ingrediente("Salsa", 0.0, 0.0)
-            ),
+            ingredientesBaseIds = listOf(12, 13, 14, 15, 3),
             tamanos = listOf(
                 TamanoPizza("Chica", 79.0),
                 TamanoPizza("Mediana", 179.0),
                 TamanoPizza("Extra Grande", 219.0)
             )
         ),
-        // Mamma-Mía
         Pizza(
             nombre = "Mamma-Mía",
-            ingredientesBase = listOf(
-                Ingrediente("Queso", 0.0, 0.0),
-                Ingrediente("Jitomate deshidratado", 0.0, 0.0),
-                Ingrediente("Jitomate cherry", 0.0, 0.0),
-                Ingrediente("Champiñón", 0.0, 0.0),
-                Ingrediente("Albahaca fresca", 0.0, 0.0),
-                Ingrediente("Salsa", 0.0, 0.0)
-            ),
+            ingredientesBaseIds = listOf(1, 16, 13, 4, 17, 3),
             tamanos = listOf(
                 TamanoPizza("Chica", 79.0),
                 TamanoPizza("Mediana", 189.0),
                 TamanoPizza("Extra Grande", 229.0)
             )
         ),
-        // Diávola
         Pizza(
             nombre = "Diávola",
-            ingredientesBase = listOf(
-                Ingrediente("Queso", 0.0, 0.0),
-                Ingrediente("Pepperoni", 0.0, 0.0),
-                Ingrediente("Chorizo", 0.0, 0.0),
-                Ingrediente("Jalapeño", 0.0, 0.0),
-                Ingrediente("Pimiento", 0.0, 0.0),
-                Ingrediente("Salsa", 0.0, 0.0)
-            ),
+            ingredientesBaseIds = listOf(1, 2, 7, 11, 9, 3),
             tamanos = listOf(
                 TamanoPizza("Chica", 79.0),
                 TamanoPizza("Mediana", 189.0),
                 TamanoPizza("Extra Grande", 229.0)
             )
         ),
-        // Exótica
         Pizza(
             nombre = "Exótica",
-            ingredientesBase = listOf(
-                Ingrediente("Queso", 0.0, 0.0),
-                Ingrediente("Jamón", 0.0, 0.0),
-                Ingrediente("Salami", 0.0, 0.0),
-                Ingrediente("Aceitunas negras", 0.0, 0.0),
-                Ingrediente("Pimiento", 0.0, 0.0),
-                Ingrediente("Cebolla", 0.0, 0.0),
-                Ingrediente("Salsa", 0.0, 0.0)
-            ),
+            ingredientesBaseIds = listOf(1, 5, 18, 19, 9, 10, 3),
             tamanos = listOf(
                 TamanoPizza("Chica", 79.0),
                 TamanoPizza("Mediana", 189.0),
                 TamanoPizza("Extra Grande", 229.0)
             )
         ),
-        // Frijoleña
         Pizza(
             nombre = "Frijoleña",
-            ingredientesBase = listOf(
-                Ingrediente("Queso", 0.0, 0.0),
-                Ingrediente("Frijoles refritos", 0.0, 0.0),
-                Ingrediente("Chorizo", 0.0, 0.0),
-                Ingrediente("Tocino", 0.0, 0.0),
-                Ingrediente("Jalapeño", 0.0, 0.0),
-                Ingrediente("Salsa", 0.0, 0.0)
-            ),
+            ingredientesBaseIds = listOf(1, 20, 7, 21, 11, 3),
             tamanos = listOf(
                 TamanoPizza("Chica", 79.0),
                 TamanoPizza("Mediana", 189.0),
                 TamanoPizza("Extra Grande", 229.0)
             )
         ),
-        // Carroñera
         Pizza(
             nombre = "Carroñera",
-            ingredientesBase = listOf(
-                Ingrediente("Queso", 0.0, 0.0),
-                Ingrediente("Pepperoni", 0.0, 0.0),
-                Ingrediente("Salami", 0.0, 0.0),
-                Ingrediente("Jamón", 0.0, 0.0),
-                Ingrediente("Tocino", 0.0, 0.0),
-                Ingrediente("Chorizo", 0.0, 0.0),
-                Ingrediente("Salchicha", 0.0, 0.0),
-                Ingrediente("Salsa", 0.0, 0.0)
-            ),
+            ingredientesBaseIds = listOf(1, 2, 18, 5, 21, 7, 22, 3),
             tamanos = listOf(
                 TamanoPizza("Chica", 89.0),
                 TamanoPizza("Mediana", 199.0),
                 TamanoPizza("Extra Grande", 249.0)
             )
         ),
-        // Wera
         Pizza(
             nombre = "Wera",
-            ingredientesBase = listOf(
-                Ingrediente("Queso", 0.0, 0.0),
-                Ingrediente("Frijoles fritos", 0.0, 0.0),
-                Ingrediente("Chicharrón de cerdo", 0.0, 0.0),
-                Ingrediente("Chorizo", 0.0, 0.0),
-                Ingrediente("Chile güero", 0.0, 0.0),
-                Ingrediente("Jalapeño", 0.0, 0.0),
-                Ingrediente("Cebolla", 0.0, 0.0),
-                Ingrediente("Salsa", 0.0, 0.0)
-            ),
+            ingredientesBaseIds = listOf(1, 23, 24, 7, 25, 11, 10, 3),
             tamanos = listOf(
                 TamanoPizza("Chica", 89.0),
                 TamanoPizza("Mediana", 199.0),
                 TamanoPizza("Extra Grande", 249.0)
             )
         ),
-        // Boneless-Búfalo
         Pizza(
             nombre = "Boneless-Búfalo",
-            ingredientesBase = listOf(
-                Ingrediente("Queso", 0.0, 0.0),
-                Ingrediente("Búfalo boneless", 0.0, 0.0),
-                Ingrediente("Apio", 0.0, 0.0),
-                Ingrediente("Aderezo ranch", 0.0, 0.0),
-                Ingrediente("Salsa", 0.0, 0.0)
-            ),
+            ingredientesBaseIds = listOf(1, 26, 27, 28, 3),
             tamanos = listOf(
                 TamanoPizza("Chica", 89.0),
                 TamanoPizza("Mediana", 199.0),
                 TamanoPizza("Extra Grande", 249.0)
             )
         ),
-        // Boneless-BBQ
         Pizza(
             nombre = "Boneless-BBQ",
-            ingredientesBase = listOf(
-                Ingrediente("Queso", 0.0, 0.0),
-                Ingrediente("BBQ boneless", 0.0, 0.0),
-                Ingrediente("Champiñón", 0.0, 0.0),
-                Ingrediente("Cebolla", 0.0, 0.0),
-                Ingrediente("Salsa", 0.0, 0.0)
-            ),
+            ingredientesBaseIds = listOf(1, 29, 4, 10, 3),
             tamanos = listOf(
                 TamanoPizza("Chica", 89.0),
                 TamanoPizza("Mediana", 199.0),
                 TamanoPizza("Extra Grande", 249.0)
             )
         ),
-        // Pizza-Dogo
         Pizza(
             nombre = "Pizza-Dogo",
-            ingredientesBase = listOf(
-                Ingrediente("Queso", 0.0, 0.0),
-                Ingrediente("Salchicha", 0.0, 0.0),
-                Ingrediente("Salami", 0.0, 0.0),
-                Ingrediente("Tocino", 0.0, 0.0),
-                Ingrediente("Cebolla", 0.0, 0.0),
-                Ingrediente("Champiñón", 0.0, 0.0),
-                Ingrediente("Aderezo ranch", 0.0, 0.0),
-                Ingrediente("Salsa", 0.0, 0.0)
-            ),
+            ingredientesBaseIds = listOf(1, 22, 18, 21, 10, 4, 28, 3),
             tamanos = listOf(
                 TamanoPizza("Chica", 89.0),
                 TamanoPizza("Mediana", 199.0),
