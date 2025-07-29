@@ -13,15 +13,46 @@ import com.alos895.simplepos.model.TamanoPizza
 import com.alos895.simplepos.data.repository.OrderRepository
 import com.alos895.simplepos.model.OrderEntity
 import com.alos895.simplepos.model.User
+import com.alos895.simplepos.model.DeliveryService
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.alos895.simplepos.data.datasource.MenuData
 
 class CartViewModel(application: Application) : AndroidViewModel(application) {
     private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
     val cartItems: StateFlow<List<CartItem>> = _cartItems
     private val orderRepository = OrderRepository(application)
+
+    private val _selectedDelivery = MutableStateFlow<DeliveryService?>(null)
+    val selectedDelivery: StateFlow<DeliveryService?> = _selectedDelivery
+
+    private val _total = MutableStateFlow(0.0)
+    val total: StateFlow<Double> = _total
+
+    init {
+        // Inicializa el servicio a domicilio con el primero disponible
+        _selectedDelivery.value = MenuData.deliveryOptions.first()
+        // Observa cambios en carrito y servicio para actualizar el total
+        viewModelScope.launch {
+            cartItems.collect { items ->
+                val deliveryPrice = _selectedDelivery.value?.price ?: 0
+                _total.value = items.sumOf { it.subtotal } + deliveryPrice
+            }
+        }
+        viewModelScope.launch {
+            selectedDelivery.collect {
+                val deliveryPrice = it?.price ?: 0
+                _total.value = _cartItems.value.sumOf { item -> item.subtotal } + deliveryPrice
+            }
+        }
+    }
+
+    fun setDeliveryService(delivery: DeliveryService) {
+        _selectedDelivery.value = delivery
+        // El total se actualizará automáticamente por el colector
+    }
 
     fun addToCart(pizza: Pizza, tamano: TamanoPizza) {
         val current = _cartItems.value.toMutableList()
@@ -53,9 +84,6 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         _cartItems.value = emptyList()
     }
 
-    val total: Double
-        get() = _cartItems.value.sumOf { it.subtotal }
-
     fun buildTicket(): String {
         val cartItems = _cartItems.value
         if (cartItems.isEmpty()) {
@@ -82,16 +110,19 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     fun saveOrder(user: User) {
         viewModelScope.launch {
             val gson = Gson()
-            val itemsJson = gson.toJson(_cartItems.value) // CORREGIDO: serializa el valor actual
+            val itemsJson = gson.toJson(_cartItems.value)
             val userJson = gson.toJson(user)
-            val order = OrderEntity(
-                // id = System.currentTimeMillis(), // Room autogenera el id, no lo asignes aquí
+            val deliveryPrice = _selectedDelivery.value?.price ?: 0
+            val isDeliveried = deliveryPrice > 0 // Si hay precio, es entrega a domicilio
+            val orderEntity = OrderEntity(
                 itemsJson = itemsJson,
-                total = total,
+                total = total.value,
                 timestamp = System.currentTimeMillis(),
-                userJson = userJson
+                userJson = userJson,
+                deliveryServicePrice = deliveryPrice,
+                isDeliveried = isDeliveried
             )
-            orderRepository.addOrder(order)
+            orderRepository.addOrder(orderEntity)
             clearCart()
         }
     }

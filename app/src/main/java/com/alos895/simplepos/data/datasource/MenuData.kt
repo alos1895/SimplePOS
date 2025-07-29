@@ -1,5 +1,6 @@
 package com.alos895.simplepos.data.datasource
 
+import com.alos895.simplepos.model.DeliveryService
 import com.alos895.simplepos.model.Pizza
 import com.alos895.simplepos.model.Ingrediente
 import com.alos895.simplepos.model.TamanoPizza
@@ -267,6 +268,39 @@ object MenuData {
                 TamanoPizza("Mediana", 199.0),
                 TamanoPizza("Extra Grande", 249.0)
             )
+        )
+    )
+
+    val deliveryOptions = listOf(
+        DeliveryService(
+            price = 0,
+            zona = "Sin entrega",
+            description = "Recoge tu pedido en la pizzería."
+        ),
+        DeliveryService(
+            price = 15,
+            zona = "Zona 1",
+            description = ""
+        ),
+        DeliveryService(
+            price = 20,
+            zona = "Zona 2",
+            description = ""
+        ),
+        DeliveryService(
+            price = 25,
+            zona = "Zona 3",
+            description = ""
+        ),
+        DeliveryService(
+            price = 30,
+            zona = "Zona 4",
+            description = ""
+        ),
+        DeliveryService(
+            price = 35,
+            zona = "Zona 5",
+            description = ""
         )
     )
 }

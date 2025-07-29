@@ -15,8 +15,10 @@ import com.alos895.simplepos.viewmodel.MenuViewModel
 import com.alos895.simplepos.viewmodel.CartViewModel
 import androidx.compose.material3.MenuAnchorType
 import com.alos895.simplepos.data.PizzeriaData
+import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.model.User
+import com.alos895.simplepos.model.DeliveryService
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,7 +31,16 @@ fun MenuScreen(
     val cartViewModel: CartViewModel = viewModel()
     val pizzas by menuViewModel.pizzas.collectAsState()
     val cartItems by cartViewModel.cartItems.collectAsState()
-    val total = cartViewModel.total
+    val deliveryOptions = MenuData.deliveryOptions
+    // Si el ViewModel no tiene un valor inicial, inicialízalo aquí
+    val selectedDelivery by cartViewModel.selectedDelivery.collectAsState(initial = deliveryOptions.first())
+    var deliveryMenuExpanded by remember { mutableStateOf(false) }
+    // Calcula el total reactivo (pizzas + servicio a domicilio)
+    val total by remember(cartItems, selectedDelivery) {
+        derivedStateOf {
+            cartItems.sumOf { it.subtotal } + (selectedDelivery?.price ?: 0)
+        }
+    }
     var isPrinting by remember { mutableStateOf(false) }
     var lastMessage by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -120,11 +131,15 @@ fun MenuScreen(
                                 Text("x${item.cantidad}")
                                 Text("$${"%.2f".format(item.subtotal)}")
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Button(onClick = { cartViewModel.removeFromCart(item.pizza, item.tamano) }) {
+                                Button(onClick = {
+                                    cartViewModel.removeFromCart(item.pizza, item.tamano)
+                                }) {
                                     Text("-")
                                 }
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Button(onClick = { cartViewModel.addToCart(item.pizza, item.tamano) }) {
+                                Button(onClick = {
+                                    cartViewModel.addToCart(item.pizza, item.tamano)
+                                }) {
                                     Text("+")
                                 }
                             }
@@ -146,10 +161,40 @@ fun MenuScreen(
                     label = { Text("Teléfono") },
                     modifier = Modifier.fillMaxWidth()
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Servicio a domicilio", style = MaterialTheme.typography.titleMedium)
+                ExposedDropdownMenuBox(
+                    expanded = deliveryMenuExpanded,
+                    onExpandedChange = { deliveryMenuExpanded = it },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    TextField(
+                        value = selectedDelivery?.let { "${it.zona} - $${it.price}" } ?: "Sin entrega",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Precio de domicilio") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = deliveryMenuExpanded) },
+                        modifier = Modifier.menuAnchor()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = deliveryMenuExpanded,
+                        onDismissRequest = { deliveryMenuExpanded = false }
+                    ) {
+                        deliveryOptions.forEach { deliveryOption ->
+                            DropdownMenuItem(
+                                text = { Text("${deliveryOption.zona} - $${deliveryOption.price}") },
+                                onClick = {
+                                    cartViewModel.setDeliveryService(deliveryOption)
+                                    deliveryMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
                 Button(
                     onClick = {
                         val user = User(
-                            id = System.currentTimeMillis(), // CORREGIDO: id debe ser Long
+                            id = System.currentTimeMillis(),
                             nombre = nombre,
                             telefono = telefono
                         )
