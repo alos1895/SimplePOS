@@ -145,7 +145,7 @@ fun OrderListScreen(
                         enabled = !isPrinting,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(if (isPrinting) "Imprimiendo..." else "Imprimir")
+                        Text(if (isPrinting) "Imprimiendo..." else "Imprimir Cliente")
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(

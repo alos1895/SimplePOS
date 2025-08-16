@@ -90,7 +90,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
             sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}")
-            sb.appendLine("Ingredientes:")
+            sb.appendLine("Ingredientes:___ NOTAS___")
             item.pizza.ingredientesBaseIds.forEach { ingredienteId ->
                 MenuData.ingredientes.find { it.id == ingredienteId }?.let { ingrediente ->
                     sb.appendLine("- ${ingrediente.nombre}")
