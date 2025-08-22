@@ -4,6 +4,7 @@ import com.alos895.simplepos.model.DeliveryService
 import com.alos895.simplepos.model.Pizza
 import com.alos895.simplepos.model.Ingrediente
 import com.alos895.simplepos.model.TamanoPizza
+import com.alos895.simplepos.model.Postre
 
 object MenuData {
     val ingredientes = listOf(
@@ -185,6 +186,12 @@ object MenuData {
         )
     )
 
+    val postres = listOf(
+        Postre(1, "Postre 1", 20.0),
+        Postre(2, "Postre 2", 30.0),
+        Postre(3, "Postre 3", 40.0)
+    )
+
     val deliveryOptions = listOf(
         DeliveryService(
             price = 0,
@@ -192,28 +199,23 @@ object MenuData {
             description = "Recoge tu pedido en la pizzería."
         ),
         DeliveryService(
-            price = 15,
+            price = 25,
             zona = "Zona 1",
             description = ""
         ),
         DeliveryService(
-            price = 20,
+            price = 30,
             zona = "Zona 2",
             description = ""
         ),
         DeliveryService(
-            price = 25,
+            price = 35,
             zona = "Zona 3",
             description = ""
         ),
         DeliveryService(
-            price = 30,
+            price = 40,
             zona = "Zona 4",
-            description = ""
-        ),
-        DeliveryService(
-            price = 35,
-            zona = "Zona 5",
             description = ""
         )
     )

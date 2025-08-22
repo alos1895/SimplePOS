@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.PizzeriaData
 import com.alos895.simplepos.model.CartItem
+import com.alos895.simplepos.model.CartItemPostre
 import com.alos895.simplepos.model.Order
 import com.alos895.simplepos.model.Pizza
 import com.alos895.simplepos.model.TamanoPizza
@@ -23,6 +24,10 @@ import com.alos895.simplepos.data.datasource.MenuData
 class CartViewModel(application: Application) : AndroidViewModel(application) {
     private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
     val cartItems: StateFlow<List<CartItem>> = _cartItems
+    
+    private val _dessertItems = MutableStateFlow<List<CartItemPostre>>(emptyList())
+    val dessertItems: StateFlow<List<CartItemPostre>> = _dessertItems
+    
     private val orderRepository = OrderRepository(application)
 
     private val _selectedDelivery = MutableStateFlow<DeliveryService?>(null)
@@ -38,13 +43,23 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             cartItems.collect { items ->
                 val deliveryPrice = _selectedDelivery.value?.price ?: 0
-                _total.value = items.sumOf { it.subtotal } + deliveryPrice
+                val dessertsTotal = _dessertItems.value.sumOf { it.subtotal }
+                _total.value = items.sumOf { it.subtotal } + dessertsTotal + deliveryPrice
             }
         }
         viewModelScope.launch {
             selectedDelivery.collect {
                 val deliveryPrice = it?.price ?: 0
-                _total.value = _cartItems.value.sumOf { item -> item.subtotal } + deliveryPrice
+                val pizzasTotal = _cartItems.value.sumOf { item -> item.subtotal }
+                val dessertsTotal = _dessertItems.value.sumOf { it.subtotal }
+                _total.value = pizzasTotal + dessertsTotal + deliveryPrice
+            }
+        }
+        viewModelScope.launch {
+            dessertItems.collect { desserts ->
+                val deliveryPrice = _selectedDelivery.value?.price ?: 0
+                val pizzasTotal = _cartItems.value.sumOf { item -> item.subtotal }
+                _total.value = pizzasTotal + desserts.sumOf { it.subtotal } + deliveryPrice
             }
         }
     }
@@ -80,13 +95,41 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         _cartItems.value = current
     }
 
+    fun addDessertToCart(postre: com.alos895.simplepos.model.Postre) {
+        val current = _dessertItems.value.toMutableList()
+        val index = current.indexOfFirst { it.postre.id == postre.id }
+        if (index >= 0) {
+            val item = current[index]
+            current[index] = item.copy(cantidad = item.cantidad + 1)
+        } else {
+            current.add(CartItemPostre(postre))
+        }
+        _dessertItems.value = current
+    }
+
+    fun removeDessertFromCart(postre: com.alos895.simplepos.model.Postre) {
+        val current = _dessertItems.value.toMutableList()
+        val index = current.indexOfFirst { it.postre.id == postre.id }
+        if (index >= 0) {
+            val item = current[index]
+            if (item.cantidad > 1) {
+                current[index] = item.copy(cantidad = item.cantidad - 1)
+            } else {
+                current.removeAt(index)
+            }
+        }
+        _dessertItems.value = current
+    }
+
     fun clearCart() {
         _cartItems.value = emptyList()
+        _dessertItems.value = emptyList()
     }
 
     fun buildTicket(): String {
         val cartItems = _cartItems.value
-        if (cartItems.isEmpty()) {
+        val dessertItems = _dessertItems.value
+        if (cartItems.isEmpty() && dessertItems.isEmpty()) {
             return "El carrito está vacío."
         }
         var result = 0.0
@@ -101,6 +144,13 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}   $${"%.2f".format(item.subtotal)}")
             result += item.subtotal
         }
+        if (dessertItems.isNotEmpty()) {
+            sb.appendLine("-------------------------------")
+            dessertItems.forEach { item ->
+                sb.appendLine("${item.cantidad}x ${item.postre.nombre}   $${"%.2f".format(item.subtotal)}")
+                result += item.subtotal
+            }
+        }
         sb.appendLine("-------------------------------")
         sb.appendLine("TOTAL: $${"%.2f".format(result)}")
         sb.appendLine("¡Gracias por su compra!")
@@ -111,6 +161,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val gson = Gson()
             val itemsJson = gson.toJson(_cartItems.value)
+            val dessertsJson = gson.toJson(_dessertItems.value)
             val userJson = gson.toJson(user)
             val deliveryPrice = _selectedDelivery.value?.price ?: 0
             val isDeliveried = deliveryPrice > 0 // Si hay precio, es entrega a domicilio
@@ -120,7 +171,8 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
                 timestamp = System.currentTimeMillis(),
                 userJson = userJson,
                 deliveryServicePrice = deliveryPrice,
-                isDeliveried = isDeliveried
+                isDeliveried = isDeliveried,
+                dessertsJson = dessertsJson
             )
             orderRepository.addOrder(orderEntity)
             clearCart()

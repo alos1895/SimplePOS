@@ -11,5 +11,6 @@ data class OrderEntity(
     val timestamp: Long,
     val userJson: String,
     val deliveryServicePrice: Int = 0,
-    val isDeliveried: Boolean = false
+    val isDeliveried: Boolean = false,
+    val dessertsJson: String = "[]"
 )

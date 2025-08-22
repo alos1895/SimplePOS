@@ -17,6 +17,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import com.alos895.simplepos.data.datasource.MenuData
+import com.alos895.simplepos.model.CartItemPostre
 
 class OrderViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = OrderRepository(application)
@@ -59,6 +60,16 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         return gson.fromJson(order.userJson, User::class.java)
     }
 
+    fun getDessertItems(order: OrderEntity): List<CartItemPostre> {
+        val gson = Gson()
+        val type = object : com.google.gson.reflect.TypeToken<List<CartItemPostre>>() {}.type
+        return try {
+            gson.fromJson(order.dessertsJson, type) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     fun getDailyOrderNumber(order: OrderEntity): Int {
         val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
         val orderDay = sdf.format(Date(order.timestamp))
@@ -72,6 +83,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
     fun buildOrderTicket(order: OrderEntity): String {
         val info = PizzeriaData.info
         val cartItems = getCartItems(order)
+        val dessertItems = getDessertItems(order)
         val user = getUser(order)
         val dailyNumber = getDailyOrderNumber(order)
         val sb = StringBuilder()
@@ -84,11 +96,17 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         }
         sb.appendLine("-------------------------------")
         //TODO: Preguntar a Monica si quiere mostrar el nombre del cliente
-        sb.appendLine("Cliente: ${user.nombre}")
-        //sb.appendLine("Teléfono: ${user.telefono}")
+        //sb.appendLine("Cliente: ${user.nombre}")
+        sb.appendLine("Teléfono: ${user.telefono}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
             sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}   $${"%.2f".format(item.subtotal)}")
+        }
+        if (dessertItems.isNotEmpty()) {
+            sb.appendLine("-------------------------------")
+            dessertItems.forEach { item ->
+                sb.appendLine("${item.cantidad}x ${item.postre.nombre}   $${"%.2f".format(item.subtotal)}")
+            }
         }
         sb.appendLine("-------------------------------")
         if (order.isDeliveried) {
