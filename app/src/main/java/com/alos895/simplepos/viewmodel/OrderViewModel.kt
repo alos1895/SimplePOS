@@ -158,6 +158,8 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         val sb = StringBuilder()
         sb.appendLine("ORDEN PARA COCINA")
         sb.appendLine("Hora: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(order.timestamp))}")
+        // nombre y direccion o PASAN
+        sb.appendLine("Cliente: ${getUser(order).nombre} - ${order.deliveryAddress.takeIf { it.isNotEmpty() } ?: "PASAN!"}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
             sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}")

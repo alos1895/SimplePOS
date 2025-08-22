@@ -98,7 +98,7 @@ object BluetoothPrinterManager {
                     outputStream.write(text.toByteArray(Charsets.ISO_8859_1))
                     outputStream.write("\n\n".toByteArray())
                     outputStream.flush()
-                    onResult(true, "¡Impresión de prueba enviada con 4 charsets!")
+                    onResult(true, "¡Ticekt impreso correctamente!")
                 } catch (e: IOException) {
                     _isConnected.value = false
                     onResult(false, "Error al imprimir: ${e.localizedMessage}")

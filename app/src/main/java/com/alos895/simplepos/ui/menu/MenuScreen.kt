@@ -239,24 +239,26 @@ fun MenuScreen(
             }
 
             // Carrito (derecha)
-            Box(modifier = Modifier
-                .weight(1f)
-                .padding(8.dp)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(8.dp)
+            ) {
                 LazyColumn(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 80.dp),
+                        .weight(1f) // ocupa todo el espacio disponible
+                        .fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // Título del carrito
                     item {
                         Text("Carrito de compras", style = MaterialTheme.typography.titleLarge)
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
+                    // Items de pizzas
                     items(cartItems) { item ->
-                        Card(modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)) {
+                        Card(modifier = Modifier.fillMaxWidth()) {
                             Row(
                                 modifier = Modifier.padding(16.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
@@ -268,27 +270,16 @@ fun MenuScreen(
                                 Text("x${item.cantidad}")
                                 Text("$${"%.2f".format(item.subtotal)}")
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Button(onClick = {
-                                    cartViewModel.removeFromCart(
-                                        item.pizza,
-                                        item.tamano
-                                    )
-                                }) { Text("-") }
+                                Button(onClick = { cartViewModel.removeFromCart(item.pizza, item.tamano) }) { Text("-") }
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Button(onClick = {
-                                    cartViewModel.addToCart(
-                                        item.pizza,
-                                        item.tamano
-                                    )
-                                }) { Text("+") }
+                                Button(onClick = { cartViewModel.addToCart(item.pizza, item.tamano) }) { Text("+") }
                             }
                         }
                     }
 
+                    // Items de postres
                     items(dessertItems) { item ->
-                        Card(modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)) {
+                        Card(modifier = Modifier.fillMaxWidth()) {
                             Row(
                                 modifier = Modifier.padding(16.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
@@ -297,25 +288,17 @@ fun MenuScreen(
                                 Text("x${item.cantidad}")
                                 Text("$${"%.2f".format(item.subtotal)}")
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Button(onClick = { cartViewModel.removeDessertFromCart(item.postreOrExtra) }) {
-                                    Text(
-                                        "-"
-                                    )
-                                }
+                                Button(onClick = { cartViewModel.removeDessertFromCart(item.postreOrExtra) }) { Text("-") }
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Button(onClick = { cartViewModel.addDessertToCart(item.postreOrExtra) }) {
-                                    Text(
-                                        "+"
-                                    )
-                                }
+                                Button(onClick = { cartViewModel.addDessertToCart(item.postreOrExtra) }) { Text("+") }
                             }
                         }
                     }
 
+                    // Total
                     item {
                         Spacer(modifier = Modifier.height(16.dp))
-                        val totalItems =
-                            cartItems.sumOf { it.cantidad } + dessertItems.sumOf { it.cantidad }
+                        val totalItems = cartItems.sumOf { it.cantidad } + dessertItems.sumOf { it.cantidad }
                         Text(
                             "Total: $${"%.2f".format(total)} ($totalItems items)",
                             style = MaterialTheme.typography.titleMedium
@@ -323,102 +306,95 @@ fun MenuScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
+                    // Formulario de cliente y entrega
                     item {
-                        Card(modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)) {
-                            Row(
-                                modifier = Modifier
-                                    .padding(16.dp)
-                                    .fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                // Nombre del cliente
-                                OutlinedTextField(
-                                    value = nombre,
-                                    onValueChange = { nombre = it },
-                                    label = { Text("Nombre del cliente") },
-                                    modifier = Modifier.weight(1f)
-                                )
-
-                                // Servicio a domicilio
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        "Servicio a domicilio",
-                                        style = MaterialTheme.typography.titleMedium
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    // Nombre del cliente
+                                    OutlinedTextField(
+                                        value = nombre,
+                                        onValueChange = { nombre = it },
+                                        label = { Text("Nombre del cliente") },
+                                        modifier = Modifier.weight(1f)
                                     )
-                                    ExposedDropdownMenuBox(
-                                        expanded = deliveryMenuExpanded,
-                                        onExpandedChange = { deliveryMenuExpanded = it },
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        TextField(
-                                            value = selectedDelivery?.let { "${it.zona} - $${it.price}" }
-                                                ?: "Sin entrega",
-                                            onValueChange = {},
-                                            readOnly = true,
-                                            label = { Text("Precio de domicilio") },
-                                            trailingIcon = {
-                                                ExposedDropdownMenuDefaults.TrailingIcon(
-                                                    expanded = deliveryMenuExpanded
-                                                )
-                                            },
-                                            modifier = Modifier
-                                                .menuAnchor()
-                                                .fillMaxWidth()
+
+                                    // Servicio a domicilio
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            "Servicio a domicilio",
+                                            style = MaterialTheme.typography.titleMedium
                                         )
-                                        ExposedDropdownMenu(
+                                        ExposedDropdownMenuBox(
                                             expanded = deliveryMenuExpanded,
-                                            onDismissRequest = { deliveryMenuExpanded = false }
+                                            onExpandedChange = { deliveryMenuExpanded = it },
+                                            modifier = Modifier.fillMaxWidth()
                                         ) {
-                                            deliveryOptions.forEach { deliveryOption ->
-                                                DropdownMenuItem(
-                                                    text = { Text("${deliveryOption.zona} - $${deliveryOption.price}") },
-                                                    onClick = {
-                                                        cartViewModel.setDeliveryService(
-                                                            deliveryOption
-                                                        )
-                                                        deliveryMenuExpanded = false
-                                                    }
-                                                )
+                                            TextField(
+                                                value = selectedDelivery?.let { "${it.zona} - $${it.price}" } ?: "Sin entrega",
+                                                onValueChange = {},
+                                                readOnly = true,
+                                                label = { Text("Precio de domicilio") },
+                                                trailingIcon = {
+                                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = deliveryMenuExpanded)
+                                                },
+                                                modifier = Modifier.menuAnchor().fillMaxWidth()
+                                            )
+                                            ExposedDropdownMenu(
+                                                expanded = deliveryMenuExpanded,
+                                                onDismissRequest = { deliveryMenuExpanded = false }
+                                            ) {
+                                                deliveryOptions.forEach { deliveryOption ->
+                                                    DropdownMenuItem(
+                                                        text = { Text("${deliveryOption.zona} - $${deliveryOption.price}") },
+                                                        onClick = {
+                                                            cartViewModel.setDeliveryService(deliveryOption)
+                                                            deliveryMenuExpanded = false
+                                                        }
+                                                    )
+                                                }
                                             }
                                         }
                                     }
-                                    // Caja de texto para dirección de entrega si el precio > 0
-                                    if ((selectedDelivery?.price ?: 0) > 0) {
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        OutlinedTextField(
-                                            value = deliveryAddress,
-                                            onValueChange = { deliveryAddress = it },
-                                            label = { Text("Dirección de entrega") },
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                    }
+                                }
+
+                                // Caja de dirección solo si el precio > 0
+                                if ((selectedDelivery?.price ?: 0) > 0) {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    OutlinedTextField(
+                                        value = deliveryAddress,
+                                        onValueChange = { deliveryAddress = it },
+                                        label = { Text("Dirección de entrega") },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
                                 }
                             }
                         }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Button(
-                            onClick = {
-                                val user = User(
-                                    id = System.currentTimeMillis(),
-                                    nombre = nombre,
-                                    telefono = telefono
-                                )
-                                cartViewModel.saveOrder(user, deliveryAddress)
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("Orden guardada exitosamente")
-                                }
-                            },
-                            enabled = cartItems.isNotEmpty() || dessertItems.isNotEmpty(),
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .fillMaxWidth()
-                                .padding(16.dp)
-                        ) { Text("Guardar orden") }
                     }
+                }
+
+                // Botón de Guardar Orden siempre pegado abajo
+                Button(
+                    onClick = {
+                        val user = User(
+                            id = System.currentTimeMillis(),
+                            nombre = nombre,
+                            telefono = telefono
+                        )
+                        cartViewModel.saveOrder(user, deliveryAddress)
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("Orden guardada exitosamente")
+                        }
+                    },
+                    enabled = cartItems.isNotEmpty() || dessertItems.isNotEmpty(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                ) {
+                    Text("Guardar orden")
                 }
             }
         }
