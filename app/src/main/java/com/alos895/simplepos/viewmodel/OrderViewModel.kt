@@ -127,9 +127,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
             sb.appendLine("Orden #$dailyNumber")
         }
         sb.appendLine("-------------------------------")
-        //TODO: Preguntar a Monica si quiere mostrar el nombre del cliente
-        //sb.appendLine("Cliente: ${user.nombre}")
-        sb.appendLine("Teléfono: ${user.telefono}")
+        sb.appendLine("Cliente: ${user.nombre}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
             sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}   $${"%.2f".format(item.subtotal)}")
