@@ -59,22 +59,40 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         return gson.fromJson(order.userJson, User::class.java)
     }
 
+    fun getDailyOrderNumber(order: OrderEntity): Int {
+        val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+        val orderDay = sdf.format(Date(order.timestamp))
+        val sameDay = orders.value
+            .filter { sdf.format(Date(it.timestamp)) == orderDay }
+            .sortedBy { it.timestamp }
+        val index = sameDay.indexOfFirst { it.id == order.id }
+        return if (index >= 0) index + 1 else 0
+    }
+
     fun buildOrderTicket(order: OrderEntity): String {
         val info = PizzeriaData.info
         val cartItems = getCartItems(order)
         val user = getUser(order)
+        val dailyNumber = getDailyOrderNumber(order)
         val sb = StringBuilder()
         sb.appendLine(info.logoAscii)
         sb.appendLine(info.nombre)
         sb.appendLine(info.telefono)
         sb.appendLine(info.direccion)
+        if (dailyNumber > 0) {
+            sb.appendLine("Orden #$dailyNumber")
+        }
         sb.appendLine("-------------------------------")
         //TODO: Preguntar a Monica si quiere mostrar el nombre del cliente
-        //sb.appendLine("Cliente: ${user.nombre}")
-        sb.appendLine("Teléfono: ${user.telefono}")
+        sb.appendLine("Cliente: ${user.nombre}")
+        //sb.appendLine("Teléfono: ${user.telefono}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
             sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}   $${"%.2f".format(item.subtotal)}")
+        }
+        sb.appendLine("-------------------------------")
+        if (order.isDeliveried) {
+            sb.appendLine("Servicio a domicilio: $${"%.2f".format(order.deliveryServicePrice.toDouble())}")
         }
         sb.appendLine("-------------------------------")
         sb.appendLine("TOTAL: $${"%.2f".format(order.total)}")

@@ -75,37 +75,41 @@ fun MenuScreen(
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
-                                ExposedDropdownMenuBox(
-                                    expanded = expanded,
-                                    onExpandedChange = { expanded = !expanded },
-                                    modifier = Modifier.navigationBarsPadding()
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    TextField(
-                                        value = selectedTamano.nombre,
-                                        onValueChange = {},
-                                        readOnly = true,
-                                        label = { Text("Tamaño") },
-                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                        modifier = Modifier.menuAnchor()
-                                    )
-                                    ExposedDropdownMenu(
+                                    ExposedDropdownMenuBox(
                                         expanded = expanded,
-                                        onDismissRequest = { expanded = false }
+                                        onExpandedChange = { expanded = !expanded },
+                                        modifier = Modifier.weight(1f)
                                     ) {
-                                        pizza.tamanos.forEach { tamano ->
-                                            DropdownMenuItem(
-                                                text = { Text(tamano.nombre + " ($${"%.2f".format(tamano.precioBase)})") },
-                                                onClick = {
-                                                    selectedTamano = tamano
-                                                    expanded = false
-                                                }
-                                            )
+                                        TextField(
+                                            value = selectedTamano.nombre,
+                                            onValueChange = {},
+                                            readOnly = true,
+                                            label = { Text("Tamaño") },
+                                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                                        )
+                                        ExposedDropdownMenu(
+                                            expanded = expanded,
+                                            onDismissRequest = { expanded = false }
+                                        ) {
+                                            pizza.tamanos.forEach { tamano ->
+                                                DropdownMenuItem(
+                                                    text = { Text(tamano.nombre + " ($${"%.2f".format(tamano.precioBase)})") },
+                                                    onClick = {
+                                                        selectedTamano = tamano
+                                                        expanded = false
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Button(onClick = { cartViewModel.addToCart(pizza, selectedTamano) }) {
-                                    Text("Agregar al carrito")
+                                    Button(onClick = { cartViewModel.addToCart(pizza, selectedTamano) }) {
+                                        Text("Agregar")
+                                    }
                                 }
                             }
                         }

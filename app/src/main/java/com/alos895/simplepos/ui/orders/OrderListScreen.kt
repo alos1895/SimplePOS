@@ -103,7 +103,7 @@ fun OrderListScreen(
                                 )
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
-                                Text("Orden #${order.id}", style = MaterialTheme.typography.titleMedium)
+                                Text("Orden #${orderViewModel.getDailyOrderNumber(order)}", style = MaterialTheme.typography.titleMedium)
                                 Text("Total: $${"%.2f".format(order.total)}")
                                 Text("Fecha: ${orderViewModel.formatDate(order.timestamp)}")
                             }
@@ -122,7 +122,7 @@ fun OrderListScreen(
                     val order = selectedOrder!!
                     Text("Detalle de la orden", style = MaterialTheme.typography.titleLarge)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Orden #${order.id}")
+                    Text("Orden #${orderViewModel.getDailyOrderNumber(order)}")
                     Text("Total: $${"%.2f".format(order.total)}")
                     Text("Fecha: ${orderViewModel.formatDate(order.timestamp)}")
                     Text("Items:")
