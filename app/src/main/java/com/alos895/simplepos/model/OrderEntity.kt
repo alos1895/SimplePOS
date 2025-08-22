@@ -13,5 +13,8 @@ data class OrderEntity(
     val deliveryServicePrice: Int = 0,
     val isDeliveried: Boolean = false,
     val dessertsJson: String = "[]",
-    val comentarios: String = ""
+    val comentarios: String = "",
+    val deliveryAddress: String = "",
+    val pizzaStatus: String = "",
+    val paymentMethod: String = ""
 )

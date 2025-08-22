@@ -140,7 +140,7 @@ fun OrderListScreen(
                                 )
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
-                                Text("Orden #${orderViewModel.getDailyOrderNumber(order)}", style = MaterialTheme.typography.titleMedium)
+                                Text("Orden #${orderViewModel.getDailyOrderNumber(order)} - ${orderViewModel.getUser(order).nombre}" , style = MaterialTheme.typography.titleMedium)
                                 Text("Total: $${"%.2f".format(order.total)}")
                                 Text("Fecha: ${orderViewModel.formatDate(order.timestamp)}")
                             }
