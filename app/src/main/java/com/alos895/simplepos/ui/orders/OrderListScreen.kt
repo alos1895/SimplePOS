@@ -20,6 +20,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import kotlinx.coroutines.launch
 import com.alos895.simplepos.model.OrderEntity
+import com.alos895.simplepos.model.DailyStats
 
 @Composable
 fun OrderListScreen(
@@ -87,9 +88,46 @@ fun OrderListScreen(
                         Text("Hoy")
                     }
                 }
+                
+                // Sección CAJA
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("CAJA", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        val dailyStats = orderViewModel.getDailyStats(selectedDate)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text("Pizzas: ${dailyStats.pizzas}", style = MaterialTheme.typography.bodyMedium)
+                                Text("Postres: ${dailyStats.postres}", style = MaterialTheme.typography.bodyMedium)
+                            }
+                            Column {
+                                Text("Órdenes: ${dailyStats.ordenes}", style = MaterialTheme.typography.bodyMedium)
+                                Text("Envíos: ${dailyStats.envios}", style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Ingresos: $${"%.2f".format(dailyStats.ingresos)}", 
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                
                 LazyColumn(
                     state = listState,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.weight(1f)
                 ) {
                     items(orderViewModel.ordersBySelectedDate(orders, selectedDate)) { order ->
                         Card(
@@ -110,6 +148,7 @@ fun OrderListScreen(
                         }
                     }
                 }
+                
             }
             // Detalle y acciones de la orden seleccionada (derecha)
             Column(
@@ -128,6 +167,11 @@ fun OrderListScreen(
                     Text("Items:")
                     orderViewModel.getCartItems(order).forEach { item ->
                         Text("- ${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}")
+                    }
+                    if (order.comentarios.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Comentarios:", style = MaterialTheme.typography.titleMedium)
+                        Text(order.comentarios, style = MaterialTheme.typography.bodyMedium)
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(

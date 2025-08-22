@@ -18,6 +18,7 @@ import java.util.Calendar
 import java.util.Locale
 import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.model.CartItemPostre
+import com.alos895.simplepos.model.DailyStats
 
 class OrderViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = OrderRepository(application)
@@ -80,6 +81,37 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         return if (index >= 0) index + 1 else 0
     }
 
+    fun getDailyStats(selectedDate: Date?): DailyStats {
+        if (selectedDate == null) return DailyStats(0, 0, 0, 0, 0.0)
+        
+        val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+        val selectedDay = sdf.format(selectedDate)
+        val dayOrders = orders.value.filter { sdf.format(Date(it.timestamp)) == selectedDay }
+        
+        var totalPizzas = 0
+        var totalDesserts = 0
+        var totalDelivery = 0
+        var totalRevenue = 0.0
+        
+        dayOrders.forEach { order ->
+            val cartItems = getCartItems(order)
+            val dessertItems = getDessertItems(order)
+            
+            totalPizzas += cartItems.sumOf { it.cantidad }
+            totalDesserts += dessertItems.sumOf { it.cantidad }
+            if (order.isDeliveried) totalDelivery++
+            totalRevenue += order.total
+        }
+        
+        return DailyStats(
+            pizzas = totalPizzas,
+            postres = totalDesserts,
+            ordenes = dayOrders.size,
+            envios = totalDelivery,
+            ingresos = totalRevenue
+        )
+    }
+
     fun buildOrderTicket(order: OrderEntity): String {
         val info = PizzeriaData.info
         val cartItems = getCartItems(order)
@@ -112,6 +144,11 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         if (order.isDeliveried) {
             sb.appendLine("Servicio a domicilio: $${"%.2f".format(order.deliveryServicePrice.toDouble())}")
         }
+        if (order.comentarios.isNotEmpty()) {
+            sb.appendLine("-------------------------------")
+            sb.appendLine("COMENTARIOS:")
+            sb.appendLine(order.comentarios)
+        }
         sb.appendLine("-------------------------------")
         sb.appendLine("TOTAL: $${"%.2f".format(order.total)}")
         sb.appendLine("¡Gracias por su compra!")
@@ -135,6 +172,11 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
             sb.appendLine()
         }
         sb.appendLine("-------------------------------")
+        if (order.comentarios.isNotEmpty()) {
+            sb.appendLine("COMENTARIOS:")
+            sb.appendLine(order.comentarios)
+            sb.appendLine("-------------------------------")
+        }
         return sb.toString()
     }
 

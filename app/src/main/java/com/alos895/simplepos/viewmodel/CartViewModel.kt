@@ -36,6 +36,9 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     private val _total = MutableStateFlow(0.0)
     val total: StateFlow<Double> = _total
 
+    private val _comentarios = MutableStateFlow("")
+    val comentarios: StateFlow<String> = _comentarios
+
     init {
         // Inicializa el servicio a domicilio con el primero disponible
         _selectedDelivery.value = MenuData.deliveryOptions.first()
@@ -67,6 +70,10 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     fun setDeliveryService(delivery: DeliveryService) {
         _selectedDelivery.value = delivery
         // El total se actualizará automáticamente por el colector
+    }
+
+    fun setComentarios(comentarios: String) {
+        _comentarios.value = comentarios
     }
 
     fun addToCart(pizza: Pizza, tamano: TamanoPizza) {
@@ -172,7 +179,8 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
                 userJson = userJson,
                 deliveryServicePrice = deliveryPrice,
                 isDeliveried = isDeliveried,
-                dessertsJson = dessertsJson
+                dessertsJson = dessertsJson,
+                comentarios = comentarios.value
             )
             orderRepository.addOrder(orderEntity)
             clearCart()

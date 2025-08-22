@@ -192,6 +192,19 @@ object MenuData {
         Postre(3, "Postre 3", 40.0)
     )
 
+    val comentariosPredefinidos = listOf(
+        "Sin cebolla",
+        "Extra queso",
+        "Bien cocida",
+        "Corte en 8 porciones",
+        "Sin jalapeño",
+        "Extra pepperoni",
+        "Corte en 6 porciones",
+        "Bien dorada",
+        "Sin piña",
+        "Extra salsa"
+    )
+
     val deliveryOptions = listOf(
         DeliveryService(
             price = 0,
