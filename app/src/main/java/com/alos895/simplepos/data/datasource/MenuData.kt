@@ -4,7 +4,7 @@ import com.alos895.simplepos.model.DeliveryService
 import com.alos895.simplepos.model.Pizza
 import com.alos895.simplepos.model.Ingrediente
 import com.alos895.simplepos.model.TamanoPizza
-import com.alos895.simplepos.model.Postre
+import com.alos895.simplepos.model.PostreOrExtra
 
 object MenuData {
     val ingredientes = listOf(
@@ -186,23 +186,14 @@ object MenuData {
         )
     )
 
-    val postres = listOf(
-        Postre(1, "Postre 1", 20.0),
-        Postre(2, "Postre 2", 30.0),
-        Postre(3, "Postre 3", 40.0)
-    )
-
-    val comentariosPredefinidos = listOf(
-        "Sin cebolla",
-        "Extra queso",
-        "Bien cocida",
-        "Corte en 8 porciones",
-        "Sin jalapeño",
-        "Extra pepperoni",
-        "Corte en 6 porciones",
-        "Bien dorada",
-        "Sin piña",
-        "Extra salsa"
+    val postreOrExtras = listOf(
+        PostreOrExtra(1, "Postre 1", 20.0),
+        PostreOrExtra(2, "Postre 2", 30.0),
+        PostreOrExtra(3, "Postre 3", 45.0),
+        PostreOrExtra(4, "Chimi Mediano", 10.0),
+        PostreOrExtra(5, "Chimi Grande", 20.0),
+        PostreOrExtra(6, "Aderezo Ranch", 15.0),
+        PostreOrExtra(7, "Salsa Habanera", 5.0)
     )
 
     val deliveryOptions = listOf(

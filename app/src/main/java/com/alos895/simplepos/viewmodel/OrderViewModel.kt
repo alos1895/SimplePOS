@@ -135,7 +135,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         if (dessertItems.isNotEmpty()) {
             sb.appendLine("-------------------------------")
             dessertItems.forEach { item ->
-                sb.appendLine("${item.cantidad}x ${item.postre.nombre}   $${"%.2f".format(item.subtotal)}")
+                sb.appendLine("${item.cantidad}x ${item.postreOrExtra.nombre}   $${"%.2f".format(item.subtotal)}")
             }
         }
         sb.appendLine("-------------------------------")

@@ -20,7 +20,6 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import kotlinx.coroutines.launch
 import com.alos895.simplepos.model.OrderEntity
-import com.alos895.simplepos.model.DailyStats
 
 @Composable
 fun OrderListScreen(
@@ -162,12 +161,26 @@ fun OrderListScreen(
                     Text("Detalle de la orden", style = MaterialTheme.typography.titleLarge)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Orden #${orderViewModel.getDailyOrderNumber(order)}")
+                    Text("Nombre: ${orderViewModel.getUser(order)?.nombre ?: "Desconocido"}")
                     Text("Total: $${"%.2f".format(order.total)}")
                     Text("Fecha: ${orderViewModel.formatDate(order.timestamp)}")
                     Text("Items:")
                     orderViewModel.getCartItems(order).forEach { item ->
                         Text("- ${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}")
                     }
+                    if (order.isDeliveried) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Envío: Claro que si")
+                        //Text("Envío: ${order.direccionEnvio ?: "No especificado"}")
+                    }
+                    if (orderViewModel.getDessertItems(order).isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Postres:")
+                        orderViewModel.getDessertItems(order).forEach { item ->
+                            Text("- ${item.cantidad}x ${item.postreOrExtra.nombre}")
+                        }
+                    }
+
                     if (order.comentarios.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text("Comentarios:", style = MaterialTheme.typography.titleMedium)

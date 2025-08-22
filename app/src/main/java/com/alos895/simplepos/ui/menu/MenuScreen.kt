@@ -3,17 +3,12 @@ package com.alos895.simplepos.ui.menu
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.*
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.alos895.simplepos.viewmodel.BluetoothPrinterViewModel
@@ -95,7 +90,7 @@ fun MenuScreen(
                             containerColor = if (!showPizzas && !showComments) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surfaceVariant
                         )
                     ) {
-                        Text("Postres")
+                        Text("Postres & Extras")
                     }
                     Button(
                         onClick = { 
@@ -216,7 +211,7 @@ fun MenuScreen(
                         }
                     } else {
                         // Vista de Postres
-                        items(MenuData.postres) { postre ->
+                        items(MenuData.postreOrExtras) { postre ->
                             Card(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -291,20 +286,20 @@ fun MenuScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Column {
-                                    Text(item.postre.nombre)
+                                    Text(item.postreOrExtra.nombre)
                                     Text("Postre")
                                 }
                                 Text("x${item.cantidad}")
                                 Text("$${"%.2f".format(item.subtotal)}")
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Button(onClick = {
-                                    cartViewModel.removeDessertFromCart(item.postre)
+                                    cartViewModel.removeDessertFromCart(item.postreOrExtra)
                                 }) {
                                     Text("-")
                                 }
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Button(onClick = {
-                                    cartViewModel.addDessertToCart(item.postre)
+                                    cartViewModel.addDessertToCart(item.postreOrExtra)
                                 }) {
                                     Text("+")
                                 }

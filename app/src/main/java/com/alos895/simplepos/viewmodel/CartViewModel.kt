@@ -8,7 +8,6 @@ import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.PizzeriaData
 import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.model.CartItemPostre
-import com.alos895.simplepos.model.Order
 import com.alos895.simplepos.model.Pizza
 import com.alos895.simplepos.model.TamanoPizza
 import com.alos895.simplepos.data.repository.OrderRepository
@@ -102,21 +101,21 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         _cartItems.value = current
     }
 
-    fun addDessertToCart(postre: com.alos895.simplepos.model.Postre) {
+    fun addDessertToCart(postreOrExtra: com.alos895.simplepos.model.PostreOrExtra) {
         val current = _dessertItems.value.toMutableList()
-        val index = current.indexOfFirst { it.postre.id == postre.id }
+        val index = current.indexOfFirst { it.postreOrExtra.id == postreOrExtra.id }
         if (index >= 0) {
             val item = current[index]
             current[index] = item.copy(cantidad = item.cantidad + 1)
         } else {
-            current.add(CartItemPostre(postre))
+            current.add(CartItemPostre(postreOrExtra))
         }
         _dessertItems.value = current
     }
 
-    fun removeDessertFromCart(postre: com.alos895.simplepos.model.Postre) {
+    fun removeDessertFromCart(postreOrExtra: com.alos895.simplepos.model.PostreOrExtra) {
         val current = _dessertItems.value.toMutableList()
-        val index = current.indexOfFirst { it.postre.id == postre.id }
+        val index = current.indexOfFirst { it.postreOrExtra.id == postreOrExtra.id }
         if (index >= 0) {
             val item = current[index]
             if (item.cantidad > 1) {
@@ -154,7 +153,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         if (dessertItems.isNotEmpty()) {
             sb.appendLine("-------------------------------")
             dessertItems.forEach { item ->
-                sb.appendLine("${item.cantidad}x ${item.postre.nombre}   $${"%.2f".format(item.subtotal)}")
+                sb.appendLine("${item.cantidad}x ${item.postreOrExtra.nombre}   $${"%.2f".format(item.subtotal)}")
                 result += item.subtotal
             }
         }
