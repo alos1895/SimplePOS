@@ -170,8 +170,10 @@ fun OrderListScreen(
                     }
                     if (order.isDeliveried) {
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Envío: Claro que si")
-                        //Text("Envío: ${order.direccionEnvio ?: "No especificado"}")
+                        Text("Envío: ${order.deliveryAddress}")
+                    } else {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("PASAN!")
                     }
                     if (orderViewModel.getDessertItems(order).isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))

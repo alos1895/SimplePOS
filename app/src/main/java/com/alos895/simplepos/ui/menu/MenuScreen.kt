@@ -48,6 +48,7 @@ fun MenuScreen(
 
     var nombre by remember { mutableStateOf("") }
     var telefono by remember { mutableStateOf("") }
+    var deliveryAddress by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -383,6 +384,16 @@ fun MenuScreen(
                                             }
                                         }
                                     }
+                                    // Caja de texto para dirección de entrega si el precio > 0
+                                    if ((selectedDelivery?.price ?: 0) > 0) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        OutlinedTextField(
+                                            value = deliveryAddress,
+                                            onValueChange = { deliveryAddress = it },
+                                            label = { Text("Dirección de entrega") },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -396,7 +407,7 @@ fun MenuScreen(
                                     nombre = nombre,
                                     telefono = telefono
                                 )
-                                cartViewModel.saveOrder(user)
+                                cartViewModel.saveOrder(user, deliveryAddress)
                                 coroutineScope.launch {
                                     snackbarHostState.showSnackbar("Orden guardada exitosamente")
                                 }

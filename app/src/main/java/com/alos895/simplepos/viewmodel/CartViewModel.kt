@@ -163,7 +163,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         return sb.toString()
     }
 
-    fun saveOrder(user: User) {
+    fun saveOrder(user: User, deliveryAddress: String = "") {
         viewModelScope.launch {
             val gson = Gson()
             val itemsJson = gson.toJson(_cartItems.value)
@@ -179,7 +179,8 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
                 deliveryServicePrice = deliveryPrice,
                 isDeliveried = isDeliveried,
                 dessertsJson = dessertsJson,
-                comentarios = comentarios.value
+                comentarios = comentarios.value,
+                deliveryAddress = deliveryAddress
             )
             orderRepository.addOrder(orderEntity)
             clearCart()
