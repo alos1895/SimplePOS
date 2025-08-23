@@ -127,7 +127,10 @@ fun MenuScreen(
                                             modifier = Modifier.weight(1f)
                                         ) {
                                             TextField(
-                                                value = selectedTamano.nombre,
+                                                value = "${selectedTamano.nombre} ($${
+                                                    "%.2f".format(
+                                                        selectedTamano.precioBase
+                                                    ) })",
                                                 onValueChange = {},
                                                 readOnly = true,
                                                 label = { Text("Tamaño") },
