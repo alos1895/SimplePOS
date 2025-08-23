@@ -385,6 +385,12 @@ fun MenuScreen(
                             telefono = telefono
                         )
                         cartViewModel.saveOrder(user, deliveryAddress)
+                        // Limpiar formulario después de guardar
+                        nombre = ""
+                        telefono = ""
+                        deliveryAddress = ""
+                        cartViewModel.setComentarios("")
+                        cartViewModel.setDeliveryService(MenuData.deliveryOptions.first())
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar("Orden guardada exitosamente")
                         }

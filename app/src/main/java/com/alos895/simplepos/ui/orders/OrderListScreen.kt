@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -158,75 +159,85 @@ fun OrderListScreen(
             ) {
                 if (selectedOrder != null) {
                     val order = selectedOrder!!
-                    Text("Detalle de la orden", style = MaterialTheme.typography.titleLarge)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Orden #${orderViewModel.getDailyOrderNumber(order)}")
-                    Text("Nombre: ${orderViewModel.getUser(order)?.nombre ?: "Desconocido"}")
-                    Text("Total: $${"%.2f".format(order.total)}")
-                    Text("Fecha: ${orderViewModel.formatDate(order.timestamp)}")
-                    Text("Items:")
-                    orderViewModel.getCartItems(order).forEach { item ->
-                        Text("- ${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}")
-                    }
-                    if (order.isDeliveried) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Envío: ${order.deliveryAddress}")
-                    } else {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("PASAN!")
-                    }
-                    if (orderViewModel.getDessertItems(order).isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Postres:")
-                        orderViewModel.getDessertItems(order).forEach { item ->
-                            Text("- ${item.cantidad}x ${item.postreOrExtra.nombre}")
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        item { Text("Detalle de la orden", style = MaterialTheme.typography.titleLarge) }
+                        item { Spacer(modifier = Modifier.height(8.dp)) }
+                        item { Text("Orden #${orderViewModel.getDailyOrderNumber(order)}") }
+                        item { Text("Nombre: ${orderViewModel.getUser(order)?.nombre ?: "Desconocido"}") }
+                        item { Text("Total: $${"%.2f".format(order.total)}") }
+                        item { Text("Fecha: ${orderViewModel.formatDate(order.timestamp)}") }
+                        item { HorizontalDivider(thickness = 1.dp, color = Color.Gray) }
+                        item { Text("Items:") }
+                        items(orderViewModel.getCartItems(order)) { item ->
+                            Text("- ${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}")
                         }
-                    }
-
-                    if (order.comentarios.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Comentarios:", style = MaterialTheme.typography.titleMedium)
-                        Text(order.comentarios, style = MaterialTheme.typography.bodyMedium)
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = {
-                            isPrinting = true
-                            val ticket = orderViewModel.buildOrderTicket(order)
-                            bluetoothPrinterViewModel.print(ticket) { success, message ->
-                                lastMessage = message
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(message)
-                                }
-                                isPrinting = false
+                        if (orderViewModel.getDessertItems(order).isNotEmpty()) {
+                            item { Spacer(modifier = Modifier.height(8.dp)) }
+                            item { Text("Postres:") }
+                            items(orderViewModel.getDessertItems(order)) { item ->
+                                Text("- ${item.cantidad}x ${item.postreOrExtra.nombre}")
                             }
-                        },
-                        enabled = !isPrinting,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(if (isPrinting) "Imprimiendo..." else "Imprimir Cliente")
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = {
-                            isPrinting = true
-                            val cocinaTicket = orderViewModel.buildCocinaTicket(order)
-                            bluetoothPrinterViewModel.print(cocinaTicket) { success, message ->
-                                lastMessage = message
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(message)
-                                }
-                                isPrinting = false
+                        }
+                        if (order.comentarios.isNotEmpty()) {
+                            item { Spacer(modifier = Modifier.height(8.dp)) }
+                            item { Text("Comentarios:", style = MaterialTheme.typography.titleMedium) }
+                            item { Text(order.comentarios, style = MaterialTheme.typography.bodyMedium) }
+                        }
+                        item { Spacer(modifier = Modifier.height(16.dp)) }
+                        item { HorizontalDivider(thickness = 1.dp, color = Color.Gray) }
+                        if (order.isDeliveried) {
+                            item { Spacer(modifier = Modifier.height(8.dp)) }
+                            item { Text("Envío: ${order.deliveryAddress}") }
+                        } else {
+                            item { Spacer(modifier = Modifier.height(8.dp)) }
+                            item { Text("Pasan o Caminando!") }
+                        }
+                        item {
+                            Button(
+                                onClick = {
+                                    isPrinting = true
+                                    val cocinaTicket = orderViewModel.buildCocinaTicket(order)
+                                    bluetoothPrinterViewModel.print(cocinaTicket) { success, message ->
+                                        lastMessage = message
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar(message)
+                                        }
+                                        isPrinting = false
+                                    }
+                                },
+                                enabled = !isPrinting,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(if (isPrinting) "Imprimiendo..." else "Imprimir cocina")
                             }
-                        },
-                        enabled = !isPrinting,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(if (isPrinting) "Imprimiendo..." else "Imprimir cocina")
-                    }
-                    if (lastMessage.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(lastMessage)
+                        }
+                        item { Spacer(modifier = Modifier.height(8.dp)) }
+                        item {
+                            Button(
+                                onClick = {
+                                    isPrinting = true
+                                    val ticket = orderViewModel.buildOrderTicket(order)
+                                    bluetoothPrinterViewModel.print(ticket) { success, message ->
+                                        lastMessage = message
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar(message)
+                                        }
+                                        isPrinting = false
+                                    }
+                                },
+                                enabled = !isPrinting,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(if (isPrinting) "Imprimiendo..." else "Imprimir Cliente")
+                            }
+                        }
+                        if (lastMessage.isNotEmpty()) {
+                            item { Spacer(modifier = Modifier.height(8.dp)) }
+                            item { Text(lastMessage) }
+                        }
                     }
                 } else {
                     Text("Selecciona una orden para ver detalles.", style = MaterialTheme.typography.bodyLarge)

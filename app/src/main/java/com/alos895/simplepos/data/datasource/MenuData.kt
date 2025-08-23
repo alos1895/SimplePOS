@@ -150,7 +150,7 @@ object MenuData {
         ),
         Pizza(
             nombre = "Wera",
-            ingredientesBaseIds = listOf(1, 23, 24, 7, 25, 11, 10, 3),
+            ingredientesBaseIds = listOf(1, 23, 24, 7, 25, 11, 10),
             tamanos = listOf(
                 TamanoPizza("Chica", 89.0),
                 TamanoPizza("Mediana", 199.0),
@@ -183,6 +183,15 @@ object MenuData {
                 TamanoPizza("Mediana", 199.0),
                 TamanoPizza("Extra Grande", 249.0)
             )
+        ),
+        Pizza(
+            nombre = "Osceana",
+            ingredientesBaseIds = listOf(1, 2, 18, 22, 4, 6, 21, 28, 3),
+            tamanos = listOf(
+                TamanoPizza("Chica", 89.0),
+                TamanoPizza("Mediana", 199.0),
+                TamanoPizza("Extra Grande", 249.0)
+            )
         )
     )
 
@@ -199,7 +208,7 @@ object MenuData {
     val deliveryOptions = listOf(
         DeliveryService(
             price = 0,
-            zona = "Sin entrega",
+            zona = "Pasan o Caminando",
             description = "Recoge tu pedido en la pizzería."
         ),
         DeliveryService(
