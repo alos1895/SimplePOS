@@ -262,7 +262,8 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
 
     fun buildCajaReport(dailyStats: DailyStats): String {
         val sb = StringBuilder()
-        sb.appendLine("REPORTE DE CAJA")
+        sb.appendLine("REPORTE DE CAJA :${SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(_selectedDate.value ?: Date())}")
+        sb.appendLine("Hora: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())}")
         sb.appendLine("-------------------------------")
         sb.appendLine("Ordenes: ${dailyStats.ordenes}")
         sb.appendLine("Pizzas:")

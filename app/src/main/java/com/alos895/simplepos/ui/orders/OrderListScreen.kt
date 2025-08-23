@@ -40,6 +40,7 @@ fun OrderListScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var orderToDelete by remember { mutableStateOf<OrderEntity?>(null) }
     val listState = rememberLazyListState()
+    var showCajaDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { orderViewModel.loadOrders() }
 
@@ -92,70 +93,14 @@ fun OrderListScreen(
                         Text("Hoy")
                     }
                 }
-                
-                // Sección CAJA
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
+
+                Button(
+                    onClick = { showCajaDialog = true },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("CAJA", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        val dailyStats = orderViewModel.getDailyStats(selectedDate)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column {
-                                Text("Chicas: ${dailyStats.pizzasChicas}", style = MaterialTheme.typography.bodySmall)
-                                Text("Medianas: ${dailyStats.pizzasMedianas}", style = MaterialTheme.typography.bodySmall)
-                                Text("Grandes: ${dailyStats.pizzasGrandes}", style = MaterialTheme.typography.bodySmall)
-                                Text("Totales Pizzas: ${dailyStats.pizzas}", style = MaterialTheme.typography.bodyMedium)
-                                Text("Postres: ${dailyStats.postres}", style = MaterialTheme.typography.bodyMedium)
-                                Text("Extras: ${dailyStats.extras}", style = MaterialTheme.typography.bodyMedium)
-                            }
-                            Column {
-                                Text("Órdenes: ${dailyStats.ordenes}", style = MaterialTheme.typography.bodyMedium)
-                                Text("Envíos: ${dailyStats.envios}", style = MaterialTheme.typography.bodyMedium)
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Ingresos Totales: $${"%.2f".format(dailyStats.ingresos)}",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Ingresos por Pizzas: $${"%.2f".format(dailyStats.ingresosPizzas)}", style = MaterialTheme.typography.bodyMedium)
-                        Text("Ingresos por Postres: $${"%.2f".format(dailyStats.ingresosPostres)}", style = MaterialTheme.typography.bodyMedium)
-                        Text("Ingresos por Extras: $${"%.2f".format(dailyStats.ingresosExtras)}", style = MaterialTheme.typography.bodyMedium)
-                        Text("Ingresos por Envíos: $${"%.2f".format(dailyStats.ingresosEnvios)}", style = MaterialTheme.typography.bodyMedium)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = {
-                                coroutineScope.launch {
-                                    orderViewModel.loadOrders() // Refrescar datos antes de imprimir
-                                    val dailyStats = orderViewModel.getDailyStats(selectedDate)
-                                    val cajaReport = orderViewModel.buildCajaReport(dailyStats)
-                                    bluetoothPrinterViewModel.print(cajaReport) { success, message ->
-                                        coroutineScope.launch { // Mover showSnackbar dentro de launch
-                                            snackbarHostState.showSnackbar(message)
-                                        }
-                                    }
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Imprimir CAJA")
-                        }
-                    }
+                    Text("Abrir CAJA")
                 }
-                
+
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.weight(1f)
@@ -190,8 +135,8 @@ fun OrderListScreen(
                         }
                     }
                 }
-                
             }
+
             // Detalle y acciones de la orden seleccionada (derecha)
             Column(
                 modifier = Modifier
@@ -286,6 +231,83 @@ fun OrderListScreen(
                 }
             }
         }
+    }
+
+    // Dialogo para la CAJA
+    if (showCajaDialog) {
+        AlertDialog(
+            onDismissRequest = { showCajaDialog = false },
+            title = { Text("CAJA") },
+            text = {
+                val dailyStats = orderViewModel.getDailyStats(selectedDate)
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text("Pizzas", style = MaterialTheme.typography.titleMedium)
+                            Text("Chicas: ${dailyStats.pizzasChicas}", style = MaterialTheme.typography.bodySmall)
+                            Text("Medianas: ${dailyStats.pizzasMedianas}", style = MaterialTheme.typography.bodySmall)
+                            Text("Grandes: ${dailyStats.pizzasGrandes}", style = MaterialTheme.typography.bodySmall)
+                            Text("Total: ${dailyStats.pizzas}", style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Column {
+                            Text("Postres y Extras", style = MaterialTheme.typography.titleMedium)
+                            Text("Postres: ${dailyStats.postres}", style = MaterialTheme.typography.bodySmall)
+                            Text("Extras: ${dailyStats.extras}", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Column {
+                            Text("Órdenes y Envíos", style = MaterialTheme.typography.titleMedium)
+                            Text("Órdenes: ${dailyStats.ordenes}", style = MaterialTheme.typography.bodySmall)
+                            Text("Envíos: ${dailyStats.envios}", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text("Ingresos", style = MaterialTheme.typography.titleMedium)
+                            Text("Pizzas: $${"%.2f".format(dailyStats.ingresosPizzas)}", style = MaterialTheme.typography.bodySmall)
+                            Text("Postres: $${"%.2f".format(dailyStats.ingresosPostres)}", style = MaterialTheme.typography.bodySmall)
+                            Text("Extras: $${"%.2f".format(dailyStats.ingresosExtras)}", style = MaterialTheme.typography.bodySmall)
+                            Text("Envíos: $${"%.2f".format(dailyStats.ingresosEnvios)}", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Column {
+                            Text("Total", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Ingresos Totales: $${"%.2f".format(dailyStats.ingresos)}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    coroutineScope.launch {
+                        orderViewModel.loadOrders() // Refrescar datos antes de imprimir
+                        val refreshedStats = orderViewModel.getDailyStats(selectedDate)
+                        val cajaReport = orderViewModel.buildCajaReport(refreshedStats)
+                        bluetoothPrinterViewModel.print(cajaReport) { success, message ->
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(message)
+                            }
+                        }
+                    }
+                }) {
+                    Text("Imprimir")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showCajaDialog = false }) {
+                    Text("Cerrar")
+                }
+            }
+        )
     }
     // Diálogo de confirmación de borrado
     if (showDeleteDialog && orderToDelete != null) {
