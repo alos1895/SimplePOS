@@ -135,6 +135,24 @@ fun OrderListScreen(
                         Text("Ingresos por Postres: $${"%.2f".format(dailyStats.ingresosPostres)}", style = MaterialTheme.typography.bodyMedium)
                         Text("Ingresos por Extras: $${"%.2f".format(dailyStats.ingresosExtras)}", style = MaterialTheme.typography.bodyMedium)
                         Text("Ingresos por Envíos: $${"%.2f".format(dailyStats.ingresosEnvios)}", style = MaterialTheme.typography.bodyMedium)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = {
+                                coroutineScope.launch {
+                                    orderViewModel.loadOrders() // Refrescar datos antes de imprimir
+                                    val dailyStats = orderViewModel.getDailyStats(selectedDate)
+                                    val cajaReport = orderViewModel.buildCajaReport(dailyStats)
+                                    bluetoothPrinterViewModel.print(cajaReport) { success, message ->
+                                        coroutineScope.launch { // Mover showSnackbar dentro de launch
+                                            snackbarHostState.showSnackbar(message)
+                                        }
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Imprimir CAJA")
+                        }
                     }
                 }
                 

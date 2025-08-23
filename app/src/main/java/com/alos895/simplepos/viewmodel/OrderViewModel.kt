@@ -260,6 +260,33 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         return sb.toString()
     }
 
+    fun buildCajaReport(dailyStats: DailyStats): String {
+        val sb = StringBuilder()
+        sb.appendLine("REPORTE DE CAJA")
+        sb.appendLine("-------------------------------")
+        sb.appendLine("Ordenes: ${dailyStats.ordenes}")
+        sb.appendLine("Pizzas:")
+        sb.appendLine("  Chicas: ${dailyStats.pizzasChicas}")
+        sb.appendLine("  Medianas: ${dailyStats.pizzasMedianas}")
+        sb.appendLine("  Grandes: ${dailyStats.pizzasGrandes}")
+        sb.appendLine("  Total: ${dailyStats.pizzas}")
+        sb.appendLine("-------------------------------")
+        sb.appendLine("Postres: ${dailyStats.postres}")
+        sb.appendLine("Extras: ${dailyStats.extras}")
+        sb.appendLine("-------------------------------")
+        sb.appendLine("Envios: ${dailyStats.envios}")
+        sb.appendLine("-------------------------------")
+        sb.appendLine("Ingresos:")
+        sb.appendLine("  Pizzas: $${"%.2f".format(dailyStats.ingresosPizzas)}")
+        sb.appendLine("  Postres: $${"%.2f".format(dailyStats.ingresosPostres)}")
+        sb.appendLine("  Extras: $${"%.2f".format(dailyStats.ingresosExtras)}")
+        sb.appendLine("  Envíos: $${"%.2f".format(dailyStats.ingresosEnvios)}")
+        sb.appendLine("  Total: $${"%.2f".format(dailyStats.ingresos)}")
+        sb.appendLine("-------------------------------")
+        sb.appendLine("¡Gracias por su trabajo!")
+        return sb.toString()
+    }
+
     companion object {
         fun getToday(): Date {
             return Calendar.getInstance().apply {
