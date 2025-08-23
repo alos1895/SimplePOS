@@ -126,10 +126,15 @@ fun OrderListScreen(
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "Ingresos: $${"%.2f".format(dailyStats.ingresos)}", 
+                            "Ingresos Totales: $${"%.2f".format(dailyStats.ingresos)}",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Ingresos por Pizzas: $${"%.2f".format(dailyStats.ingresosPizzas)}", style = MaterialTheme.typography.bodyMedium)
+                        Text("Ingresos por Postres: $${"%.2f".format(dailyStats.ingresosPostres)}", style = MaterialTheme.typography.bodyMedium)
+                        Text("Ingresos por Extras: $${"%.2f".format(dailyStats.ingresosExtras)}", style = MaterialTheme.typography.bodyMedium)
+                        Text("Ingresos por Envíos: $${"%.2f".format(dailyStats.ingresosEnvios)}", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
                 

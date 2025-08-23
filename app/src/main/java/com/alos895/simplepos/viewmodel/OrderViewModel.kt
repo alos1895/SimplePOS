@@ -89,7 +89,21 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun getDailyStats(selectedDate: Date?): DailyStats {
-        if (selectedDate == null) return DailyStats(0,0,0,0,0,0,0,0.0,0)
+        if (selectedDate == null) return DailyStats(
+            pizzas = 0,
+            pizzasChicas = 0,
+            pizzasMedianas = 0,
+            pizzasGrandes = 0,
+            postres = 0,
+            extras = 0,
+            ordenes = 0,
+            envios = 0,
+            ingresos = 0.0,
+            ingresosPizzas = 0.0,
+            ingresosPostres = 0.0,
+            ingresosExtras = 0.0,
+            ingresosEnvios = 0.0
+        )
 
         val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
         val selectedDay = sdf.format(selectedDate)
@@ -105,6 +119,10 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         var totalExtras = 0
         var totalDelivery = 0
         var totalRevenue = 0.0
+        var pizzaRevenue = 0.0
+        var postreRevenue = 0.0
+        var extraRevenue = 0.0
+        var deliveryRevenue = 0.0
 
         dayOrders.forEach { order ->
             val cartItems = getCartItems(order)
@@ -112,6 +130,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
 
             cartItems.forEach { item ->
                 totalPizzas += item.cantidad
+                pizzaRevenue += item.subtotal
                 when (item.tamano.nombre.lowercase()) {
                     "chica" -> totalChicas += item.cantidad
                     "mediana" -> totalMedianas += item.cantidad
@@ -122,12 +141,18 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
             dessertItems.forEach { item ->
                 if (item.postreOrExtra.esPostre) {
                     totalPostres += item.cantidad
+                    postreRevenue += item.subtotal
                 } else {
                     totalExtras += item.cantidad
+                    extraRevenue += item.subtotal
                 }
             }
 
-            if (order.isDeliveried) totalDelivery++
+            if (order.isDeliveried) {
+                totalDelivery++
+                deliveryRevenue += order.deliveryServicePrice
+            }
+
             totalRevenue += order.total
         }
 
@@ -140,7 +165,11 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
             extras = totalExtras,
             ordenes = dayOrders.size,
             envios = totalDelivery,
-            ingresos = totalRevenue
+            ingresos = totalRevenue,
+            ingresosPizzas = pizzaRevenue,
+            ingresosPostres = postreRevenue,
+            ingresosExtras = extraRevenue,
+            ingresosEnvios = deliveryRevenue
         )
     }
 
@@ -162,12 +191,24 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine("Cliente: ${user.nombre}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
-            sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}   $${"%.2f".format(item.subtotal)}")
+            sb.appendLine(
+                "${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}   $${
+                    "%.2f".format(
+                        item.subtotal
+                    )
+                }"
+            )
         }
         if (dessertItems.isNotEmpty()) {
             sb.appendLine("-------------------------------")
             dessertItems.forEach { item ->
-                sb.appendLine("${item.cantidad}x ${item.postreOrExtra.nombre}   $${"%.2f".format(item.subtotal)}")
+                sb.appendLine(
+                    "${item.cantidad}x ${item.postreOrExtra.nombre}   $${
+                        "%.2f".format(
+                            item.subtotal
+                        )
+                    }"
+                )
             }
         }
         sb.appendLine("-------------------------------")
@@ -189,7 +230,14 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         val cartItems = getCartItems(order)
         val sb = StringBuilder()
         sb.appendLine("ORDEN PARA COCINA")
-        sb.appendLine("Hora: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(order.timestamp))} - Orden: ${getDailyOrderNumber(order)}")
+        sb.appendLine(
+            "Hora: ${
+                SimpleDateFormat(
+                    "HH:mm",
+                    Locale.getDefault()
+                ).format(Date(order.timestamp))
+            } - Orden: ${getDailyOrderNumber(order)}"
+        )
         // nombre y direccion o PASAN
         sb.appendLine("Cliente: ${getUser(order).nombre} - ${order.deliveryAddress.takeIf { it.isNotEmpty() } ?: "Pasan o Caminando!"}")
         sb.appendLine("-------------------------------")
