@@ -287,6 +287,42 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine("¡Gracias por su trabajo!")
         return sb.toString()
     }
+    
+    fun buildDeleteTicket(order: OrderEntity): String {
+        val sb = StringBuilder()
+        sb.appendLine("TICKET DE ORDEN BORRADA")
+        sb.appendLine("-------------------------------")
+        sb.appendLine("Orden #${getDailyOrderNumber(order)}")
+        sb.appendLine("Nombre: ${getUser(order)?.nombre ?: "Desconocido"}")
+        sb.appendLine("Fecha: ${formatDate(order.timestamp)}")
+        sb.appendLine("Total: $${"%.2f".format(order.total)}")
+        sb.appendLine("-------------------------------")
+        sb.appendLine("Items:")
+        getCartItems(order).forEach { item ->
+            sb.appendLine("- ${item.cantidad}x ${item.pizza.nombre} (${item.tamano.nombre})")
+        }
+        if (getDessertItems(order).isNotEmpty()) {
+            sb.appendLine("Postres:")
+            getDessertItems(order).forEach { item ->
+                sb.appendLine("- ${item.cantidad}x ${item.postreOrExtra.nombre}")
+            }
+        }
+        if (order.comentarios.isNotEmpty()) {
+            sb.appendLine("-------------------------------")
+            sb.appendLine("Comentarios:")
+            sb.appendLine(order.comentarios)
+        }
+        if (order.isDeliveried) {
+            sb.appendLine("-------------------------------")
+            sb.appendLine("Envío a: ${order.deliveryAddress}")
+        } else {
+            sb.appendLine("-------------------------------")
+            sb.appendLine("Recogida en tienda")
+        }
+        sb.appendLine("-------------------------------")
+        sb.appendLine("¡Orden eliminada correctamente!")
+        return sb.toString()
+    }
 
     companion object {
         fun getToday(): Date {

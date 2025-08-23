@@ -317,12 +317,23 @@ fun OrderListScreen(
             text = { Text("¿Seguro que deseas borrar esta orden? Esta acción no elimina la orden físicamente, solo la oculta.") },
             confirmButton = {
                 Button(onClick = {
+                    val orderToPrint = orderToDelete // Guardar la orden antes de borrarla
                     orderViewModel.deleteOrderLogical(orderToDelete!!.id)
                     showDeleteDialog = false
                     if (selectedOrder?.id == orderToDelete!!.id) selectedOrder = null
                     orderToDelete = null
                     coroutineScope.launch {
                         snackbarHostState.showSnackbar("Orden borrada")
+                    }
+
+                    // Imprimir ticket con la información de la orden eliminada
+                    orderToPrint?.let { order ->
+                        val deleteTicket = orderViewModel.buildDeleteTicket(order)
+                        bluetoothPrinterViewModel.print(deleteTicket) { success, message ->
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(message)
+                            }
+                        }
                     }
                 }) {
                     Text("Borrar")
