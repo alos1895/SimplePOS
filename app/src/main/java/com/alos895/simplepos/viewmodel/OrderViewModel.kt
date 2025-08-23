@@ -82,13 +82,16 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun getDailyStats(selectedDate: Date?): DailyStats {
-        if (selectedDate == null) return DailyStats(0, 0, 0, 0, 0.0)
-        
+        if (selectedDate == null) return DailyStats(0, 0, 0, 0, 0, 0, 0, 0.0)
+
         val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
         val selectedDay = sdf.format(selectedDate)
         val dayOrders = orders.value.filter { sdf.format(Date(it.timestamp)) == selectedDay }
         
         var totalPizzas = 0
+        var totalChicas = 0
+        var totalMedianas = 0
+        var totalGrandes = 0
         var totalDesserts = 0
         var totalDelivery = 0
         var totalRevenue = 0.0
@@ -97,7 +100,14 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
             val cartItems = getCartItems(order)
             val dessertItems = getDessertItems(order)
             
-            totalPizzas += cartItems.sumOf { it.cantidad }
+            cartItems.forEach { item ->
+                totalPizzas += item.cantidad
+                when (item.tamano.nombre.lowercase()) {
+                    "chica" -> totalChicas += item.cantidad
+                    "mediana" -> totalMedianas += item.cantidad
+                    "extra grande", "grande" -> totalGrandes += item.cantidad
+                }
+            }
             totalDesserts += dessertItems.sumOf { it.cantidad }
             if (order.isDeliveried) totalDelivery++
             totalRevenue += order.total
@@ -105,6 +115,9 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         
         return DailyStats(
             pizzas = totalPizzas,
+            pizzasChicas = totalChicas,
+            pizzasMedianas = totalMedianas,
+            pizzasGrandes = totalGrandes,
             postres = totalDesserts,
             ordenes = dayOrders.size,
             envios = totalDelivery,
@@ -157,7 +170,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         val cartItems = getCartItems(order)
         val sb = StringBuilder()
         sb.appendLine("ORDEN PARA COCINA")
-        sb.appendLine("Hora: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(order.timestamp))}")
+        sb.appendLine("Hora: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(order.timestamp))} - Orden: ${getDailyOrderNumber(order)}")
         // nombre y direccion o PASAN
         sb.appendLine("Cliente: ${getUser(order).nombre} - ${order.deliveryAddress.takeIf { it.isNotEmpty() } ?: "Pasan o Caminando!"}")
         sb.appendLine("-------------------------------")

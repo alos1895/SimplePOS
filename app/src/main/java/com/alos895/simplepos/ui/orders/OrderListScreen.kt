@@ -108,8 +108,10 @@ fun OrderListScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column {
-                                Text("Pizzas: ${dailyStats.pizzas}", style = MaterialTheme.typography.bodyMedium)
-                                Text("Postres: ${dailyStats.postres}", style = MaterialTheme.typography.bodyMedium)
+                                Text("Chicas: ${dailyStats.pizzasChicas}", style = MaterialTheme.typography.bodySmall)
+                                Text("Medianas: ${dailyStats.pizzasMedianas}", style = MaterialTheme.typography.bodySmall)
+                                Text("Grandes: ${dailyStats.pizzasGrandes}", style = MaterialTheme.typography.bodySmall)
+                                Text("Totales Pizzas: ${dailyStats.pizzas}", style = MaterialTheme.typography.bodyMedium)
                             }
                             Column {
                                 Text("Órdenes: ${dailyStats.ordenes}", style = MaterialTheme.typography.bodyMedium)
