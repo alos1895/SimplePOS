@@ -199,10 +199,10 @@ object MenuData {
         PostreOrExtra(1, "Postre 1", 20.0),
         PostreOrExtra(2, "Postre 2", 30.0),
         PostreOrExtra(3, "Postre 3", 45.0),
-        PostreOrExtra(4, "Chimi Mediano", 10.0),
-        PostreOrExtra(5, "Chimi Grande", 20.0),
-        PostreOrExtra(6, "Aderezo Ranch", 15.0),
-        PostreOrExtra(7, "Salsa Habanera", 5.0)
+        PostreOrExtra(4, "Chimi Mediano", 10.0, esPostre = false),
+        PostreOrExtra(5, "Chimi Grande", 20.0, esPostre = false),
+        PostreOrExtra(6, "Aderezo Ranch", 15.0, esPostre = false),
+        PostreOrExtra(7, "Salsa Habanera", 5.0, esPostre = false)
     )
 
     val deliveryOptions = listOf(

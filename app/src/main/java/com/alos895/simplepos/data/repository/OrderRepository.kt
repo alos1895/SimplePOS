@@ -21,4 +21,34 @@ class OrderRepository(context: Context) {
     suspend fun getOrders(): List<OrderEntity> {
         return orderDao.getAllOrders()
     }
+
+    suspend fun deleteOrderLogical(orderId: Long) {
+        val order = getOrderById(orderId)
+        if (order != null) {
+            val updatedOrder = order.copy(isDeleted = true)
+            updateOrder(updatedOrder)
+        }
+    }
+
+    private suspend fun getOrderById(orderId: Long): OrderEntity? {
+        return orderDao.getOrderById(orderId)
+    }
+
+    private suspend fun updateOrder(order: OrderEntity) {
+        orderDao.updateOrder(
+            id = order.id,
+            itemsJson = order.itemsJson,
+            total = order.total,
+            timestamp = order.timestamp,
+            userJson = order.userJson,
+            deliveryServicePrice = order.deliveryServicePrice,
+            isDeliveried = order.isDeliveried,
+            dessertsJson = order.dessertsJson,
+            comentarios = order.comentarios,
+            deliveryAddress = order.deliveryAddress,
+            pizzaStatus = order.pizzaStatus,
+            paymentMethod = order.paymentMethod,
+            isDeleted = order.isDeleted
+        )
+    }
 }

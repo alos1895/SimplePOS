@@ -8,5 +8,6 @@ data class DailyStats(
     val postres: Int,
     val ordenes: Int,
     val envios: Int,
-    val ingresos: Double
+    val ingresos: Double,
+    val extras: Int
 )

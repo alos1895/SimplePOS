@@ -37,12 +37,19 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         _selectedDate.value = date
     }
 
+    fun deleteOrderLogical(orderId: Long) {
+        viewModelScope.launch {
+            repository.deleteOrderLogical(orderId)
+            loadOrders()
+        }
+    }
+
     fun ordersBySelectedDate(orders: List<OrderEntity>, selectedDate: Date?): List<OrderEntity> {
-        if (selectedDate == null) return orders
+        if (selectedDate == null) return orders.filter { !it.isDeleted }
         val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
         val selectedDay = sdf.format(selectedDate)
         return orders.filter {
-            sdf.format(Date(it.timestamp)) == selectedDay
+            !it.isDeleted && sdf.format(Date(it.timestamp)) == selectedDay
         }
     }
 
@@ -82,24 +89,27 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun getDailyStats(selectedDate: Date?): DailyStats {
-        if (selectedDate == null) return DailyStats(0, 0, 0, 0, 0, 0, 0, 0.0)
+        if (selectedDate == null) return DailyStats(0,0,0,0,0,0,0,0.0,0)
 
         val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
         val selectedDay = sdf.format(selectedDate)
-        val dayOrders = orders.value.filter { sdf.format(Date(it.timestamp)) == selectedDay }
-        
+        val dayOrders = orders.value.filter {
+            !it.isDeleted && sdf.format(Date(it.timestamp)) == selectedDay
+        }
+
         var totalPizzas = 0
         var totalChicas = 0
         var totalMedianas = 0
         var totalGrandes = 0
-        var totalDesserts = 0
+        var totalPostres = 0
+        var totalExtras = 0
         var totalDelivery = 0
         var totalRevenue = 0.0
-        
+
         dayOrders.forEach { order ->
             val cartItems = getCartItems(order)
             val dessertItems = getDessertItems(order)
-            
+
             cartItems.forEach { item ->
                 totalPizzas += item.cantidad
                 when (item.tamano.nombre.lowercase()) {
@@ -108,17 +118,26 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
                     "extra grande", "grande" -> totalGrandes += item.cantidad
                 }
             }
-            totalDesserts += dessertItems.sumOf { it.cantidad }
+
+            dessertItems.forEach { item ->
+                if (item.postreOrExtra.esPostre) {
+                    totalPostres += item.cantidad
+                } else {
+                    totalExtras += item.cantidad
+                }
+            }
+
             if (order.isDeliveried) totalDelivery++
             totalRevenue += order.total
         }
-        
+
         return DailyStats(
             pizzas = totalPizzas,
             pizzasChicas = totalChicas,
             pizzasMedianas = totalMedianas,
             pizzasGrandes = totalGrandes,
-            postres = totalDesserts,
+            postres = totalPostres,
+            extras = totalExtras,
             ordenes = dayOrders.size,
             envios = totalDelivery,
             ingresos = totalRevenue

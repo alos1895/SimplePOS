@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
@@ -35,6 +37,8 @@ fun OrderListScreen(
     var lastMessage by remember { mutableStateOf("") }
     val context = LocalContext.current
     var selectedOrder by remember { mutableStateOf<OrderEntity?>(null) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var orderToDelete by remember { mutableStateOf<OrderEntity?>(null) }
     val listState = rememberLazyListState()
 
     LaunchedEffect(Unit) { orderViewModel.loadOrders() }
@@ -112,6 +116,8 @@ fun OrderListScreen(
                                 Text("Medianas: ${dailyStats.pizzasMedianas}", style = MaterialTheme.typography.bodySmall)
                                 Text("Grandes: ${dailyStats.pizzasGrandes}", style = MaterialTheme.typography.bodySmall)
                                 Text("Totales Pizzas: ${dailyStats.pizzas}", style = MaterialTheme.typography.bodyMedium)
+                                Text("Postres: ${dailyStats.postres}", style = MaterialTheme.typography.bodyMedium)
+                                Text("Extras: ${dailyStats.extras}", style = MaterialTheme.typography.bodyMedium)
                             }
                             Column {
                                 Text("Órdenes: ${dailyStats.ordenes}", style = MaterialTheme.typography.bodyMedium)
@@ -146,6 +152,17 @@ fun OrderListScreen(
                                 Text("Orden #${orderViewModel.getDailyOrderNumber(order)} - ${orderViewModel.getUser(order).nombre}" , style = MaterialTheme.typography.titleMedium)
                                 Text("Total: $${"%.2f".format(order.total)}")
                                 Text("Fecha: ${orderViewModel.formatDate(order.timestamp)}")
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.End
+                                ) {
+                                    IconButton(onClick = {
+                                        orderToDelete = order
+                                        showDeleteDialog = true
+                                    }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Borrar orden")
+                                    }
+                                }
                             }
                         }
                     }
@@ -246,5 +263,34 @@ fun OrderListScreen(
                 }
             }
         }
+    }
+    // Diálogo de confirmación de borrado
+    if (showDeleteDialog && orderToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Confirmar borrado") },
+            text = { Text("¿Seguro que deseas borrar esta orden? Esta acción no elimina la orden físicamente, solo la oculta.") },
+            confirmButton = {
+                Button(onClick = {
+                    orderViewModel.deleteOrderLogical(orderToDelete!!.id)
+                    showDeleteDialog = false
+                    if (selectedOrder?.id == orderToDelete!!.id) selectedOrder = null
+                    orderToDelete = null
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("Orden borrada")
+                    }
+                }) {
+                    Text("Borrar")
+                }
+            },
+            dismissButton = {
+                Button(onClick = {
+                    showDeleteDialog = false
+                    orderToDelete = null
+                }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
