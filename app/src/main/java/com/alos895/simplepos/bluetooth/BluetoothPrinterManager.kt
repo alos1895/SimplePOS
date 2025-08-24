@@ -94,8 +94,9 @@ object BluetoothPrinterManager {
         if (_isConnected.value && socket != null) {
             scope.launch {
                 try {
+                    val newText = limpiarAcentos(text)
                     val outputStream = socket!!.outputStream
-                    outputStream.write(text.toByteArray(Charsets.ISO_8859_1))
+                    outputStream.write(newText.toByteArray(Charsets.ISO_8859_1))
                     outputStream.write("\n\n".toByteArray())
                     outputStream.flush()
                     onResult(true, "¡Ticekt impreso correctamente!")
@@ -109,5 +110,14 @@ object BluetoothPrinterManager {
             onResult(false, "Impresora no conectada")
             connect()
         }
+    }
+
+    fun limpiarAcentos(text: String): String {
+        val acentos = mapOf(
+            'á' to 'a', 'é' to 'e', 'í' to 'i', 'ó' to 'o', 'ú' to 'u',
+            'Á' to 'A', 'É' to 'E', 'Í' to 'I', 'Ó' to 'O', 'Ú' to 'U',
+            'ñ' to 'n', 'Ñ' to 'N'
+        )
+        return text.map { acentos[it] ?: it }.joinToString("")
     }
 } 
