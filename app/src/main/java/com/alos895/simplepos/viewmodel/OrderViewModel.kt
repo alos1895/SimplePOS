@@ -189,6 +189,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         }
         sb.appendLine("-------------------------------")
         sb.appendLine("Cliente: ${user.nombre}")
+        sb.appendLine("Direccion: ${if (order.isDeliveried) order.deliveryAddress else ""}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
             sb.appendLine(
