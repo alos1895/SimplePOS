@@ -202,7 +202,8 @@ object MenuData {
         PostreOrExtra(4, "Chimi Mediano", 10.0, esPostre = false),
         PostreOrExtra(5, "Chimi Grande", 20.0, esPostre = false),
         PostreOrExtra(6, "Aderezo Ranch", 15.0, esPostre = false),
-        PostreOrExtra(7, "Salsa Habanera", 5.0, esPostre = false)
+        PostreOrExtra(7, "Salsa Habanera", 5.0, esPostre = false),
+        PostreOrExtra(8, "Postre 4", 15.0)
     )
 
     val deliveryOptions = listOf(
@@ -229,6 +230,26 @@ object MenuData {
         DeliveryService(
             price = 40,
             zona = "Zona 4",
+            description = ""
+        ),
+        DeliveryService(
+            price = 45,
+            zona = "Zona 5",
+            description = ""
+        ),
+        DeliveryService(
+            price = 50,
+            zona = "Zona 6",
+            description = ""
+        ),
+        DeliveryService(
+            price = 55,
+            zona = "Zona 7",
+            description = ""
+        ),
+        DeliveryService(
+            price = 60,
+            zona = "Zona 8",
             description = ""
         )
     )

@@ -192,8 +192,8 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine("Direccion: ${if (order.isDeliveried) order.deliveryAddress else ""}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
-            sb.appendLine(
-                "${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}   $${
+            sb.appendLine( //tamaño en mayusculas
+                "${item.cantidad} x ${item.pizza.nombre} ${item.tamano.nombre.toUpperCase(Locale.getDefault())}   $${
                     "%.2f".format(
                         item.subtotal
                     )
@@ -243,8 +243,8 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine("Cliente: ${getUser(order).nombre} - ${order.deliveryAddress.takeIf { it.isNotEmpty() } ?: "Pasan o Caminando!"}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
-            sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}")
-            sb.appendLine("Ingredientes:___ NOTAS___")
+            sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre.toUpperCase(Locale.getDefault())}")
+            //sb.appendLine("Ingredientes:___ NOTAS___")
             item.pizza.ingredientesBaseIds.forEach { ingredienteId ->
                 MenuData.ingredientes.find { it.id == ingredienteId }?.let { ingrediente ->
                     sb.appendLine("- ${ingrediente.nombre}")
