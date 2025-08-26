@@ -204,6 +204,7 @@ object MenuData {
         PostreOrExtra(6, "Postre 35", 25.0),
         PostreOrExtra(7, "Postre 40", 40.0),
         PostreOrExtra(8, "Postre 45", 45.0),
+        // TODO: Agregar los precios extras por pipsa
         PostreOrExtra(4, "Ingrediente extra 5", 5.0, esPostre = false),
         PostreOrExtra(5, "Ingrediente extra 10", 10.0, esPostre = false),
         PostreOrExtra(6, "Ingrediente extra 15", 15.0, esPostre = false),
