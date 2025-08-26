@@ -94,13 +94,6 @@ fun OrderListScreen(
                     }
                 }
 
-                Button(
-                    onClick = { showCajaDialog = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Abrir CAJA")
-                }
-
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.weight(1f)

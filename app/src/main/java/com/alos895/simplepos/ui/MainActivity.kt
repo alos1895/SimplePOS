@@ -31,11 +31,13 @@ import com.alos895.simplepos.ui.theme.SimplePOSTheme
 import com.alos895.simplepos.ui.print.BluetoothPrinterScreen
 import com.alos895.simplepos.ui.orders.OrderListScreen
 import com.alos895.simplepos.viewmodel.OrderViewModel
+import com.alos895.simplepos.ui.caja.CajaScreen
 
 sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
     object Menu : BottomNavItem("menu", Icons.Filled.Home, "Menú")
     object Print : BottomNavItem("print", Icons.Filled.Print, "Impresión")
-    object Orders : BottomNavItem("orders", Icons.Filled.Home, "Órdenes") // Puedes cambiar el icono
+    object Orders : BottomNavItem("orders", Icons.Filled.Home, "Órdenes")
+    object Caja : BottomNavItem("caja", Icons.Filled.Home, "Caja")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,6 +63,7 @@ class MainActivity : ComponentActivity() {
                 val items = listOf(
                     BottomNavItem.Menu,
                     BottomNavItem.Orders,
+                    BottomNavItem.Caja,
                     BottomNavItem.Print
                     )
                 // ViewModel compartido a nivel de actividad
@@ -125,6 +128,11 @@ class MainActivity : ComponentActivity() {
                         composable(BottomNavItem.Orders.route) {
                             val orderViewModel: OrderViewModel = viewModel()
                             OrderListScreen(orderViewModel)
+                        }
+                        composable(BottomNavItem.Caja.route) {
+                            val orderViewModel: OrderViewModel = viewModel()
+                            val bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel()
+                            CajaScreen(orderViewModel, bluetoothPrinterViewModel) // Nueva pantalla
                         }
                     }
                 }
