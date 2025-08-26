@@ -196,21 +196,35 @@ object MenuData {
     )
 
     val postreOrExtras = listOf(
-        PostreOrExtra(1, "Postre 1", 20.0),
-        PostreOrExtra(2, "Postre 2", 30.0),
-        PostreOrExtra(3, "Postre 3", 45.0),
-        PostreOrExtra(4, "Chimi Mediano", 10.0, esPostre = false),
-        PostreOrExtra(5, "Chimi Grande", 20.0, esPostre = false),
-        PostreOrExtra(6, "Aderezo Ranch", 15.0, esPostre = false),
-        PostreOrExtra(7, "Salsa Habanera", 5.0, esPostre = false),
-        PostreOrExtra(8, "Postre 4", 15.0)
+        PostreOrExtra(1, "Postre 10", 10.0),
+        PostreOrExtra(2, "Postre 15", 15.0),
+        PostreOrExtra(3, "Postre 20", 20.0),
+        PostreOrExtra(4, "Postre 25", 25.0),
+        PostreOrExtra(5, "Postre 30", 30.0),
+        PostreOrExtra(6, "Postre 35", 25.0),
+        PostreOrExtra(7, "Postre 40", 40.0),
+        PostreOrExtra(8, "Postre 45", 45.0),
+        PostreOrExtra(4, "Ingrediente extra 5", 5.0, esPostre = false),
+        PostreOrExtra(5, "Ingrediente extra 10", 10.0, esPostre = false),
+        PostreOrExtra(6, "Ingrediente extra 15", 15.0, esPostre = false),
+        PostreOrExtra(7, "Ingrediente extra 20", 20.0, esPostre = false),
+        PostreOrExtra(8, "Chimi Grande", 20.0, esPostre = false),
+        PostreOrExtra(9, "Chimi Mediano", 10.0, esPostre = false),
+        PostreOrExtra(10, "Aderezo Ranch", 15.0, esPostre = false),
+        PostreOrExtra(11, "Salsa Habanera", 5.0, esPostre = false),
     )
 
     val deliveryOptions = listOf(
         DeliveryService(
             price = 0,
-            zona = "Pasan o Caminando",
-            description = "Recoge tu pedido en la pizzería."
+            zona = "Pasan",
+            description = "Recoge tu pedido en la pizzería.",
+            pickUp = true
+        ),
+        DeliveryService(
+            price = 0,
+            zona = "Caminando",
+            description = "La llevamos caminando sin costo."
         ),
         DeliveryService(
             price = 25,
