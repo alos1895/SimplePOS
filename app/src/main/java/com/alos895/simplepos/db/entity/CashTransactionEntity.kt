@@ -1,8 +1,7 @@
-package com.alos895.simplepos.model
+package com.alos895.simplepos.db.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import java.util.Date
 
 enum class TransactionType {
     INGRESO,

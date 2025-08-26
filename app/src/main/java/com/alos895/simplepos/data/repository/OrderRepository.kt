@@ -2,7 +2,7 @@ package com.alos895.simplepos.data.repository
 
 import android.content.Context
 import androidx.room.Room
-import com.alos895.simplepos.data.local.AppDatabase
+import com.alos895.simplepos.db.AppDatabase
 import com.alos895.simplepos.model.OrderEntity
 
 class OrderRepository(context: Context) {

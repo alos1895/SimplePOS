@@ -1,4 +1,4 @@
-package com.alos895.simplepos.data.local
+package com.alos895.simplepos.db
 
 import androidx.room.Dao
 import androidx.room.Insert
