@@ -1,20 +1,18 @@
 package com.alos895.simplepos.ui.caja
 
+import android.app.DatePickerDialog // Importado
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items // Import added
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color // Import added
+import androidx.compose.ui.platform.LocalContext // Importado
 import androidx.compose.ui.unit.dp
 import com.alos895.simplepos.viewmodel.OrderViewModel
 import com.alos895.simplepos.viewmodel.BluetoothPrinterViewModel
-import java.text.SimpleDateFormat // Import added
+import java.text.SimpleDateFormat
+import java.util.Calendar // Importado
 import java.util.Date
-import java.util.Locale // Import added
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 @Composable
@@ -25,24 +23,34 @@ fun CajaScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val selectedDate by orderViewModel.selectedDate.collectAsState()
+    val context = LocalContext.current // Añadido
 
-    // Cargar órdenes cuando la pantalla se muestra por primera vez
-    LaunchedEffect(Unit) {
+    // Cargar órdenes cuando la pantalla se muestra por primera vez o cambia la fecha
+    LaunchedEffect(selectedDate) { // Observar selectedDate también
         orderViewModel.loadOrders()
     }
 
     // Observar los cambios en las órdenes y recalcular dailyStats
     val orders by orderViewModel.orders.collectAsState()
-    val dailyStats = remember(orders, selectedDate) { // Recalcular si orders o selectedDate cambian
+    val dailyStats = remember(orders, selectedDate) {
         orderViewModel.getDailyStats(selectedDate)
     }
 
-    var concept by remember { mutableStateOf("") }
-    // ... (resto del código igual)
+    // Configuración del DatePickerDialog
+    val calendar = Calendar.getInstance()
+    selectedDate?.let { calendar.time = it } // Usar la fecha seleccionada si existe
 
-    var description by remember { mutableStateOf("") }
-    var total by remember { mutableStateOf("") }
-    val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+    val datePickerDialog = DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            val pickedCal = Calendar.getInstance()
+            pickedCal.set(year, month, dayOfMonth, 0, 0, 0) // Resetear hora, minuto, segundo
+            orderViewModel.setSelectedDate(pickedCal.time)
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    )
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -54,7 +62,34 @@ fun CajaScreen(
                 .padding(16.dp)
         ) {
             Text("CAJA", style = MaterialTheme.typography.titleLarge)
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp)) // Reducido para mejor espaciado
+
+            // Selector de Fecha
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = selectedDate?.let {
+                        "Mostrando datos de: ${SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it)}"
+                    } ?: "Mostrando datos de hoy", // Texto por defecto
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Row {
+                    Button(onClick = { datePickerDialog.show() }) {
+                        Text("Elegir día")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(onClick = { orderViewModel.setSelectedDate(OrderViewModel.getToday()) }) {
+                        Text("Hoy")
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp)) // Ajustado
+
+            // Estadísticas (el resto del código permanece igual)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -101,7 +136,7 @@ fun CajaScreen(
             Button(
                 onClick = {
                     coroutineScope.launch {
-                        orderViewModel.loadOrders() // Refrescar datos antes de imprimir
+                        // No es necesario llamar a loadOrders() aquí si LaunchedEffect lo maneja
                         val refreshedStats = orderViewModel.getDailyStats(selectedDate)
                         val cajaReport = orderViewModel.buildCajaReport(refreshedStats)
                         bluetoothPrinterViewModel.print(cajaReport) { success, message ->
