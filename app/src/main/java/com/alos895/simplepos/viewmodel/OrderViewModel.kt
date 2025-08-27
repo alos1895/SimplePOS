@@ -11,6 +11,8 @@ import com.alos895.simplepos.model.User
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.util.Date
 import java.text.SimpleDateFormat
@@ -18,38 +20,51 @@ import java.util.Calendar
 import java.util.Locale
 import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.model.CartItemPostre
-import com.alos895.simplepos.model.DailyStats
+import kotlinx.coroutines.flow.stateIn
 
 class OrderViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = OrderRepository(application)
-    private val _orders = MutableStateFlow<List<OrderEntity>>(emptyList())
-    val orders: StateFlow<List<OrderEntity>> = _orders
-    private val _selectedDate = MutableStateFlow<Date?>(getToday())
-    val selectedDate: StateFlow<Date?> = _selectedDate
+
+    // For storing the full list of orders fetched from the repository
+    private val _rawOrders = MutableStateFlow<List<OrderEntity>>(emptyList())
+
+    // For managing the selected date for filtering
+    private val _selectedDate = MutableStateFlow(getToday()) // Default to today
+    val selectedDate: StateFlow<Date?> = _selectedDate.asStateFlow()
+
+    // The publicly exposed list of orders, filtered by selectedDate
+    val orders: StateFlow<List<OrderEntity>> = combine(_rawOrders, _selectedDate) { rawOrders, date ->
+        if (date == null) {
+            rawOrders // Show all if no date is selected
+        } else {
+            val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+            val selectedDay = sdf.format(date)
+            rawOrders.filter { order ->
+                sdf.format(Date(order.timestamp)) == selectedDay
+            }
+        }
+    }.stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, emptyList())
+
+    init {
+        loadOrders()
+    }
 
     fun loadOrders() {
         viewModelScope.launch {
-            _orders.value = repository.getOrders()
+            val currentDate : Long = _selectedDate.value.time
+            _rawOrders.value = repository.getOrdersByDate(currentDate)
         }
     }
 
-    fun setSelectedDate(date: Date?) {
+    fun setSelectedDate(date: Date) {
         _selectedDate.value = date
+        loadOrders()
     }
 
     fun deleteOrderLogical(orderId: Long) {
         viewModelScope.launch {
             repository.deleteOrderLogical(orderId)
-            loadOrders()
-        }
-    }
-
-    fun ordersBySelectedDate(orders: List<OrderEntity>, selectedDate: Date?): List<OrderEntity> {
-        if (selectedDate == null) return orders.filter { !it.isDeleted }
-        val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
-        val selectedDay = sdf.format(selectedDate)
-        return orders.filter {
-            !it.isDeleted && sdf.format(Date(it.timestamp)) == selectedDay
+            loadOrders() // Refresh the raw list after deletion
         }
     }
 
@@ -58,120 +73,45 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun getCartItems(order: OrderEntity): List<CartItem> {
-        val gson = Gson()
-        val type = object : com.google.gson.reflect.TypeToken<List<CartItem>>() {}.type
-        return gson.fromJson(order.itemsJson, type)
+        return try {
+            val gson = Gson()
+            val type = object : com.google.gson.reflect.TypeToken<List<CartItem>>() {}.type
+            gson.fromJson(order.itemsJson, type) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
-    fun getUser(order: OrderEntity): User {
-        val gson = Gson()
-        return gson.fromJson(order.userJson, User::class.java)
+    fun getUser(order: OrderEntity): User? {
+        return try {
+            val gson = Gson()
+            gson.fromJson(order.userJson, User::class.java)
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun getDessertItems(order: OrderEntity): List<CartItemPostre> {
-        val gson = Gson()
-        val type = object : com.google.gson.reflect.TypeToken<List<CartItemPostre>>() {}.type
         return try {
+            val gson = Gson()
+            val type = object : com.google.gson.reflect.TypeToken<List<CartItemPostre>>() {}.type
             gson.fromJson(order.dessertsJson, type) ?: emptyList()
         } catch (e: Exception) {
             emptyList()
         }
     }
 
-    fun getDailyOrderNumber(order: OrderEntity): Int {
+    fun getDailyOrderNumber(orderEntity: OrderEntity): Int {
         val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
-        val orderDay = sdf.format(Date(order.timestamp))
-        val sameDay = orders.value
-            .filter { sdf.format(Date(it.timestamp)) == orderDay }
+        val orderDay = sdf.format(Date(orderEntity.timestamp))
+        // Filter from _rawOrders as it contains all orders for potential daily numbering
+        val sameDayOrders = _rawOrders.value
+            .filter { !it.isDeleted && sdf.format(Date(it.timestamp)) == orderDay }
             .sortedBy { it.timestamp }
-        val index = sameDay.indexOfFirst { it.id == order.id }
+        val index = sameDayOrders.indexOfFirst { it.id == orderEntity.id }
         return if (index >= 0) index + 1 else 0
     }
 
-    fun getDailyStats(selectedDate: Date?): DailyStats {
-        if (selectedDate == null) return DailyStats(
-            pizzas = 0,
-            pizzasChicas = 0,
-            pizzasMedianas = 0,
-            pizzasGrandes = 0,
-            postres = 0,
-            extras = 0,
-            ordenes = 0,
-            envios = 0,
-            ingresos = 0.0,
-            ingresosPizzas = 0.0,
-            ingresosPostres = 0.0,
-            ingresosExtras = 0.0,
-            ingresosEnvios = 0.0
-        )
-
-        val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
-        val selectedDay = sdf.format(selectedDate)
-        val dayOrders = orders.value.filter {
-            !it.isDeleted && sdf.format(Date(it.timestamp)) == selectedDay
-        }
-
-        var totalPizzas = 0
-        var totalChicas = 0
-        var totalMedianas = 0
-        var totalGrandes = 0
-        var totalPostres = 0
-        var totalExtras = 0
-        var totalDelivery = 0
-        var totalRevenue = 0.0
-        var pizzaRevenue = 0.0
-        var postreRevenue = 0.0
-        var extraRevenue = 0.0
-        var deliveryRevenue = 0.0
-
-        dayOrders.forEach { order ->
-            val cartItems = getCartItems(order)
-            val dessertItems = getDessertItems(order)
-
-            cartItems.forEach { item ->
-                totalPizzas += item.cantidad
-                pizzaRevenue += item.subtotal
-                when (item.tamano.nombre.lowercase()) {
-                    "chica" -> totalChicas += item.cantidad
-                    "mediana" -> totalMedianas += item.cantidad
-                    "extra grande", "grande" -> totalGrandes += item.cantidad
-                }
-            }
-
-            dessertItems.forEach { item ->
-                if (item.postreOrExtra.esPostre) {
-                    totalPostres += item.cantidad
-                    postreRevenue += item.subtotal
-                } else {
-                    totalExtras += item.cantidad
-                    extraRevenue += item.subtotal
-                }
-            }
-
-            if (order.isDeliveried) {
-                totalDelivery++
-                deliveryRevenue += order.deliveryServicePrice
-            }
-
-            totalRevenue += order.total
-        }
-
-        return DailyStats(
-            pizzas = totalPizzas,
-            pizzasChicas = totalChicas,
-            pizzasMedianas = totalMedianas,
-            pizzasGrandes = totalGrandes,
-            postres = totalPostres,
-            extras = totalExtras,
-            ordenes = dayOrders.size,
-            envios = totalDelivery,
-            ingresos = totalRevenue,
-            ingresosPizzas = pizzaRevenue,
-            ingresosPostres = postreRevenue,
-            ingresosExtras = extraRevenue,
-            ingresosEnvios = deliveryRevenue
-        )
-    }
 
     fun buildOrderTicket(order: OrderEntity): String {
         val info = PizzeriaData.info
@@ -188,27 +128,19 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
             sb.appendLine("Orden #$dailyNumber")
         }
         sb.appendLine("-------------------------------")
-        sb.appendLine("Cliente: ${user.nombre}")
-        sb.appendLine("Direccion: ${if (order.isDeliveried) order.deliveryAddress else ""}")
+        sb.appendLine("Cliente: ${user?.nombre ?: "Cliente"}")
+        sb.appendLine("Direccion: ${if (order.isDeliveried && order.deliveryAddress.isNotBlank()) order.deliveryAddress else "Recoge en tienda"}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
-            sb.appendLine( //tamaño en mayusculas
-                "${item.cantidad} x ${item.pizza.nombre} ${item.tamano.nombre.toUpperCase(Locale.getDefault())}   $${
-                    "%.2f".format(
-                        item.subtotal
-                    )
-                }"
+            sb.appendLine(
+                "${item.cantidad} x ${item.pizza.nombre} ${item.tamano.nombre.uppercase(Locale.getDefault())}   $${"%.2f".format(item.subtotal)}"
             )
         }
         if (dessertItems.isNotEmpty()) {
             sb.appendLine("-------------------------------")
             dessertItems.forEach { item ->
                 sb.appendLine(
-                    "${item.cantidad}x ${item.postreOrExtra.nombre}   $${
-                        "%.2f".format(
-                            item.subtotal
-                        )
-                    }"
+                    "${item.cantidad}x ${item.postreOrExtra.nombre}   $${"%.2f".format(item.subtotal)}"
                 )
             }
         }
@@ -229,21 +161,16 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
 
     fun buildCocinaTicket(order: OrderEntity): String {
         val cartItems = getCartItems(order)
+        val user = getUser(order)
         val sb = StringBuilder()
         sb.appendLine("ORDEN PARA COCINA")
         sb.appendLine(
-            "Hora: ${
-                SimpleDateFormat(
-                    "HH:mm",
-                    Locale.getDefault()
-                ).format(Date(order.timestamp))
-            } - Orden: ${getDailyOrderNumber(order)}"
+            "Hora: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(order.timestamp))} - Orden: ${getDailyOrderNumber(order)}"
         )
-        // nombre y direccion o PASAN
-        sb.appendLine("Cliente: ${getUser(order).nombre} - ${order.deliveryAddress.takeIf { it.isNotEmpty() } ?: "Pasan o Caminando!"}")
+        sb.appendLine("Cliente: ${user?.nombre ?: "Cliente"} - ${if (order.isDeliveried && order.deliveryAddress.isNotBlank()) order.deliveryAddress else "Pasan/Caminando"}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
-            sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre.toUpperCase(Locale.getDefault())}")
+            sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre.uppercase(Locale.getDefault())}")
             item.pizza.ingredientesBaseIds.forEach { ingredienteId ->
                 MenuData.ingredientes.find { it.id == ingredienteId }?.let { ingrediente ->
                     sb.appendLine("- ${ingrediente.nombre}")
@@ -260,40 +187,13 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         return sb.toString()
     }
 
-    fun buildCajaReport(dailyStats: DailyStats): String {
-        val sb = StringBuilder()
-        sb.appendLine("REPORTE DE CAJA :${SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(_selectedDate.value ?: Date())}")
-        sb.appendLine("Hora: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("Ordenes: ${dailyStats.ordenes}")
-        sb.appendLine("Pizzas:")
-        sb.appendLine("  Chicas: ${dailyStats.pizzasChicas}")
-        sb.appendLine("  Medianas: ${dailyStats.pizzasMedianas}")
-        sb.appendLine("  Grandes: ${dailyStats.pizzasGrandes}")
-        sb.appendLine("  Total: ${dailyStats.pizzas}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("Postres: ${dailyStats.postres}")
-        sb.appendLine("Extras: ${dailyStats.extras}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("Envios: ${dailyStats.envios}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("Ingresos:")
-        sb.appendLine("  Pizzas: $${"%.2f".format(dailyStats.ingresosPizzas)}")
-        sb.appendLine("  Postres: $${"%.2f".format(dailyStats.ingresosPostres)}")
-        sb.appendLine("  Extras: $${"%.2f".format(dailyStats.ingresosExtras)}")
-        sb.appendLine("  Envíos: $${"%.2f".format(dailyStats.ingresosEnvios)}")
-        sb.appendLine("  Total: $${"%.2f".format(dailyStats.ingresos)}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("¡Gracias por su trabajo!")
-        return sb.toString()
-    }
-    
     fun buildDeleteTicket(order: OrderEntity): String {
+        val user = getUser(order)
         val sb = StringBuilder()
         sb.appendLine("TICKET DE ORDEN BORRADA")
         sb.appendLine("-------------------------------")
         sb.appendLine("Orden #${getDailyOrderNumber(order)}")
-        sb.appendLine("Nombre: ${getUser(order)?.nombre ?: "Desconocido"}")
+        sb.appendLine("Nombre: ${user?.nombre ?: "Desconocido"}")
         sb.appendLine("Fecha: ${formatDate(order.timestamp)}")
         sb.appendLine("Total: $${"%.2f".format(order.total)}")
         sb.appendLine("-------------------------------")

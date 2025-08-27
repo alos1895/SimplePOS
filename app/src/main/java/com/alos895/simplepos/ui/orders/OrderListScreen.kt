@@ -10,7 +10,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,8 +20,10 @@ import com.alos895.simplepos.viewmodel.BluetoothPrinterViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Locale
 import kotlinx.coroutines.launch
 import com.alos895.simplepos.model.OrderEntity
+import java.util.Date
 
 @Composable
 fun OrderListScreen(
@@ -40,13 +41,15 @@ fun OrderListScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var orderToDelete by remember { mutableStateOf<OrderEntity?>(null) }
     val listState = rememberLazyListState()
-    var showCajaDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) { orderViewModel.loadOrders() }
+    // Load orders once when the screen is first composed
+    LaunchedEffect(Unit) {
+        orderViewModel.loadOrders()
+    }
 
-    // DatePickerDialog setup
     val calendar = Calendar.getInstance()
-    selectedDate?.let { calendar.time = it }
+    selectedDate?.let { calendar.time = it } // Use the selectedDate from ViewModel
+
     val datePickerDialog = DatePickerDialog(
         context,
         { _, year, month, dayOfMonth ->
@@ -82,7 +85,7 @@ fun OrderListScreen(
                 ) {
                     Text(
                         text = selectedDate?.let {
-                            "Filtrando: ${SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault()).format(it)}"
+                            "Filtrando: ${SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it)}"
                         } ?: "Todas las órdenes",
                         style = MaterialTheme.typography.titleMedium
                     )
@@ -94,18 +97,12 @@ fun OrderListScreen(
                     }
                 }
 
-                Button(
-                    onClick = { showCajaDialog = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Abrir CAJA")
-                }
-
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.weight(1f)
                 ) {
-                    items(orderViewModel.ordersBySelectedDate(orders, selectedDate)) { order ->
+                    // 'orders' StateFlow from ViewModel is already filtered by selectedDate
+                    items(orders, key = { order -> order.id }) { order ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -117,8 +114,11 @@ fun OrderListScreen(
                                 )
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
-                                Text("Orden #${orderViewModel.getDailyOrderNumber(order)} - ${orderViewModel.getUser(order).nombre}" , style = MaterialTheme.typography.titleMedium)
-                                Text("Total: $${"%.2f".format(order.total)}")
+                                Text(
+                                    text = "Orden #${orderViewModel.getDailyOrderNumber(order)} - ${orderViewModel.getUser(order)?.nombre ?: "Cliente"}",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text("Total: $${String.format(Locale.US, "%.2f", order.total)}")
                                 Text("Fecha: ${orderViewModel.formatDate(order.timestamp)}")
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -144,8 +144,7 @@ fun OrderListScreen(
                     .fillMaxHeight()
                     .padding(8.dp)
             ) {
-                if (selectedOrder != null) {
-                    val order = selectedOrder!!
+                selectedOrder?.let { order -> // Use selectedOrder directly
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -154,7 +153,7 @@ fun OrderListScreen(
                         item { Spacer(modifier = Modifier.height(8.dp)) }
                         item { Text("Orden #${orderViewModel.getDailyOrderNumber(order)}") }
                         item { Text("Nombre: ${orderViewModel.getUser(order)?.nombre ?: "Desconocido"}") }
-                        item { Text("Total: $${"%.2f".format(order.total)}") }
+                        item { Text("Total: $${String.format(Locale.US, "%.2f", order.total)}") }
                         item { Text("Fecha: ${orderViewModel.formatDate(order.timestamp)}") }
                         item { HorizontalDivider(thickness = 1.dp, color = Color.Gray) }
                         item { Text("Items:") }
@@ -187,7 +186,7 @@ fun OrderListScreen(
                                 onClick = {
                                     isPrinting = true
                                     val cocinaTicket = orderViewModel.buildCocinaTicket(order)
-                                    bluetoothPrinterViewModel.print(cocinaTicket) { success, message ->
+                                    bluetoothPrinterViewModel.print(cocinaTicket) { _, message ->
                                         lastMessage = message
                                         coroutineScope.launch {
                                             snackbarHostState.showSnackbar(message)
@@ -207,7 +206,7 @@ fun OrderListScreen(
                                 onClick = {
                                     isPrinting = true
                                     val ticket = orderViewModel.buildOrderTicket(order)
-                                    bluetoothPrinterViewModel.print(ticket) { success, message ->
+                                    bluetoothPrinterViewModel.print(ticket) { _, message ->
                                         lastMessage = message
                                         coroutineScope.launch {
                                             snackbarHostState.showSnackbar(message)
@@ -226,114 +225,37 @@ fun OrderListScreen(
                             item { Text(lastMessage) }
                         }
                     }
-                } else {
+                } ?: run {
                     Text("Selecciona una orden para ver detalles.", style = MaterialTheme.typography.bodyLarge)
                 }
             }
         }
     }
 
-    // Dialogo para la CAJA
-    if (showCajaDialog) {
-        AlertDialog(
-            onDismissRequest = { showCajaDialog = false },
-            title = { Text("CAJA") },
-            text = {
-                val dailyStats = orderViewModel.getDailyStats(selectedDate)
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text("Pizzas", style = MaterialTheme.typography.titleMedium)
-                            Text("Chicas: ${dailyStats.pizzasChicas}", style = MaterialTheme.typography.bodySmall)
-                            Text("Medianas: ${dailyStats.pizzasMedianas}", style = MaterialTheme.typography.bodySmall)
-                            Text("Grandes: ${dailyStats.pizzasGrandes}", style = MaterialTheme.typography.bodySmall)
-                            Text("Total: ${dailyStats.pizzas}", style = MaterialTheme.typography.bodyMedium)
-                        }
-                        Column {
-                            Text("Postres y Extras", style = MaterialTheme.typography.titleMedium)
-                            Text("Postres: ${dailyStats.postres}", style = MaterialTheme.typography.bodySmall)
-                            Text("Extras: ${dailyStats.extras}", style = MaterialTheme.typography.bodySmall)
-                        }
-                        Column {
-                            Text("Órdenes y Envíos", style = MaterialTheme.typography.titleMedium)
-                            Text("Órdenes: ${dailyStats.ordenes}", style = MaterialTheme.typography.bodySmall)
-                            Text("Envíos: ${dailyStats.envios}", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text("Ingresos", style = MaterialTheme.typography.titleMedium)
-                            Text("Pizzas: $${"%.2f".format(dailyStats.ingresosPizzas)}", style = MaterialTheme.typography.bodySmall)
-                            Text("Postres: $${"%.2f".format(dailyStats.ingresosPostres)}", style = MaterialTheme.typography.bodySmall)
-                            Text("Extras: $${"%.2f".format(dailyStats.ingresosExtras)}", style = MaterialTheme.typography.bodySmall)
-                            Text("Envíos: $${"%.2f".format(dailyStats.ingresosEnvios)}", style = MaterialTheme.typography.bodySmall)
-                        }
-                        Column {
-                            Text("Total", style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                "Ingresos Totales: $${"%.2f".format(dailyStats.ingresos)}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    coroutineScope.launch {
-                        orderViewModel.loadOrders() // Refrescar datos antes de imprimir
-                        val refreshedStats = orderViewModel.getDailyStats(selectedDate)
-                        val cajaReport = orderViewModel.buildCajaReport(refreshedStats)
-                        bluetoothPrinterViewModel.print(cajaReport) { success, message ->
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar(message)
-                            }
-                        }
-                    }
-                }) {
-                    Text("Imprimir")
-                }
-            },
-            dismissButton = {
-                Button(onClick = { showCajaDialog = false }) {
-                    Text("Cerrar")
-                }
-            }
-        )
-    }
-    // Diálogo de confirmación de borrado
     if (showDeleteDialog && orderToDelete != null) {
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
+            onDismissRequest = { 
+                showDeleteDialog = false
+                orderToDelete = null 
+            },
             title = { Text("Confirmar borrado") },
             text = { Text("¿Seguro que deseas borrar esta orden? Esta acción no elimina la orden físicamente, solo la oculta.") },
             confirmButton = {
                 Button(onClick = {
-                    val orderToPrint = orderToDelete // Guardar la orden antes de borrarla
-                    orderViewModel.deleteOrderLogical(orderToDelete!!.id)
-                    showDeleteDialog = false
-                    if (selectedOrder?.id == orderToDelete!!.id) selectedOrder = null
-                    orderToDelete = null
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Orden borrada")
-                    }
-
-                    // Imprimir ticket con la información de la orden eliminada
-                    orderToPrint?.let { order ->
-                        val deleteTicket = orderViewModel.buildDeleteTicket(order)
-                        bluetoothPrinterViewModel.print(deleteTicket) { success, message ->
+                    orderToDelete?.let { orderToActuallyDelete ->
+                        orderViewModel.deleteOrderLogical(orderToActuallyDelete.id)
+                        val deleteTicket = orderViewModel.buildDeleteTicket(orderToActuallyDelete)
+                        bluetoothPrinterViewModel.print(deleteTicket) { _, message ->
                             coroutineScope.launch {
                                 snackbarHostState.showSnackbar(message)
                             }
                         }
+                    }
+                    if (selectedOrder?.id == orderToDelete?.id) selectedOrder = null
+                    showDeleteDialog = false
+                    orderToDelete = null
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("Orden borrada (lógicamente)")
                     }
                 }) {
                     Text("Borrar")

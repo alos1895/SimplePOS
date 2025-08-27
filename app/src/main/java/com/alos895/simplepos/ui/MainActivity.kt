@@ -31,11 +31,18 @@ import com.alos895.simplepos.ui.theme.SimplePOSTheme
 import com.alos895.simplepos.ui.print.BluetoothPrinterScreen
 import com.alos895.simplepos.ui.orders.OrderListScreen
 import com.alos895.simplepos.viewmodel.OrderViewModel
+import com.alos895.simplepos.ui.caja.CajaScreen
+import com.alos895.simplepos.ui.transaction.TransactionsScreen
+import com.alos895.simplepos.viewmodel.CajaViewModel
+import com.alos895.simplepos.viewmodel.PrintTicketViewModel
+import com.alos895.simplepos.viewmodel.TransactionViewModel
 
 sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
     object Menu : BottomNavItem("menu", Icons.Filled.Home, "Menú")
+    object Orders : BottomNavItem("orders", Icons.Filled.Home, "Órdenes")
+    object Transactions : BottomNavItem("transactions", Icons.Filled.Home, "Transacciones")
+    object Caja : BottomNavItem("caja", Icons.Filled.Home, "Caja")
     object Print : BottomNavItem("print", Icons.Filled.Print, "Impresión")
-    object Orders : BottomNavItem("orders", Icons.Filled.Home, "Órdenes") // Puedes cambiar el icono
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,6 +68,8 @@ class MainActivity : ComponentActivity() {
                 val items = listOf(
                     BottomNavItem.Menu,
                     BottomNavItem.Orders,
+                    BottomNavItem.Transactions,
+                    BottomNavItem.Caja,
                     BottomNavItem.Print
                     )
                 // ViewModel compartido a nivel de actividad
@@ -97,10 +106,23 @@ class MainActivity : ComponentActivity() {
                         composable(BottomNavItem.Menu.route) {
                             MenuScreen(onPrintRequested = { navController.navigate(BottomNavItem.Print.route) }, bluetoothPrinterViewModel = bluetoothPrinterViewModel)
                         }
+                        composable(BottomNavItem.Orders.route) {
+                            val orderViewModel: OrderViewModel = viewModel()
+                            OrderListScreen(orderViewModel)
+                        }
+                        composable(BottomNavItem.Transactions.route) {
+                            val transactionViewModel: TransactionViewModel = viewModel()
+                            TransactionsScreen(transactionViewModel)
+                        }
+                        composable(BottomNavItem.Caja.route) {
+                            val cajaViewModel: CajaViewModel = viewModel()
+                            val bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel()
+                            CajaScreen(cajaViewModel, bluetoothPrinterViewModel)
+                        }
                         composable(BottomNavItem.Print.route) @androidx.annotation.RequiresPermission(
                             android.Manifest.permission.BLUETOOTH_CONNECT
                         ) {
-                            val printTicketViewModel: com.alos895.simplepos.viewmodel.PrintTicketViewModel = viewModel()
+                            val printTicketViewModel: PrintTicketViewModel = viewModel()
                             val isConnected by bluetoothPrinterViewModel.isConnected.collectAsState(initial = false)
                             val selectedDevice by bluetoothPrinterViewModel.selectedDevice.collectAsState(initial = null)
                             val pairedDevices = bluetoothPrinterViewModel.pairedDevices
@@ -121,10 +143,6 @@ class MainActivity : ComponentActivity() {
                                 lastMessage = lastMessage,
                                 initialTicket = ticket
                             )
-                        }
-                        composable(BottomNavItem.Orders.route) {
-                            val orderViewModel: OrderViewModel = viewModel()
-                            OrderListScreen(orderViewModel)
                         }
                     }
                 }

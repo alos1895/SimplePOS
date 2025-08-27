@@ -2,7 +2,7 @@ package com.alos895.simplepos.data.repository
 
 import android.content.Context
 import androidx.room.Room
-import com.alos895.simplepos.data.local.AppDatabase
+import com.alos895.simplepos.db.AppDatabase
 import com.alos895.simplepos.model.OrderEntity
 
 class OrderRepository(context: Context) {
@@ -18,8 +18,8 @@ class OrderRepository(context: Context) {
         orderDao.insertOrder(order)
     }
 
-    suspend fun getOrders(): List<OrderEntity> {
-        return orderDao.getAllOrders()
+    suspend fun getOrdersByDate(date: Long): List<OrderEntity> {
+        return orderDao.getOrdersByDate(date)
     }
 
     suspend fun deleteOrderLogical(orderId: Long) {

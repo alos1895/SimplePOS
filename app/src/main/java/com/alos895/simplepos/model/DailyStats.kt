@@ -1,17 +1,19 @@
 package com.alos895.simplepos.model
 
 data class DailyStats(
-    val pizzas: Int,
-    val pizzasChicas: Int,
-    val pizzasMedianas: Int,
-    val pizzasGrandes: Int,
-    val postres: Int,
-    val ordenes: Int,
-    val envios: Int,
-    val ingresos: Double,
-    val extras: Int,
-    val ingresosPizzas: Double,
-    val ingresosPostres: Double,
-    val ingresosExtras: Double,
-    val ingresosEnvios: Double
+    val pizzas: Int = 0,
+    val pizzasChicas: Int = 0,
+    val pizzasMedianas: Int = 0,
+    val pizzasGrandes: Int = 0,
+    val postres: Int = 0,
+    val ordenes: Int = 0,
+    val envios: Int = 0,
+    val totalCaja: Double = 0.0,
+    val extras: Int = 0,
+    val ingresosPizzas: Double = 0.0,
+    val ingresosPostres: Double = 0.0,
+    val ingresosExtras: Double = 0.0,
+    val ingresosEnvios: Double = 0.0,
+    val ingresosCapturados: Double = 0.0,
+    val egresosCapturados: Double = 0.0
 )
