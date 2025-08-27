@@ -1,7 +1,6 @@
 package com.alos895.simplepos.viewmodel
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.repository.OrderRepository
@@ -19,6 +18,7 @@ import java.util.Calendar
 import java.util.Locale
 import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.data.repository.TransactionsRepository
+import com.alos895.simplepos.db.entity.TransactionType
 import com.alos895.simplepos.model.CartItemPostre
 import com.alos895.simplepos.model.DailyStats
 import kotlinx.coroutines.flow.SharingStarted
@@ -120,7 +120,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         var totalPostres = 0
         var totalExtras = 0
         var totalDelivery = 0
-        var totalRevenue = 0.0
+        var totalCaja = 0.0
         var pizzaRevenue = 0.0
         var postreRevenue = 0.0
         var extraRevenue = 0.0
@@ -157,14 +157,21 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
                 deliveryRevenue += order.deliveryServicePrice
             }
 
-            totalRevenue += order.total
+            totalCaja += order.total
         }
 
-        repositoryTransaction.getTransactionsForDate(date = selectedDate.time).forEach {
-            if (it.type.name == "INGRESO") {
-                totalIngresos += it.amount
-            } else if (it.type.name == "EGRESO") {
-                totalGastos += it.amount
+        repositoryTransaction.getAllTransactions().forEach { transaction ->
+            if (sdf.format(Date(transaction.date)) == selectedDay) {
+                when (transaction.type) {
+                    TransactionType.INGRESO -> {
+                        totalIngresos += transaction.amount
+                        totalCaja += transaction.amount
+                    }
+                    TransactionType.GASTO -> {
+                        totalGastos += transaction.amount
+                        totalCaja -= transaction.amount
+                    }
+                }
             }
         }
 
@@ -177,7 +184,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
             extras = totalExtras,
             ordenes = dayOrders.size,
             envios = totalDelivery,
-            ingresos = totalRevenue,
+            totalCaja = totalCaja,
             ingresosPizzas = pizzaRevenue,
             ingresosPostres = postreRevenue,
             ingresosExtras = extraRevenue,
@@ -253,7 +260,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
                 ).format(Date(order.timestamp))
             } - Orden: ${getDailyOrderNumber(order)}"
         )
-        // nombre y direccion o PASAN
+        // TODO Cambiar por el texto
         sb.appendLine("Cliente: ${getUser(order).nombre} - ${order.deliveryAddress.takeIf { it.isNotEmpty() } ?: "Pasan o Caminando!"}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
@@ -296,7 +303,9 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine("  Postres: $${"%.2f".format(dailyStats.ingresosPostres)}")
         sb.appendLine("  Extras: $${"%.2f".format(dailyStats.ingresosExtras)}")
         sb.appendLine("  Envíos: $${"%.2f".format(dailyStats.ingresosEnvios)}")
-        sb.appendLine("  Total: $${"%.2f".format(dailyStats.ingresos)}")
+        sb.appendLine("  Ingresos: $${"%.2f".format(dailyStats.ingresosCapturados)}")
+        sb.appendLine("  Gastos : $${"%.2f".format(dailyStats.egresosCapturados)}")
+        sb.appendLine("  Total CAJA: $${"%.2f".format(dailyStats.totalCaja)}")
         sb.appendLine("-------------------------------")
         sb.appendLine("¡Gracias por su trabajo!")
         return sb.toString()

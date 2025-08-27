@@ -102,6 +102,11 @@ fun CajaScreen(
                     Text("Órdenes: ${dailyStats.ordenes}")
                     Text("Envíos: ${dailyStats.envios}")
                 }
+                Column {
+                    Text("Gastos e Ingresos", style = MaterialTheme.typography.titleMedium)
+                    Text("Gastos: $${"%.2f".format(dailyStats.egresosCapturados)}")
+                    Text("Ingresos: $${"%.2f".format(dailyStats.ingresosCapturados)}")
+                }
             }
             Spacer(modifier = Modifier.height(16.dp))
             Row(
@@ -118,7 +123,7 @@ fun CajaScreen(
                 Column {
                     Text("Total", style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Ingresos Totales: $${"%.2f".format(dailyStats.ingresos)}",
+                        "Total Caja: $${"%.2f".format(dailyStats.totalCaja)}",
                         color = MaterialTheme.colorScheme.primary
                     )
                 }

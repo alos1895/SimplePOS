@@ -41,7 +41,6 @@ fun OrderListScreen(
     var orderToDelete by remember { mutableStateOf<OrderEntity?>(null) }
     val dailyStats by orderViewModel.dailyStats.collectAsState()
     val listState = rememberLazyListState()
-    var showCajaDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(selectedDate, orders) {
         orderViewModel.loadOrders()
@@ -229,80 +228,6 @@ fun OrderListScreen(
         }
     }
 
-    // Dialogo para la CAJA
-    if (showCajaDialog) {
-        AlertDialog(
-            onDismissRequest = { showCajaDialog = false },
-            title = { Text("CAJA") },
-            text = {
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text("Pizzas", style = MaterialTheme.typography.titleMedium)
-                            Text("Chicas: ${dailyStats.pizzasChicas}", style = MaterialTheme.typography.bodySmall)
-                            Text("Medianas: ${dailyStats.pizzasMedianas}", style = MaterialTheme.typography.bodySmall)
-                            Text("Grandes: ${dailyStats.pizzasGrandes}", style = MaterialTheme.typography.bodySmall)
-                            Text("Total: ${dailyStats.pizzas}", style = MaterialTheme.typography.bodyMedium)
-                        }
-                        Column {
-                            Text("Postres y Extras", style = MaterialTheme.typography.titleMedium)
-                            Text("Postres: ${dailyStats.postres}", style = MaterialTheme.typography.bodySmall)
-                            Text("Extras: ${dailyStats.extras}", style = MaterialTheme.typography.bodySmall)
-                        }
-                        Column {
-                            Text("Órdenes y Envíos", style = MaterialTheme.typography.titleMedium)
-                            Text("Órdenes: ${dailyStats.ordenes}", style = MaterialTheme.typography.bodySmall)
-                            Text("Envíos: ${dailyStats.envios}", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text("Ingresos", style = MaterialTheme.typography.titleMedium)
-                            Text("Pizzas: $${"%.2f".format(dailyStats.ingresosPizzas)}", style = MaterialTheme.typography.bodySmall)
-                            Text("Postres: $${"%.2f".format(dailyStats.ingresosPostres)}", style = MaterialTheme.typography.bodySmall)
-                            Text("Extras: $${"%.2f".format(dailyStats.ingresosExtras)}", style = MaterialTheme.typography.bodySmall)
-                            Text("Envíos: $${"%.2f".format(dailyStats.ingresosEnvios)}", style = MaterialTheme.typography.bodySmall)
-                        }
-                        Column {
-                            Text("Total", style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                "Ingresos Totales: $${"%.2f".format(dailyStats.ingresos)}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    coroutineScope.launch {
-                        val cajaReport = orderViewModel.buildCajaReport(dailyStats)
-                        bluetoothPrinterViewModel.print(cajaReport) { success, message ->
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar(message)
-                            }
-                        }
-                    }
-                }) {
-                    Text("Imprimir")
-                }
-
-            },
-            dismissButton = {
-                Button(onClick = { showCajaDialog = false }) {
-                    Text("Cerrar")
-                }
-            }
-        )
-    }
     // Diálogo de confirmación de borrado
     if (showDeleteDialog && orderToDelete != null) {
         AlertDialog(
@@ -320,7 +245,6 @@ fun OrderListScreen(
                         snackbarHostState.showSnackbar("Orden borrada")
                     }
 
-                    // Imprimir ticket con la información de la orden eliminada
                     orderToPrint?.let { order ->
                         val deleteTicket = orderViewModel.buildDeleteTicket(order)
                         bluetoothPrinterViewModel.print(deleteTicket) { success, message ->

@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 
 enum class TransactionType {
     INGRESO,
-    EGRESO
+    GASTO
 }
 
 @Entity(tableName = "cash_transactions")
