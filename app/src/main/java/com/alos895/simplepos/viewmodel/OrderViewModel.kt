@@ -11,6 +11,8 @@ import com.alos895.simplepos.model.User
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.util.Date
 import java.text.SimpleDateFormat
@@ -18,50 +20,69 @@ import java.util.Calendar
 import java.util.Locale
 import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.model.CartItemPostre
-// No longer needs TransactionsRepository or DailyStats related imports here if only CajaViewModel handles them
+import kotlinx.coroutines.flow.stateIn
 
 class OrderViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = OrderRepository(application)
-    // private val repositoryTransaction = TransactionsRepository(application) // Removed if only CajaVM uses it
 
-    private val _orders = MutableStateFlow<List<OrderEntity>>(emptyList())
-    val orders: StateFlow<List<OrderEntity>> = _orders
+    // For storing the full list of orders fetched from the repository
+    private val _rawOrders = MutableStateFlow<List<OrderEntity>>(emptyList())
 
-    // _selectedDate, _dailyStats, _transactions (for daily stats), calculateDailyStats, refreshAllData, buildCajaReport were moved to CajaViewModel
+    // For managing the selected date for filtering
+    private val _selectedDate = MutableStateFlow(getToday()) // Default to today
+    val selectedDate: StateFlow<Date?> = _selectedDate.asStateFlow()
+
+    // The publicly exposed list of orders, filtered by selectedDate
+    val orders: StateFlow<List<OrderEntity>> = combine(_rawOrders, _selectedDate) { rawOrders, date ->
+        if (date == null) {
+            rawOrders // Show all if no date is selected
+        } else {
+            val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+            val selectedDay = sdf.format(date)
+            rawOrders.filter { order ->
+                sdf.format(Date(order.timestamp)) == selectedDay
+            }
+        }
+    }.stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, emptyList())
 
     init {
-        loadOrders() // Loads all non-deleted orders, or as per your repository's default getOrders()
+        loadOrders()
     }
 
     fun loadOrders() {
         viewModelScope.launch {
-            // This should fetch all relevant orders for general display, not just for a specific date (unless this VM is only for a specific date view)
-            // Assuming repository.getOrders() gets all non-deleted orders.
-            _orders.value = repository.getOrders() 
+            val currentDate : Long = _selectedDate.value.time
+            _rawOrders.value = repository.getOrdersByDate(currentDate)
         }
+    }
+
+    fun setSelectedDate(date: Date) {
+        _selectedDate.value = date
+        loadOrders()
     }
 
     fun deleteOrderLogical(orderId: Long) {
         viewModelScope.launch {
             repository.deleteOrderLogical(orderId)
-            loadOrders() // Refresh the list of all orders
+            loadOrders() // Refresh the raw list after deletion
         }
     }
-
-    // ordersBySelectedDate was primarily for dailyStats, CajaViewModel handles its own date filtering now.
-    // If you need a similar function for other purposes in OrderViewModel, you can keep/adapt it.
 
     fun formatDate(timestamp: Long): String {
         return SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(timestamp))
     }
 
     fun getCartItems(order: OrderEntity): List<CartItem> {
-        val gson = Gson()
-        val type = object : com.google.gson.reflect.TypeToken<List<CartItem>>() {}.type
-        return gson.fromJson(order.itemsJson, type) ?: emptyList()
+        return try {
+            val gson = Gson()
+            val type = object : com.google.gson.reflect.TypeToken<List<CartItem>>() {}.type
+            gson.fromJson(order.itemsJson, type) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
-    fun getUser(order: OrderEntity): User? { // Made User nullable as GSON can return null
+    fun getUser(order: OrderEntity): User? {
         return try {
             val gson = Gson()
             gson.fromJson(order.userJson, User::class.java)
@@ -71,27 +92,26 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun getDessertItems(order: OrderEntity): List<CartItemPostre> {
-        val gson = Gson()
-        val type = object : com.google.gson.reflect.TypeToken<List<CartItemPostre>>() {}.type
         return try {
+            val gson = Gson()
+            val type = object : com.google.gson.reflect.TypeToken<List<CartItemPostre>>() {}.type
             gson.fromJson(order.dessertsJson, type) ?: emptyList()
         } catch (e: Exception) {
             emptyList()
         }
     }
 
-    fun getDailyOrderNumber(order: OrderEntity): Int {
+    fun getDailyOrderNumber(orderEntity: OrderEntity): Int {
         val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
-        val orderDay = sdf.format(Date(order.timestamp))
-        // _orders.value now contains all orders loaded by this ViewModel.
-        // Ensure this logic is correct if _orders is not guaranteed to be sorted or contain all orders for the day.
-        // This might be better if OrderRepository provides a method to get daily order number directly from DB for robustness.
-        val sameDayOrders = _orders.value
+        val orderDay = sdf.format(Date(orderEntity.timestamp))
+        // Filter from _rawOrders as it contains all orders for potential daily numbering
+        val sameDayOrders = _rawOrders.value
             .filter { !it.isDeleted && sdf.format(Date(it.timestamp)) == orderDay }
             .sortedBy { it.timestamp }
-        val index = sameDayOrders.indexOfFirst { it.id == order.id }
+        val index = sameDayOrders.indexOfFirst { it.id == orderEntity.id }
         return if (index >= 0) index + 1 else 0
     }
+
 
     fun buildOrderTicket(order: OrderEntity): String {
         val info = PizzeriaData.info
@@ -109,7 +129,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         }
         sb.appendLine("-------------------------------")
         sb.appendLine("Cliente: ${user?.nombre ?: "Cliente"}")
-        sb.appendLine("Direccion: ${if (order.isDeliveried) order.deliveryAddress else "Recoge en tienda"}")
+        sb.appendLine("Direccion: ${if (order.isDeliveried && order.deliveryAddress.isNotBlank()) order.deliveryAddress else "Recoge en tienda"}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
             sb.appendLine(
@@ -147,17 +167,16 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine(
             "Hora: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(order.timestamp))} - Orden: ${getDailyOrderNumber(order)}"
         )
-        sb.appendLine("Cliente: ${user?.nombre ?: "Cliente"} - ${order.deliveryAddress.takeIf { it.isNotBlank() && order.isDeliveried } ?: "Pasan/Caminando"}")
+        sb.appendLine("Cliente: ${user?.nombre ?: "Cliente"} - ${if (order.isDeliveried && order.deliveryAddress.isNotBlank()) order.deliveryAddress else "Pasan/Caminando"}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
             sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre.uppercase(Locale.getDefault())}")
-            // Assuming MenuData.ingredientes is accessible and correct
             item.pizza.ingredientesBaseIds.forEach { ingredienteId ->
                 MenuData.ingredientes.find { it.id == ingredienteId }?.let { ingrediente ->
                     sb.appendLine("- ${ingrediente.nombre}")
                 }
             }
-            sb.appendLine() 
+            sb.appendLine()
         }
         sb.appendLine("-------------------------------")
         if (order.comentarios.isNotEmpty()) {
@@ -203,5 +222,16 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine("-------------------------------")
         sb.appendLine("¡Orden eliminada correctamente!")
         return sb.toString()
+    }
+
+    companion object {
+        fun getToday(): Date {
+            return Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.time
+        }
     }
 }

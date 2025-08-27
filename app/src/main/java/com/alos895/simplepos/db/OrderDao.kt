@@ -10,9 +10,6 @@ interface OrderDao {
     @Insert
     suspend fun insertOrder(order: OrderEntity)
 
-    @Query("SELECT * FROM orders ORDER BY timestamp DESC")
-    suspend fun getAllOrders(): List<OrderEntity>
-
     @Query("SELECT * FROM orders WHERE id = :orderId LIMIT 1")
     suspend fun getOrderById(orderId: Long): OrderEntity?
 

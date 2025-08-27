@@ -18,10 +18,6 @@ class OrderRepository(context: Context) {
         orderDao.insertOrder(order)
     }
 
-    suspend fun getOrders(): List<OrderEntity> {
-        return orderDao.getAllOrders()
-    }
-
     suspend fun getOrdersByDate(date: Long): List<OrderEntity> {
         return orderDao.getOrdersByDate(date)
     }
