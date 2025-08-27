@@ -9,8 +9,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -101,7 +103,6 @@ fun OrderListScreen(
                     state = listState,
                     modifier = Modifier.weight(1f)
                 ) {
-                    // 'orders' StateFlow from ViewModel is already filtered by selectedDate
                     items(orders, key = { order -> order.id }) { order ->
                         Card(
                             modifier = Modifier
@@ -113,22 +114,33 @@ fun OrderListScreen(
                                     else Color.Transparent
                                 )
                         ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Text(
-                                    text = "Orden #${orderViewModel.getDailyOrderNumber(order)} - ${orderViewModel.getUser(order)?.nombre ?: "Cliente"}",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Text("Total: $${String.format(Locale.US, "%.2f", order.total)}")
-                                Text("Fecha: ${orderViewModel.formatDate(order.timestamp)}")
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.End
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Columna con información de la orden
+                                Column(
+                                    modifier = Modifier.weight(1f)
                                 ) {
-                                    IconButton(onClick = {
-                                        orderToDelete = order
-                                        showDeleteDialog = true
-                                    }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Borrar orden")
+                                    Text(
+                                        text = "Orden #${orderViewModel.getDailyOrderNumber(order)} - ${orderViewModel.getUser(order)?.nombre ?: "Cliente"}",
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                    Text("Total: $${String.format(Locale.US, "%.2f", order.total)}")
+                                    Text("Fecha: ${orderViewModel.formatDate(order.timestamp)}")
+                                }
+                                Column(
+                                    horizontalAlignment = Alignment.End
+                                ) {
+                                    if (!order.isDeliveried) {
+                                        Icon(
+                                            imageVector = Icons.Filled.ShoppingBag,
+                                            contentDescription = "Para llevar",
+                                            tint = MaterialTheme.colorScheme.secondary,
+                                            modifier = Modifier.padding(bottom = 4.dp)
+                                        )
                                     }
                                 }
                             }
@@ -218,6 +230,19 @@ fun OrderListScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(if (isPrinting) "Imprimiendo..." else "Imprimir Cliente")
+                            }
+                        }
+                        item { Spacer(modifier = Modifier.height(8.dp)) }
+                        item {
+                            Button(
+                                onClick = {
+                                    orderToDelete = order
+                                    showDeleteDialog = true
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Borrar Orden", color = Color.White)
                             }
                         }
                         if (lastMessage.isNotEmpty()) {
