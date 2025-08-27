@@ -18,6 +18,8 @@ import java.util.Calendar
 import java.util.Locale
 import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.data.repository.TransactionsRepository
+import com.alos895.simplepos.db.entity.CashTransactionEntity
+// Asegúrate que esta es la importación correcta para tu TransactionEntity
 import com.alos895.simplepos.db.entity.TransactionType
 import com.alos895.simplepos.model.CartItemPostre
 import com.alos895.simplepos.model.DailyStats
@@ -28,22 +30,41 @@ import kotlinx.coroutines.flow.stateIn
 class OrderViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = OrderRepository(application)
     private val repositoryTransaction = TransactionsRepository(application)
+
     private val _orders = MutableStateFlow<List<OrderEntity>>(emptyList())
     val orders: StateFlow<List<OrderEntity>> = _orders
+
+    private val _transactions = MutableStateFlow<List<CashTransactionEntity>>(emptyList())
+    // No es necesario exponer _transactions si solo se usa internamente para dailyStats
 
     private val _selectedDate = MutableStateFlow<Date?>(getToday())
     val selectedDate: StateFlow<Date?> = _selectedDate
 
-    private val _dailyStats = MutableStateFlow(DailyStats())
     val dailyStats: StateFlow<DailyStats> =
-        combine(_orders, _selectedDate) { orders, selectedDate ->
-            calculateDailyStats(orders, selectedDate)
+        combine(_orders, _selectedDate, _transactions) { orders, selectedDate, transactions ->
+            calculateDailyStats(orders, selectedDate, transactions)
         }.stateIn(viewModelScope, SharingStarted.Eagerly, DailyStats())
+
+    init {
+        loadOrders()
+        loadTransactions()
+    }
 
     fun loadOrders() {
         viewModelScope.launch {
             _orders.value = repository.getOrders()
         }
+    }
+
+    fun loadTransactions() {
+        viewModelScope.launch {
+            _transactions.value = repositoryTransaction.getAllTransactions()
+        }
+    }
+
+    fun refreshAllData() {
+        loadOrders()
+        loadTransactions()
     }
 
     fun setSelectedDate(date: Date?) {
@@ -53,7 +74,8 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteOrderLogical(orderId: Long) {
         viewModelScope.launch {
             repository.deleteOrderLogical(orderId)
-            loadOrders()
+            loadOrders() // Refrescar órdenes después de borrar
+            // Considera si necesitas refrescar transacciones también, aunque borrar una orden no suele crear una transacción.
         }
     }
 
@@ -94,16 +116,17 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
     fun getDailyOrderNumber(order: OrderEntity): Int {
         val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
         val orderDay = sdf.format(Date(order.timestamp))
-        val sameDay = orders.value
+        val sameDay = orders.value // Usa el StateFlow actual
             .filter { sdf.format(Date(it.timestamp)) == orderDay }
             .sortedBy { it.timestamp }
         val index = sameDay.indexOfFirst { it.id == order.id }
         return if (index >= 0) index + 1 else 0
     }
 
-    private suspend fun calculateDailyStats(
+    private fun calculateDailyStats(
         orders: List<OrderEntity>,
-        selectedDate: Date?
+        selectedDate: Date?,
+        transactions: List<CashTransactionEntity> // Recibe transacciones como parámetro
     ): DailyStats {
         if (selectedDate == null) return DailyStats()
 
@@ -160,7 +183,8 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
             totalCaja += order.total
         }
 
-        repositoryTransaction.getAllTransactions().forEach { transaction ->
+        // Usa la lista de transacciones pasada como parámetro
+        transactions.forEach { transaction ->
             if (sdf.format(Date(transaction.date)) == selectedDay) {
                 when (transaction.type) {
                     TransactionType.INGRESO -> {

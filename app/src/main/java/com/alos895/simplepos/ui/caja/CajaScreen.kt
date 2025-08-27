@@ -56,7 +56,7 @@ fun CajaScreen(
             Text("CAJA", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Selector de Fecha
+            // Selector de Fecha y Botón de Refresco
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -76,6 +76,10 @@ fun CajaScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(onClick = { orderViewModel.setSelectedDate(OrderViewModel.getToday()) }) {
                         Text("Hoy")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp)) // Espacio antes del nuevo botón
+                    Button(onClick = { orderViewModel.refreshAllData() }) { // Nuevo botón
+                        Text("Refrescar Datos")
                     }
                 }
             }
