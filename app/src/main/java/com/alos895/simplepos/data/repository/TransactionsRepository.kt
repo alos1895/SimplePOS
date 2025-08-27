@@ -20,12 +20,11 @@ class TransactionsRepository (context: Context) {
         transactionDao.insertTransaction(transaction)
     }
     suspend fun getAllTransactions(): List<TransactionEntity> {
-        // TODO Investiate if is necesario as List<TransactionEntity>
         return transactionDao.getAllTransactions()
     }
 
     suspend fun getTransactionsByDate(date: Long): List<TransactionEntity> {
-        return transactionDao.getTransactionsForDate(date)
+        return transactionDao.getTransactionsForDay(date)
     }
 
     suspend fun deleteTransaction(transactionId: Long) {

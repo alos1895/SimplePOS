@@ -13,8 +13,9 @@ interface CashTransactionDao {
 
     @Query("SELECT * FROM cash_transactions WHERE date >= :startDate AND date < :endDate ORDER BY date DESC")
     suspend fun getTransactionsForDateRange(startDate: Long, endDate: Long): List<TransactionEntity>
-    @Query("SELECT * FROM cash_transactions WHERE date == :date ORDER BY date DESC")
-    suspend fun getTransactionsForDate(date: Long): List<TransactionEntity>
+
+    @Query("SELECT * FROM cash_transactions WHERE date >= :day AND date < :day + 86400000 ORDER BY date DESC")
+    suspend fun getTransactionsForDay(day: Long): List<TransactionEntity>
 
     @Query("SELECT * FROM cash_transactions ORDER BY date DESC")
     suspend fun getAllTransactions(): List<TransactionEntity>
