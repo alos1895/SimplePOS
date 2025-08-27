@@ -23,28 +23,25 @@ fun CajaScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val selectedDate by orderViewModel.selectedDate.collectAsState()
-    val context = LocalContext.current // Añadido
+    val context = LocalContext.current
 
-    // Cargar órdenes cuando la pantalla se muestra por primera vez o cambia la fecha
-    LaunchedEffect(selectedDate) { // Observar selectedDate también
+    LaunchedEffect(selectedDate) {
         orderViewModel.loadOrders()
     }
 
-    // Observar los cambios en las órdenes y recalcular dailyStats
     val orders by orderViewModel.orders.collectAsState()
     val dailyStats = remember(orders, selectedDate) {
         orderViewModel.getDailyStats(selectedDate)
     }
 
-    // Configuración del DatePickerDialog
     val calendar = Calendar.getInstance()
-    selectedDate?.let { calendar.time = it } // Usar la fecha seleccionada si existe
+    selectedDate?.let { calendar.time = it }
 
     val datePickerDialog = DatePickerDialog(
         context,
         { _, year, month, dayOfMonth ->
             val pickedCal = Calendar.getInstance()
-            pickedCal.set(year, month, dayOfMonth, 0, 0, 0) // Resetear hora, minuto, segundo
+            pickedCal.set(year, month, dayOfMonth, 0, 0, 0)
             orderViewModel.setSelectedDate(pickedCal.time)
         },
         calendar.get(Calendar.YEAR),
@@ -62,7 +59,7 @@ fun CajaScreen(
                 .padding(16.dp)
         ) {
             Text("CAJA", style = MaterialTheme.typography.titleLarge)
-            Spacer(modifier = Modifier.height(8.dp)) // Reducido para mejor espaciado
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Selector de Fecha
             Row(
@@ -74,7 +71,7 @@ fun CajaScreen(
                 Text(
                     text = selectedDate?.let {
                         "Mostrando datos de: ${SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it)}"
-                    } ?: "Mostrando datos de hoy", // Texto por defecto
+                    } ?: "Mostrando datos de hoy",
                     style = MaterialTheme.typography.titleMedium
                 )
                 Row {
@@ -87,9 +84,8 @@ fun CajaScreen(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp)) // Ajustado
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Estadísticas (el resto del código permanece igual)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -136,7 +132,6 @@ fun CajaScreen(
             Button(
                 onClick = {
                     coroutineScope.launch {
-                        // No es necesario llamar a loadOrders() aquí si LaunchedEffect lo maneja
                         val refreshedStats = orderViewModel.getDailyStats(selectedDate)
                         val cajaReport = orderViewModel.buildCajaReport(refreshedStats)
                         bluetoothPrinterViewModel.print(cajaReport) { success, message ->
@@ -150,9 +145,6 @@ fun CajaScreen(
             ) {
                 Text("Imprimir CAJA")
             }
-
-            // TODO Formulario para agregar transacciones
-
         }
     }
 }
