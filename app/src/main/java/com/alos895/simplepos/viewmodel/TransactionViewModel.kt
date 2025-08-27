@@ -4,22 +4,19 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.repository.TransactionsRepository
-import com.alos895.simplepos.db.AppDatabase
-import com.alos895.simplepos.db.CashTransactionDao // Asegúrate que es com.alos895.simplepos.db.CashTransactionDao
-import com.alos895.simplepos.db.entity.CashTransactionEntity
+import com.alos895.simplepos.db.entity.TransactionEntity
 import com.alos895.simplepos.db.entity.TransactionType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.util.Date
 
 class TransactionViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = TransactionsRepository(application)
-    private val _transactions = MutableStateFlow<List<CashTransactionEntity>>(emptyList())
-    val transactions: StateFlow<List<CashTransactionEntity>> = _transactions.asStateFlow()
+    private val _transactions = MutableStateFlow<List<TransactionEntity>>(emptyList())
+    val transactions: StateFlow<List<TransactionEntity>> = _transactions.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -49,7 +46,7 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
     fun addTransaction(concept: String, amount: Double, type: TransactionType) {
         viewModelScope.launch {
             try {
-                val newTransaction = CashTransactionEntity(
+                val newTransaction = TransactionEntity(
                     concept = concept,
                     amount = amount,
                     type = type,

@@ -7,37 +7,39 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext // Importado
 import androidx.compose.ui.unit.dp
-import com.alos895.simplepos.viewmodel.OrderViewModel
 import com.alos895.simplepos.viewmodel.BluetoothPrinterViewModel
+import com.alos895.simplepos.viewmodel.CajaViewModel
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import kotlinx.coroutines.launch
+import java.util.Date
 
 @Composable
 fun CajaScreen(
-    orderViewModel: OrderViewModel,
+    cajaViewModel: CajaViewModel,
     bluetoothPrinterViewModel: BluetoothPrinterViewModel
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
-    val dailyStats by orderViewModel.dailyStats.collectAsState()
+    val dailyStats by cajaViewModel.dailyStats.collectAsState()
     val coroutineScope = rememberCoroutineScope()
-    val selectedDate by orderViewModel.selectedDate.collectAsState()
+    val selectedDate by cajaViewModel.selectedDate.collectAsState() // This is a State<Date>
     val context = LocalContext.current
 
-    LaunchedEffect(selectedDate) {
-        orderViewModel.loadOrders()
-    }
+    // LaunchedEffect to observe selectedDate changes from ViewModel is no longer needed here,
+    // as CajaViewModel's setSelectedDate internally triggers data loading.
+    // The initial load happens in CajaViewModel's init block.
 
     val calendar = Calendar.getInstance()
-    selectedDate?.let { calendar.time = it }
+    // selectedDate is State<Date>, so access its value. It's not nullable in CajaViewModel.
+    calendar.time = selectedDate 
 
     val datePickerDialog = DatePickerDialog(
         context,
         { _, year, month, dayOfMonth ->
             val pickedCal = Calendar.getInstance()
             pickedCal.set(year, month, dayOfMonth, 0, 0, 0)
-            orderViewModel.setSelectedDate(pickedCal.time)
+            cajaViewModel.setSelectedDate(pickedCal.time)
         },
         calendar.get(Calendar.YEAR),
         calendar.get(Calendar.MONTH),
@@ -64,9 +66,8 @@ fun CajaScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = selectedDate?.let {
-                        "Mostrando datos de: ${SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it)}"
-                    } ?: "Mostrando datos de hoy",
+                    // selectedDate.value is Date, not nullable.
+                    text = "Mostrando datos de: ${SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(selectedDate)}",
                     style = MaterialTheme.typography.titleMedium
                 )
                 Row {
@@ -74,11 +75,11 @@ fun CajaScreen(
                         Text("Elegir día")
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = { orderViewModel.setSelectedDate(OrderViewModel.getToday()) }) {
+                    Button(onClick = { cajaViewModel.setSelectedDate(CajaViewModel.getToday()) }) { // Corrected
                         Text("Hoy")
                     }
                     Spacer(modifier = Modifier.width(8.dp)) // Espacio antes del nuevo botón
-                    Button(onClick = { orderViewModel.refreshAllData() }) { // Nuevo botón
+                    Button(onClick = { cajaViewModel.refreshCajaData() }) { // Corrected
                         Text("Refrescar Datos")
                     }
                 }
@@ -136,7 +137,8 @@ fun CajaScreen(
             Button(
                 onClick = {
                     coroutineScope.launch {
-                        val cajaReport = orderViewModel.buildCajaReport(dailyStats)
+                        // dailyStats is already a State, so access its value
+                        val cajaReport = cajaViewModel.buildCajaReport(dailyStats)
                         bluetoothPrinterViewModel.print(cajaReport) { success, message ->
                             coroutineScope.launch {
                                 snackbarHostState.showSnackbar(message)

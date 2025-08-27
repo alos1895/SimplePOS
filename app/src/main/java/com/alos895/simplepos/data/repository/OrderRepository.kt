@@ -22,6 +22,10 @@ class OrderRepository(context: Context) {
         return orderDao.getAllOrders()
     }
 
+    suspend fun getOrdersByDate(date: Long): List<OrderEntity> {
+        return orderDao.getOrdersByDate(date)
+    }
+
     suspend fun deleteOrderLogical(orderId: Long) {
         val order = getOrderById(orderId)
         if (order != null) {

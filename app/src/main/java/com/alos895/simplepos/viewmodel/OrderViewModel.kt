@@ -17,76 +17,39 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import com.alos895.simplepos.data.datasource.MenuData
-import com.alos895.simplepos.data.repository.TransactionsRepository
-import com.alos895.simplepos.db.entity.CashTransactionEntity
-// Asegúrate que esta es la importación correcta para tu TransactionEntity
-import com.alos895.simplepos.db.entity.TransactionType
 import com.alos895.simplepos.model.CartItemPostre
-import com.alos895.simplepos.model.DailyStats
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
+// No longer needs TransactionsRepository or DailyStats related imports here if only CajaViewModel handles them
 
 class OrderViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = OrderRepository(application)
-    private val repositoryTransaction = TransactionsRepository(application)
+    // private val repositoryTransaction = TransactionsRepository(application) // Removed if only CajaVM uses it
 
     private val _orders = MutableStateFlow<List<OrderEntity>>(emptyList())
     val orders: StateFlow<List<OrderEntity>> = _orders
 
-    private val _transactions = MutableStateFlow<List<CashTransactionEntity>>(emptyList())
-    // No es necesario exponer _transactions si solo se usa internamente para dailyStats
-
-    private val _selectedDate = MutableStateFlow<Date?>(getToday())
-    val selectedDate: StateFlow<Date?> = _selectedDate
-
-    val dailyStats: StateFlow<DailyStats> =
-        combine(_orders, _selectedDate, _transactions) { orders, selectedDate, transactions ->
-            calculateDailyStats(orders, selectedDate, transactions)
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, DailyStats())
+    // _selectedDate, _dailyStats, _transactions (for daily stats), calculateDailyStats, refreshAllData, buildCajaReport were moved to CajaViewModel
 
     init {
-        loadOrders()
-        loadTransactions()
+        loadOrders() // Loads all non-deleted orders, or as per your repository's default getOrders()
     }
 
     fun loadOrders() {
         viewModelScope.launch {
-            _orders.value = repository.getOrders()
+            // This should fetch all relevant orders for general display, not just for a specific date (unless this VM is only for a specific date view)
+            // Assuming repository.getOrders() gets all non-deleted orders.
+            _orders.value = repository.getOrders() 
         }
-    }
-
-    fun loadTransactions() {
-        viewModelScope.launch {
-            _transactions.value = repositoryTransaction.getAllTransactions()
-        }
-    }
-
-    fun refreshAllData() {
-        loadOrders()
-        loadTransactions()
-    }
-
-    fun setSelectedDate(date: Date?) {
-        _selectedDate.value = date
     }
 
     fun deleteOrderLogical(orderId: Long) {
         viewModelScope.launch {
             repository.deleteOrderLogical(orderId)
-            loadOrders() // Refrescar órdenes después de borrar
-            // Considera si necesitas refrescar transacciones también, aunque borrar una orden no suele crear una transacción.
+            loadOrders() // Refresh the list of all orders
         }
     }
 
-    fun ordersBySelectedDate(orders: List<OrderEntity>, selectedDate: Date?): List<OrderEntity> {
-        if (selectedDate == null) return orders.filter { !it.isDeleted }
-        val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
-        val selectedDay = sdf.format(selectedDate)
-        return orders.filter {
-            !it.isDeleted && sdf.format(Date(it.timestamp)) == selectedDay
-        }
-    }
+    // ordersBySelectedDate was primarily for dailyStats, CajaViewModel handles its own date filtering now.
+    // If you need a similar function for other purposes in OrderViewModel, you can keep/adapt it.
 
     fun formatDate(timestamp: Long): String {
         return SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(timestamp))
@@ -95,12 +58,16 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
     fun getCartItems(order: OrderEntity): List<CartItem> {
         val gson = Gson()
         val type = object : com.google.gson.reflect.TypeToken<List<CartItem>>() {}.type
-        return gson.fromJson(order.itemsJson, type)
+        return gson.fromJson(order.itemsJson, type) ?: emptyList()
     }
 
-    fun getUser(order: OrderEntity): User {
-        val gson = Gson()
-        return gson.fromJson(order.userJson, User::class.java)
+    fun getUser(order: OrderEntity): User? { // Made User nullable as GSON can return null
+        return try {
+            val gson = Gson()
+            gson.fromJson(order.userJson, User::class.java)
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun getDessertItems(order: OrderEntity): List<CartItemPostre> {
@@ -116,106 +83,14 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
     fun getDailyOrderNumber(order: OrderEntity): Int {
         val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
         val orderDay = sdf.format(Date(order.timestamp))
-        val sameDay = orders.value // Usa el StateFlow actual
-            .filter { sdf.format(Date(it.timestamp)) == orderDay }
+        // _orders.value now contains all orders loaded by this ViewModel.
+        // Ensure this logic is correct if _orders is not guaranteed to be sorted or contain all orders for the day.
+        // This might be better if OrderRepository provides a method to get daily order number directly from DB for robustness.
+        val sameDayOrders = _orders.value
+            .filter { !it.isDeleted && sdf.format(Date(it.timestamp)) == orderDay }
             .sortedBy { it.timestamp }
-        val index = sameDay.indexOfFirst { it.id == order.id }
+        val index = sameDayOrders.indexOfFirst { it.id == order.id }
         return if (index >= 0) index + 1 else 0
-    }
-
-    private fun calculateDailyStats(
-        orders: List<OrderEntity>,
-        selectedDate: Date?,
-        transactions: List<CashTransactionEntity> // Recibe transacciones como parámetro
-    ): DailyStats {
-        if (selectedDate == null) return DailyStats()
-
-        val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
-        val selectedDay = sdf.format(selectedDate)
-        val dayOrders = orders.filter {
-            !it.isDeleted && sdf.format(Date(it.timestamp)) == selectedDay
-        }
-
-        var totalPizzas = 0
-        var totalChicas = 0
-        var totalMedianas = 0
-        var totalGrandes = 0
-        var totalPostres = 0
-        var totalExtras = 0
-        var totalDelivery = 0
-        var totalCaja = 0.0
-        var pizzaRevenue = 0.0
-        var postreRevenue = 0.0
-        var extraRevenue = 0.0
-        var deliveryRevenue = 0.0
-        var totalIngresos = 0.0
-        var totalGastos = 0.0
-
-        dayOrders.forEach { order ->
-            val cartItems = getCartItems(order)
-            val dessertItems = getDessertItems(order)
-
-            cartItems.forEach { item ->
-                totalPizzas += item.cantidad
-                pizzaRevenue += item.subtotal
-                when (item.tamano.nombre.lowercase()) {
-                    "chica" -> totalChicas += item.cantidad
-                    "mediana" -> totalMedianas += item.cantidad
-                    "extra grande", "grande" -> totalGrandes += item.cantidad
-                }
-            }
-
-            dessertItems.forEach { item ->
-                if (item.postreOrExtra.esPostre) {
-                    totalPostres += item.cantidad
-                    postreRevenue += item.subtotal
-                } else {
-                    totalExtras += item.cantidad
-                    extraRevenue += item.subtotal
-                }
-            }
-
-            if (order.isDeliveried) {
-                totalDelivery++
-                deliveryRevenue += order.deliveryServicePrice
-            }
-
-            totalCaja += order.total
-        }
-
-        // Usa la lista de transacciones pasada como parámetro
-        transactions.forEach { transaction ->
-            if (sdf.format(Date(transaction.date)) == selectedDay) {
-                when (transaction.type) {
-                    TransactionType.INGRESO -> {
-                        totalIngresos += transaction.amount
-                        totalCaja += transaction.amount
-                    }
-                    TransactionType.GASTO -> {
-                        totalGastos += transaction.amount
-                        totalCaja -= transaction.amount
-                    }
-                }
-            }
-        }
-
-        return DailyStats(
-            pizzas = totalPizzas,
-            pizzasChicas = totalChicas,
-            pizzasMedianas = totalMedianas,
-            pizzasGrandes = totalGrandes,
-            postres = totalPostres,
-            extras = totalExtras,
-            ordenes = dayOrders.size,
-            envios = totalDelivery,
-            totalCaja = totalCaja,
-            ingresosPizzas = pizzaRevenue,
-            ingresosPostres = postreRevenue,
-            ingresosExtras = extraRevenue,
-            ingresosEnvios = deliveryRevenue,
-            ingresosCapturados = totalIngresos,
-            egresosCapturados = totalGastos
-        )
     }
 
     fun buildOrderTicket(order: OrderEntity): String {
@@ -233,27 +108,19 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
             sb.appendLine("Orden #$dailyNumber")
         }
         sb.appendLine("-------------------------------")
-        sb.appendLine("Cliente: ${user.nombre}")
-        sb.appendLine("Direccion: ${if (order.isDeliveried) order.deliveryAddress else ""}")
+        sb.appendLine("Cliente: ${user?.nombre ?: "Cliente"}")
+        sb.appendLine("Direccion: ${if (order.isDeliveried) order.deliveryAddress else "Recoge en tienda"}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
-            sb.appendLine( //tamaño en mayusculas
-                "${item.cantidad} x ${item.pizza.nombre} ${item.tamano.nombre.toUpperCase(Locale.getDefault())}   $${
-                    "%.2f".format(
-                        item.subtotal
-                    )
-                }"
+            sb.appendLine(
+                "${item.cantidad} x ${item.pizza.nombre} ${item.tamano.nombre.uppercase(Locale.getDefault())}   $${"%.2f".format(item.subtotal)}"
             )
         }
         if (dessertItems.isNotEmpty()) {
             sb.appendLine("-------------------------------")
             dessertItems.forEach { item ->
                 sb.appendLine(
-                    "${item.cantidad}x ${item.postreOrExtra.nombre}   $${
-                        "%.2f".format(
-                            item.subtotal
-                        )
-                    }"
+                    "${item.cantidad}x ${item.postreOrExtra.nombre}   $${"%.2f".format(item.subtotal)}"
                 )
             }
         }
@@ -274,27 +141,23 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
 
     fun buildCocinaTicket(order: OrderEntity): String {
         val cartItems = getCartItems(order)
+        val user = getUser(order)
         val sb = StringBuilder()
         sb.appendLine("ORDEN PARA COCINA")
         sb.appendLine(
-            "Hora: ${
-                SimpleDateFormat(
-                    "HH:mm",
-                    Locale.getDefault()
-                ).format(Date(order.timestamp))
-            } - Orden: ${getDailyOrderNumber(order)}"
+            "Hora: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(order.timestamp))} - Orden: ${getDailyOrderNumber(order)}"
         )
-        // TODO Cambiar por el texto
-        sb.appendLine("Cliente: ${getUser(order).nombre} - ${order.deliveryAddress.takeIf { it.isNotEmpty() } ?: "Pasan o Caminando!"}")
+        sb.appendLine("Cliente: ${user?.nombre ?: "Cliente"} - ${order.deliveryAddress.takeIf { it.isNotBlank() && order.isDeliveried } ?: "Pasan/Caminando"}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
-            sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre.toUpperCase(Locale.getDefault())}")
+            sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre.uppercase(Locale.getDefault())}")
+            // Assuming MenuData.ingredientes is accessible and correct
             item.pizza.ingredientesBaseIds.forEach { ingredienteId ->
                 MenuData.ingredientes.find { it.id == ingredienteId }?.let { ingrediente ->
                     sb.appendLine("- ${ingrediente.nombre}")
                 }
             }
-            sb.appendLine()
+            sb.appendLine() 
         }
         sb.appendLine("-------------------------------")
         if (order.comentarios.isNotEmpty()) {
@@ -305,42 +168,13 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         return sb.toString()
     }
 
-    fun buildCajaReport(dailyStats: DailyStats): String {
-        val sb = StringBuilder()
-        sb.appendLine("REPORTE DE CAJA :${SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(_selectedDate.value ?: Date())}")
-        sb.appendLine("Hora: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("Ordenes: ${dailyStats.ordenes}")
-        sb.appendLine("Pizzas:")
-        sb.appendLine("  Chicas: ${dailyStats.pizzasChicas}")
-        sb.appendLine("  Medianas: ${dailyStats.pizzasMedianas}")
-        sb.appendLine("  Grandes: ${dailyStats.pizzasGrandes}")
-        sb.appendLine("  Total: ${dailyStats.pizzas}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("Postres: ${dailyStats.postres}")
-        sb.appendLine("Extras: ${dailyStats.extras}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("Envios: ${dailyStats.envios}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("Ingresos:")
-        sb.appendLine("  Pizzas: $${"%.2f".format(dailyStats.ingresosPizzas)}")
-        sb.appendLine("  Postres: $${"%.2f".format(dailyStats.ingresosPostres)}")
-        sb.appendLine("  Extras: $${"%.2f".format(dailyStats.ingresosExtras)}")
-        sb.appendLine("  Envíos: $${"%.2f".format(dailyStats.ingresosEnvios)}")
-        sb.appendLine("  Ingresos: $${"%.2f".format(dailyStats.ingresosCapturados)}")
-        sb.appendLine("  Gastos : $${"%.2f".format(dailyStats.egresosCapturados)}")
-        sb.appendLine("  Total CAJA: $${"%.2f".format(dailyStats.totalCaja)}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("¡Gracias por su trabajo!")
-        return sb.toString()
-    }
-
     fun buildDeleteTicket(order: OrderEntity): String {
+        val user = getUser(order)
         val sb = StringBuilder()
         sb.appendLine("TICKET DE ORDEN BORRADA")
         sb.appendLine("-------------------------------")
         sb.appendLine("Orden #${getDailyOrderNumber(order)}")
-        sb.appendLine("Nombre: ${getUser(order)?.nombre ?: "Desconocido"}")
+        sb.appendLine("Nombre: ${user?.nombre ?: "Desconocido"}")
         sb.appendLine("Fecha: ${formatDate(order.timestamp)}")
         sb.appendLine("Total: $${"%.2f".format(order.total)}")
         sb.appendLine("-------------------------------")
@@ -369,16 +203,5 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine("-------------------------------")
         sb.appendLine("¡Orden eliminada correctamente!")
         return sb.toString()
-    }
-
-    companion object {
-        fun getToday(): Date {
-            return Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }.time
-        }
     }
 }

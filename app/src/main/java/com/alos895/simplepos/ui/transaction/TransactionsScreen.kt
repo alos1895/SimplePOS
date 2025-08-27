@@ -16,7 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.alos895.simplepos.db.entity.CashTransactionEntity
+import com.alos895.simplepos.db.entity.TransactionEntity
 import com.alos895.simplepos.db.entity.TransactionType
 import com.alos895.simplepos.viewmodel.TransactionViewModel
 import java.text.SimpleDateFormat
@@ -184,7 +184,7 @@ fun TransactionsScreen(viewModel: TransactionViewModel) {
 }
 
 @Composable
-fun TransactionItem(transaction: CashTransactionEntity, dateFormatter: SimpleDateFormat) {
+fun TransactionItem(transaction: TransactionEntity, dateFormatter: SimpleDateFormat) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

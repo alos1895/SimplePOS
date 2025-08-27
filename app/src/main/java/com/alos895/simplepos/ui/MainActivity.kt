@@ -33,6 +33,7 @@ import com.alos895.simplepos.ui.orders.OrderListScreen
 import com.alos895.simplepos.viewmodel.OrderViewModel
 import com.alos895.simplepos.ui.caja.CajaScreen
 import com.alos895.simplepos.ui.transaction.TransactionsScreen
+import com.alos895.simplepos.viewmodel.CajaViewModel
 import com.alos895.simplepos.viewmodel.PrintTicketViewModel
 import com.alos895.simplepos.viewmodel.TransactionViewModel
 
@@ -114,9 +115,9 @@ class MainActivity : ComponentActivity() {
                             TransactionsScreen(transactionViewModel)
                         }
                         composable(BottomNavItem.Caja.route) {
-                            val orderViewModel: OrderViewModel = viewModel()
+                            val cajaViewModel: CajaViewModel = viewModel()
                             val bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel()
-                            CajaScreen(orderViewModel, bluetoothPrinterViewModel)
+                            CajaScreen(cajaViewModel, bluetoothPrinterViewModel)
                         }
                         composable(BottomNavItem.Print.route) @androidx.annotation.RequiresPermission(
                             android.Manifest.permission.BLUETOOTH_CONNECT

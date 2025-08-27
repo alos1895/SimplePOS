@@ -9,7 +9,7 @@ enum class TransactionType {
 }
 
 @Entity(tableName = "cash_transactions")
-data class CashTransactionEntity(
+data class TransactionEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val concept: String,

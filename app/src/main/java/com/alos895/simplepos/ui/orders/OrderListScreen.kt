@@ -39,7 +39,6 @@ fun OrderListScreen(
     var selectedOrder by remember { mutableStateOf<OrderEntity?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var orderToDelete by remember { mutableStateOf<OrderEntity?>(null) }
-    val dailyStats by orderViewModel.dailyStats.collectAsState()
     val listState = rememberLazyListState()
 
     LaunchedEffect(selectedDate, orders) {
