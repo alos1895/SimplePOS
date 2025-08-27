@@ -60,6 +60,17 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    fun deleteTransaction(transactionId: Long) {
+        viewModelScope.launch {
+            try {
+                repository.deleteTransaction(transactionId)
+                loadTransactions()
+            } catch (e: Exception) {
+                _error.value = "Error al eliminar la transacción: ${e.message}"
+            }
+        }
+    }
+
     fun clearError() {
         _error.value = null
     }

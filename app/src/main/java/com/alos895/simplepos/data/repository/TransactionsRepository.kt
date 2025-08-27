@@ -4,8 +4,6 @@ import android.content.Context
 import androidx.room.Room
 import com.alos895.simplepos.db.AppDatabase
 import com.alos895.simplepos.db.entity.TransactionEntity
-import com.alos895.simplepos.model.OrderEntity
-import kotlinx.coroutines.flow.Flow
 
 class TransactionsRepository (context: Context) {
     private val db = Room.databaseBuilder(

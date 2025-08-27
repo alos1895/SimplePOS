@@ -1,5 +1,7 @@
 package com.alos895.simplepos.ui.transaction
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,13 +35,16 @@ fun TransactionsScreen(viewModel: TransactionViewModel) {
 
     var transactionConcept by remember { mutableStateOf("") }
     var transactionAmount by remember { mutableStateOf("") }
-    val transactionTypes = remember { TransactionType.values().toList() }
-    var selectedTransactionType by remember { mutableStateOf(transactionTypes[0]) }
+    val transactionTypes = remember { TransactionType.values().toList() } // Using .toList() as per previous correct versions
+    var selectedTransactionType by remember { mutableStateOf(transactionTypes.firstOrNull() ?: TransactionType.INGRESO) } // Ensure a default
     var expandedTransactionType by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
+
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var transactionIdToDelete by remember { mutableStateOf<Long?>(null) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -48,28 +53,28 @@ fun TransactionsScreen(viewModel: TransactionViewModel) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp) // Padding general para la pantalla
+                .padding(16.dp)
         ) {
             if (isLoading && transactions.isEmpty()) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else {
-                Row( // Fila principal para dividir izquierda y derecha
+                Row(
                     modifier = Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp) // Espacio entre las dos columnas
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // Columna Izquierda: Formulario para Nueva Transacción
                     Column(
                         modifier = Modifier
-                            .weight(1f) // Ocupa la mitad del espacio
-                            .fillMaxHeight() // Ocupa toda la altura disponible
+                            .weight(1f)
+                            .fillMaxHeight()
                     ) {
                         Card(
-                            modifier = Modifier.fillMaxWidth(), // El Card ocupa todo el ancho de esta columna
+                            modifier = Modifier.fillMaxWidth(),
                             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text("Nueva Transacción Manual", style = MaterialTheme.typography.titleMedium)
-                                Spacer(modifier = Modifier.height(16.dp)) // Aumentado espacio
+                                Spacer(modifier = Modifier.height(16.dp))
                                 OutlinedTextField(
                                     value = transactionConcept,
                                     onValueChange = { transactionConcept = it },
@@ -127,7 +132,8 @@ fun TransactionsScreen(viewModel: TransactionViewModel) {
                                             )
                                             transactionConcept = ""
                                             transactionAmount = ""
-                                            selectedTransactionType = transactionTypes[0]
+                                            // Reset to the first type or a sensible default
+                                            selectedTransactionType = transactionTypes.firstOrNull() ?: TransactionType.INGRESO
                                             coroutineScope.launch {
                                                 snackbarHostState.showSnackbar("Transacción guardada")
                                             }
@@ -145,6 +151,7 @@ fun TransactionsScreen(viewModel: TransactionViewModel) {
                         }
                     }
 
+                    // Columna Derecha: Historial de Transacciones
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -164,15 +171,22 @@ fun TransactionsScreen(viewModel: TransactionViewModel) {
                         if (transactions.isEmpty() && error == null && !isLoading) {
                             Text("No hay transacciones registradas.")
                         } else if (transactions.isNotEmpty()) {
-                            LazyColumn(modifier = Modifier.weight(1f)) { // weight(1f) para que ocupe el espacio restante en esta columna
+                            LazyColumn(modifier = Modifier.weight(1f)) {
                                 items(transactions) { transaction ->
-                                    TransactionItem(transaction, dateFormatter)
+                                    TransactionItem(
+                                        transaction = transaction,
+                                        dateFormatter = dateFormatter,
+                                        onDeleteClicked = { id ->
+                                            transactionIdToDelete = id
+                                            showDeleteDialog = true
+                                        }
+                                    )
                                     Divider()
                                 }
                             }
                         }
 
-                        if (isLoading && transactions.isNotEmpty()) { // Indicador de carga al final de la lista
+                        if (isLoading && transactions.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(8.dp))
                             CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
                         }
@@ -180,11 +194,50 @@ fun TransactionsScreen(viewModel: TransactionViewModel) {
                 }
             }
         }
+
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = {
+                    showDeleteDialog = false
+                    transactionIdToDelete = null
+                },
+                title = { Text("Confirmar Borrado") },
+                text = { Text("¿Estás seguro de que deseas eliminar esta transacción?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            transactionIdToDelete?.let { id ->
+                                viewModel.deleteTransaction(id)
+                                coroutineScope.launch { // <-- AÑADIDO AQUÍ
+                                    snackbarHostState.showSnackbar("Transacción eliminada")
+                                }
+                            }
+                            showDeleteDialog = false
+                            transactionIdToDelete = null
+                        }
+                    ) {
+                        Text("Eliminar")
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = {
+                        showDeleteDialog = false
+                        transactionIdToDelete = null
+                    }) {
+                        Text("Cancelar")
+                    }
+                }
+            )
+        }
     }
 }
 
 @Composable
-fun TransactionItem(transaction: TransactionEntity, dateFormatter: SimpleDateFormat) {
+fun TransactionItem(
+    transaction: TransactionEntity,
+    dateFormatter: SimpleDateFormat,
+    onDeleteClicked: (Long) -> Unit // Parámetro para manejar el clic de borrado
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -206,10 +259,18 @@ fun TransactionItem(transaction: TransactionEntity, dateFormatter: SimpleDateFor
             )
             transaction.concept?.let {
                 Text(
-                    text = "Concepto: $it", // Cambiado "Descripción" a "Concepto" para consistencia
+                    text = "Concepto: $it",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
+        }
+        // Botón de eliminar
+        IconButton(onClick = {
+            transaction.id?.let { // Asegurarse de que el ID no es null
+                onDeleteClicked(it.toLong())
+            }
+        }) {
+            Icon(Icons.Filled.Delete, contentDescription = "Eliminar transacción")
         }
     }
 }
