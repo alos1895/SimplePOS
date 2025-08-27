@@ -145,11 +145,10 @@ fun TransactionsScreen(viewModel: TransactionViewModel) {
                         }
                     }
 
-                    // Columna Derecha: Historial de Transacciones
                     Column(
                         modifier = Modifier
-                            .weight(1f) // Ocupa la otra mitad del espacio
-                            .fillMaxHeight() // Ocupa toda la altura disponible
+                            .weight(1f)
+                            .fillMaxHeight()
                     ) {
                         Text("Historial de Transacciones", style = MaterialTheme.typography.headlineMedium)
                         Spacer(modifier = Modifier.height(16.dp))

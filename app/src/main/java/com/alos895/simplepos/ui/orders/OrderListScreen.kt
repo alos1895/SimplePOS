@@ -39,10 +39,13 @@ fun OrderListScreen(
     var selectedOrder by remember { mutableStateOf<OrderEntity?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var orderToDelete by remember { mutableStateOf<OrderEntity?>(null) }
+    val dailyStats by orderViewModel.dailyStats.collectAsState()
     val listState = rememberLazyListState()
     var showCajaDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) { orderViewModel.loadOrders() }
+    LaunchedEffect(selectedDate, orders) {
+        orderViewModel.loadOrders()
+    }
 
     // DatePickerDialog setup
     val calendar = Calendar.getInstance()
@@ -232,7 +235,6 @@ fun OrderListScreen(
             onDismissRequest = { showCajaDialog = false },
             title = { Text("CAJA") },
             text = {
-                val dailyStats = orderViewModel.getDailyStats(selectedDate)
                 Column {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -282,9 +284,7 @@ fun OrderListScreen(
             confirmButton = {
                 Button(onClick = {
                     coroutineScope.launch {
-                        orderViewModel.loadOrders() // Refrescar datos antes de imprimir
-                        val refreshedStats = orderViewModel.getDailyStats(selectedDate)
-                        val cajaReport = orderViewModel.buildCajaReport(refreshedStats)
+                        val cajaReport = orderViewModel.buildCajaReport(dailyStats)
                         bluetoothPrinterViewModel.print(cajaReport) { success, message ->
                             coroutineScope.launch {
                                 snackbarHostState.showSnackbar(message)
@@ -294,6 +294,7 @@ fun OrderListScreen(
                 }) {
                     Text("Imprimir")
                 }
+
             },
             dismissButton = {
                 Button(onClick = { showCajaDialog = false }) {

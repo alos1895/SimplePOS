@@ -1,6 +1,7 @@
 package com.alos895.simplepos.viewmodel
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.repository.OrderRepository
@@ -17,15 +18,27 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import com.alos895.simplepos.data.datasource.MenuData
+import com.alos895.simplepos.data.repository.TransactionsRepository
 import com.alos895.simplepos.model.CartItemPostre
 import com.alos895.simplepos.model.DailyStats
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 
 class OrderViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = OrderRepository(application)
+    private val repositoryTransaction = TransactionsRepository(application)
     private val _orders = MutableStateFlow<List<OrderEntity>>(emptyList())
     val orders: StateFlow<List<OrderEntity>> = _orders
+
     private val _selectedDate = MutableStateFlow<Date?>(getToday())
     val selectedDate: StateFlow<Date?> = _selectedDate
+
+    private val _dailyStats = MutableStateFlow(DailyStats())
+    val dailyStats: StateFlow<DailyStats> =
+        combine(_orders, _selectedDate) { orders, selectedDate ->
+            calculateDailyStats(orders, selectedDate)
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, DailyStats())
 
     fun loadOrders() {
         viewModelScope.launch {
@@ -88,26 +101,15 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         return if (index >= 0) index + 1 else 0
     }
 
-    fun getDailyStats(selectedDate: Date?): DailyStats {
-        if (selectedDate == null) return DailyStats(
-            pizzas = 0,
-            pizzasChicas = 0,
-            pizzasMedianas = 0,
-            pizzasGrandes = 0,
-            postres = 0,
-            extras = 0,
-            ordenes = 0,
-            envios = 0,
-            ingresos = 0.0,
-            ingresosPizzas = 0.0,
-            ingresosPostres = 0.0,
-            ingresosExtras = 0.0,
-            ingresosEnvios = 0.0
-        )
+    private suspend fun calculateDailyStats(
+        orders: List<OrderEntity>,
+        selectedDate: Date?
+    ): DailyStats {
+        if (selectedDate == null) return DailyStats()
 
         val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
         val selectedDay = sdf.format(selectedDate)
-        val dayOrders = orders.value.filter {
+        val dayOrders = orders.filter {
             !it.isDeleted && sdf.format(Date(it.timestamp)) == selectedDay
         }
 
@@ -123,6 +125,8 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         var postreRevenue = 0.0
         var extraRevenue = 0.0
         var deliveryRevenue = 0.0
+        var totalIngresos = 0.0
+        var totalGastos = 0.0
 
         dayOrders.forEach { order ->
             val cartItems = getCartItems(order)
@@ -156,6 +160,14 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
             totalRevenue += order.total
         }
 
+        repositoryTransaction.getTransactionsForDate(date = selectedDate.time).forEach {
+            if (it.type.name == "INGRESO") {
+                totalIngresos += it.amount
+            } else if (it.type.name == "EGRESO") {
+                totalGastos += it.amount
+            }
+        }
+
         return DailyStats(
             pizzas = totalPizzas,
             pizzasChicas = totalChicas,
@@ -169,7 +181,9 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
             ingresosPizzas = pizzaRevenue,
             ingresosPostres = postreRevenue,
             ingresosExtras = extraRevenue,
-            ingresosEnvios = deliveryRevenue
+            ingresosEnvios = deliveryRevenue,
+            ingresosCapturados = totalIngresos,
+            egresosCapturados = totalGastos
         )
     }
 
@@ -287,7 +301,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine("¡Gracias por su trabajo!")
         return sb.toString()
     }
-    
+
     fun buildDeleteTicket(order: OrderEntity): String {
         val sb = StringBuilder()
         sb.appendLine("TICKET DE ORDEN BORRADA")

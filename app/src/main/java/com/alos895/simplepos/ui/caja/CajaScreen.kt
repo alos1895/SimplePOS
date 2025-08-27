@@ -10,8 +10,7 @@ import androidx.compose.ui.unit.dp
 import com.alos895.simplepos.viewmodel.OrderViewModel
 import com.alos895.simplepos.viewmodel.BluetoothPrinterViewModel
 import java.text.SimpleDateFormat
-import java.util.Calendar // Importado
-import java.util.Date
+import java.util.Calendar
 import java.util.Locale
 import kotlinx.coroutines.launch
 
@@ -21,17 +20,13 @@ fun CajaScreen(
     bluetoothPrinterViewModel: BluetoothPrinterViewModel
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    val dailyStats by orderViewModel.dailyStats.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val selectedDate by orderViewModel.selectedDate.collectAsState()
     val context = LocalContext.current
 
     LaunchedEffect(selectedDate) {
         orderViewModel.loadOrders()
-    }
-
-    val orders by orderViewModel.orders.collectAsState()
-    val dailyStats = remember(orders, selectedDate) {
-        orderViewModel.getDailyStats(selectedDate)
     }
 
     val calendar = Calendar.getInstance()
@@ -132,8 +127,7 @@ fun CajaScreen(
             Button(
                 onClick = {
                     coroutineScope.launch {
-                        val refreshedStats = orderViewModel.getDailyStats(selectedDate)
-                        val cajaReport = orderViewModel.buildCajaReport(refreshedStats)
+                        val cajaReport = orderViewModel.buildCajaReport(dailyStats)
                         bluetoothPrinterViewModel.print(cajaReport) { success, message ->
                             coroutineScope.launch {
                                 snackbarHostState.showSnackbar(message)
