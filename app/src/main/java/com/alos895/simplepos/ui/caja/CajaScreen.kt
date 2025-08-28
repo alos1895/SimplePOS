@@ -107,28 +107,49 @@ fun CajaScreen(
                     Text("Órdenes: ${dailyStats.ordenes}")
                     Text("Envíos: ${dailyStats.envios}")
                 }
-                Column {
-                    Text("Gastos e Ingresos", style = MaterialTheme.typography.titleMedium)
-                    Text("Gastos: $${"%.2f".format(dailyStats.egresosCapturados)}")
-                    Text("Ingresos: $${"%.2f".format(dailyStats.ingresosCapturados)}")
-                }
             }
             Spacer(modifier = Modifier.height(16.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                // Bloque 1: Órdenes y métodos de pago
                 Column {
-                    Text("Ingresos", style = MaterialTheme.typography.titleMedium)
+                    Text("RESUMEN ÓRDENES", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(4.dp))
+                    Text("Órdenes totales: ${dailyStats.ordenes}")
+                    Text("Órdenes no pagadas: $${"%.2f".format(dailyStats.ordenesNoPagadas)}")
+                    Text("Órdenes efectivo: $${"%.2f".format(dailyStats.totalOrdenesEfectivo)}")
+                    Text("Órdenes tarjeta: $${"%.2f".format(dailyStats.totalOrdenesTarjeta)}")
+                }
+
+                // Bloque 2: Ingresos por tipo de venta
+                Column {
+                    Text("INGRESOS POR VENTAS", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(4.dp))
                     Text("Pizzas: $${"%.2f".format(dailyStats.ingresosPizzas)}")
                     Text("Postres: $${"%.2f".format(dailyStats.ingresosPostres)}")
                     Text("Extras: $${"%.2f".format(dailyStats.ingresosExtras)}")
                     Text("Envíos: $${"%.2f".format(dailyStats.ingresosEnvios)}")
                 }
+
+                // Bloque 3: Totales y movimientos manuales
                 Column {
-                    Text("Total", style = MaterialTheme.typography.titleMedium)
+                    Text("TOTALES", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(4.dp))
+                    Text("Ingresos manuales: $${"%.2f".format(dailyStats.ingresosCapturados)}")
+                    Text("Gastos manuales: $${"%.2f".format(dailyStats.egresosCapturados)}")
+                    val totalEfectivoCaja = dailyStats.totalOrdenesEfectivo + dailyStats.ingresosCapturados - dailyStats.egresosCapturados
                     Text(
-                        "Total Caja: $${"%.2f".format(dailyStats.totalCaja)}",
+                        "TOTAL EFECTIVO: $${"%.2f".format(totalEfectivoCaja)}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        "TOTAL EN CAJA: $${"%.2f".format(dailyStats.totalCaja)}",
+                        style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }

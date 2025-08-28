@@ -1,6 +1,7 @@
 package com.alos895.simplepos.viewmodel
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.repository.OrderRepository
@@ -11,6 +12,8 @@ import com.alos895.simplepos.model.DailyStats
 import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.model.CartItemPostre
+import com.alos895.simplepos.model.PaymentMethod
+import com.alos895.simplepos.model.PaymentPart
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,6 +30,7 @@ import java.util.Locale
 class CajaViewModel(application: Application) : AndroidViewModel(application) {
 
     private val orderRepository = OrderRepository(application)
+    val gson = Gson()
     private val transactionsRepository = TransactionsRepository(application)
 
     private val _selectedDate = MutableStateFlow(getToday())
@@ -91,12 +95,10 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
 
 
     private fun calculateDailyStatsInternal(
-        date: Date, // date parameter is for consistency, actual filtering happens in loadDataForSelectedDate
+        date: Date,
         orders: List<OrderEntity>,
         transactions: List<TransactionEntity>
     ): DailyStats {
-        // The orders and transactions lists are already filtered for the selected date
-
         var totalPizzas = 0
         var totalChicas = 0
         var totalMedianas = 0
@@ -109,13 +111,18 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         var postreRevenue = 0.0
         var extraRevenue = 0.0
         var deliveryRevenue = 0.0
-        var totalIngresosCapturados = 0.0 // Renamed from totalIngresos to avoid confusion
-        var totalGastosCapturados = 0.0 // Renamed from totalGastos to avoid confusion
+        var totalIngresosCapturados = 0.0
+        var totalGastosCapturados = 0.0
+        var totalOrdenesEfectivo = 0.0
+        var totalOrdenesTarjeta = 0.0
+        var totalSoloOrdenes = 0.0
 
-        orders.forEach { order ->
-            // No need to check for isDeleted or date here, as list is pre-filtered
-            val cartItems = getCartItems(order) // Use helper
-            val dessertItems = getDessertItems(order) // Use helper
+        val gson = Gson()
+        val paymentPartListType = object : com.google.gson.reflect.TypeToken<List<PaymentPart>>() {}.type
+
+        orders.filter { !it.isDeleted }.forEach { order ->
+            val cartItems = getCartItems(order)
+            val dessertItems = getDessertItems(order)
 
             cartItems.forEach { item ->
                 totalPizzas += item.cantidad
@@ -141,19 +148,32 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
                 totalDelivery++
                 deliveryRevenue += order.deliveryServicePrice
             }
-            totalCaja += order.total // Summing up order totals
+
+            totalCaja += order.total
+            totalSoloOrdenes += order.total
+
+            try {
+                val paymentParts: List<PaymentPart>? = gson.fromJson(order.paymentBreakdownJson, paymentPartListType)
+                paymentParts?.forEach { part ->
+                    when (part.method) {
+                        PaymentMethod.EFECTIVO -> totalOrdenesEfectivo += part.amount
+                        PaymentMethod.TRANSFERENCIA -> totalOrdenesTarjeta += part.amount
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("CajaViewModel", "Error parsing paymentBreakdownJson", e)
+            }
         }
 
-        // Process transactions, which are already for the selected date
         transactions.forEach { transaction ->
             when (transaction.type) {
                 TransactionType.INGRESO -> {
                     totalIngresosCapturados += transaction.amount
-                    totalCaja += transaction.amount // Add manual income to caja
+                    totalCaja += transaction.amount
                 }
                 TransactionType.GASTO -> {
                     totalGastosCapturados += transaction.amount
-                    totalCaja -= transaction.amount // Subtract manual expenses from caja
+                    totalCaja -= transaction.amount
                 }
             }
         }
@@ -173,9 +193,14 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
             ingresosExtras = extraRevenue,
             ingresosEnvios = deliveryRevenue,
             ingresosCapturados = totalIngresosCapturados,
-            egresosCapturados = totalGastosCapturados
+            egresosCapturados = totalGastosCapturados,
+            totalOrdenesEfectivo = totalOrdenesEfectivo,
+            totalOrdenesTarjeta = totalOrdenesTarjeta,
+            totalEfectivoCaja = totalOrdenesEfectivo + totalIngresosCapturados - totalGastosCapturados,
+            ordenesNoPagadas = (totalOrdenesEfectivo + totalOrdenesTarjeta - totalSoloOrdenes )
         )
     }
+
 
     fun buildCajaReport(dailyStats: DailyStats): String {
         val sdfReportDate = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
@@ -183,33 +208,45 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         val reportDateStr = sdfReportDate.format(_selectedDate.value) // Use the selected date for the report title
         
         val sb = StringBuilder()
+        val formatAmount = { amount: Double -> "$${"%,.2f".format(amount)}" }
         sb.appendLine("REPORTE DE CAJA: $reportDateStr")
-        sb.appendLine("Hora Gen.: ${sdfReportTime.format(Date())}") // Generation time
-        sb.appendLine("-------------------------------")
-        sb.appendLine("Ordenes: ${dailyStats.ordenes}")
-        sb.appendLine("Pizzas:")
-        sb.appendLine("  Chicas: ${dailyStats.pizzasChicas}")
-        sb.appendLine("  Medianas: ${dailyStats.pizzasMedianas}")
-        sb.appendLine("  Grandes: ${dailyStats.pizzasGrandes}")
-        sb.appendLine("  Total: ${dailyStats.pizzas}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("Postres: ${dailyStats.postres}")
-        sb.appendLine("Extras: ${dailyStats.extras}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("Envios: ${dailyStats.envios}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("Ingresos por Ventas:")
-        sb.appendLine("  Pizzas: $${"%.2f".format(dailyStats.ingresosPizzas)}")
-        sb.appendLine("  Postres: $${"%.2f".format(dailyStats.ingresosPostres)}")
-        sb.appendLine("  Extras: $${"%.2f".format(dailyStats.ingresosExtras)}")
-        sb.appendLine("  Envíos: $${"%.2f".format(dailyStats.ingresosEnvios)}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("Movimientos Manuales:")
-        sb.appendLine("  Otros Ingresos: $${"%.2f".format(dailyStats.ingresosCapturados)}")
-        sb.appendLine("  Gastos: $${"%.2f".format(dailyStats.egresosCapturados)}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("TOTAL EN CAJA: $${"%.2f".format(dailyStats.totalCaja)}")
-        sb.appendLine("-------------------------------")
+        sb.appendLine("Hora Gen.: ${sdfReportTime.format(Date())}")
+        sb.appendLine("--------------------------------------------------")
+        sb.appendLine("RESUMEN DE ÓRDENES")
+        sb.appendLine("Órdenes totales: ${dailyStats.ordenes}")
+        sb.appendLine("Órdenes no pagadas: ${formatAmount(dailyStats.ordenesNoPagadas)}")
+        sb.appendLine()
+        sb.appendLine("PIZZAS")
+        sb.appendLine("  Chicas   : ${dailyStats.pizzasChicas}")
+        sb.appendLine("  Medianas : ${dailyStats.pizzasMedianas}")
+        sb.appendLine("  Grandes  : ${dailyStats.pizzasGrandes}")
+        sb.appendLine("  Total    : ${dailyStats.pizzas}")
+        sb.appendLine()
+        sb.appendLine("POSTRES Y EXTRAS")
+        sb.appendLine("  Postres  : ${dailyStats.postres}")
+        sb.appendLine("  Extras   : ${dailyStats.extras}")
+        sb.appendLine()
+        sb.appendLine("ENVIOS")
+        sb.appendLine("  Total envíos: ${dailyStats.envios}")
+        sb.appendLine()
+        sb.appendLine("INGRESOS POR VENTAS")
+        sb.appendLine("  Pizzas    : ${formatAmount(dailyStats.ingresosPizzas)}")
+        sb.appendLine("  Postres   : ${formatAmount(dailyStats.ingresosPostres)}")
+        sb.appendLine("  Extras    : ${formatAmount(dailyStats.ingresosExtras)}")
+        sb.appendLine("  Envíos    : ${formatAmount(dailyStats.ingresosEnvios)}")
+        sb.appendLine()
+        sb.appendLine("PAGOS POR MÉTODO")
+        sb.appendLine("  Efectivo     : ${formatAmount(dailyStats.totalOrdenesEfectivo)}")
+        sb.appendLine("  Transferencia: ${formatAmount(dailyStats.totalOrdenesTarjeta)}")
+        sb.appendLine()
+        sb.appendLine("MOVIMIENTOS MANUALES")
+        sb.appendLine("  Ingresos : ${formatAmount(dailyStats.ingresosCapturados)}")
+        sb.appendLine("  Gastos   : ${formatAmount(dailyStats.egresosCapturados)}")
+        sb.appendLine("--------------------------------------------------")
+        sb.appendLine("TOTAL EN CAJA: ${formatAmount(dailyStats.totalCaja)}")
+        sb.appendLine("Total en efectivo en caja")
+        sb.appendLine(formatAmount(dailyStats.totalEfectivoCaja))
+        sb.appendLine("--------------------------------------------------")
         sb.appendLine("¡Gracias por su trabajo!")
         return sb.toString()
     }

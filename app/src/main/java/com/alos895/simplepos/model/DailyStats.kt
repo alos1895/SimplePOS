@@ -15,5 +15,9 @@ data class DailyStats(
     val ingresosExtras: Double = 0.0,
     val ingresosEnvios: Double = 0.0,
     val ingresosCapturados: Double = 0.0,
-    val egresosCapturados: Double = 0.0
+    val egresosCapturados: Double = 0.0,
+    val totalOrdenesEfectivo: Double = 0.0,
+    val totalOrdenesTarjeta: Double = 0.0,
+    val totalEfectivoCaja: Double = 0.0,
+    val ordenesNoPagadas: Double = 0.0
 )

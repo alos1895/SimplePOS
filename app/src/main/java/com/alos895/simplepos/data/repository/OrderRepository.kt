@@ -4,6 +4,10 @@ import android.content.Context
 import androidx.room.Room
 import com.alos895.simplepos.db.AppDatabase
 import com.alos895.simplepos.db.entity.OrderEntity
+import com.alos895.simplepos.model.PaymentMethod
+import com.alos895.simplepos.model.PaymentPart
+import com.google.gson.Gson
+import kotlinx.coroutines.launch
 
 class OrderRepository(context: Context) {
     private val db = Room.databaseBuilder(
@@ -22,19 +26,33 @@ class OrderRepository(context: Context) {
         return orderDao.getOrdersByDate(date)
     }
 
+    suspend fun updatePaymentBreakdown(orderId: Long, paymentParts: List<PaymentPart>) {
+        val gson = Gson()
+        val paymentPartsJson = gson.toJson(paymentParts)
+        orderDao.updatePaymentBreakdown(orderId, paymentPartsJson)
+    }
+
+    suspend fun clearPaymentBreakdown(orderId: Long) {
+        orderDao.clearPaymentBreakdown(orderId)
+    }
+
     suspend fun deleteOrderLogical(orderId: Long) {
-        val order = getOrderById(orderId)
+        val order = getOrderById(orderId).first
         if (order != null) {
             val updatedOrder = order.copy(isDeleted = true)
             updateOrder(updatedOrder)
         }
     }
 
-    private suspend fun getOrderById(orderId: Long): OrderEntity? {
-        return orderDao.getOrderById(orderId)
+    private suspend fun getOrderById(orderId: Long): Pair<OrderEntity?, Boolean> {
+        val order = orderDao.getOrderById(orderId)
+        if (order == null) {
+            return Pair(null, false)
+        }
+        return Pair(order, calculatePaymentStatus(order))
     }
 
-    private suspend fun updateOrder(order: OrderEntity) {
+    suspend fun updateOrder(order: OrderEntity) {
         orderDao.updateOrder(
             id = order.id,
             itemsJson = order.itemsJson,
@@ -47,8 +65,23 @@ class OrderRepository(context: Context) {
             comentarios = order.comentarios,
             deliveryAddress = order.deliveryAddress,
             pizzaStatus = order.pizzaStatus,
-            paymentMethod = order.paymentMethod,
-            isDeleted = order.isDeleted
+            isDeleted = order.isDeleted,
+            paymentBreakdownJson = order.paymentBreakdownJson
         )
+    }
+
+    fun calculatePaymentStatus(order: OrderEntity): Boolean {
+        val gson = Gson()
+        val type = object : com.google.gson.reflect.TypeToken<List<PaymentPart>>() {}.type
+
+        val paymentParts: List<PaymentPart> = try {
+            gson.fromJson(order.paymentBreakdownJson, type) ?: emptyList()
+        } catch (e: Exception) {
+            return false
+        }
+
+        val totalPaid = paymentParts.sumOf { it.amount }
+        val epsilon = 0.001
+        return totalPaid >= (order.total - epsilon)
     }
 }
