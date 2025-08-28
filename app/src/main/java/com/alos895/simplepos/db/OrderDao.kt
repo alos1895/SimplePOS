@@ -39,7 +39,6 @@ interface OrderDao {
         paymentBreakdownJson: String
     )
 
-    // Delete paymentBreakdownJson field (set to empty array)
     @Query("UPDATE orders SET paymentBreakdownJson = '[]' WHERE id = :id")
     suspend fun clearPaymentBreakdown(
         id: Long

@@ -75,7 +75,6 @@ fun OrderListScreen(
                 .padding(innerPadding)
                 .fillMaxSize()
         ) {
-            // Filtros y lista de órdenes (izquierda)
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -260,35 +259,6 @@ fun OrderListScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                             HorizontalDivider(thickness = 1.dp, color = Color.Gray)
                             Spacer(modifier = Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                OutlinedTextField(
-                                    value = efectivoInput,
-                                    onValueChange = { efectivoInput = it },
-                                    label = { Text("Efectivo") },
-                                    modifier = Modifier.weight(1f),
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    singleLine = true,
-                                    // Guardar al perder foco
-                                    keyboardActions = KeyboardActions(onDone = {
-                                        orderViewModel.updatePayment(order, efectivoInput.toDoubleOrNull() ?: 0.0, PaymentMethod.EFECTIVO)
-                                    })
-                                )
-
-                                OutlinedTextField(
-                                    value = tarjetaInput,
-                                    onValueChange = { tarjetaInput = it },
-                                    label = { Text("Tarjeta") },
-                                    modifier = Modifier.weight(1f),
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    singleLine = true,
-                                    keyboardActions = KeyboardActions(onDone = {
-                                        orderViewModel.updatePayment(order, tarjetaInput.toDoubleOrNull() ?: 0.0, PaymentMethod.TRANSFERENCIA)
-                                    })
-                                )
-                            }
                         }
                         // Botones para llenar automáticamente los inputs
                         item {
@@ -298,7 +268,7 @@ fun OrderListScreen(
                             ) {
                                 Button(
                                     onClick = {
-                                        efectivoInput = order.total.toString() // Llena el input de efectivo
+                                        order.paymentBreakdownJson = "[]"
                                         orderViewModel.updatePayment(order, order.total, PaymentMethod.EFECTIVO)
                                         coroutineScope.launch {
                                             snackbarHostState.showSnackbar("Pago en efectivo registrado")
@@ -312,7 +282,7 @@ fun OrderListScreen(
 
                                 Button(
                                     onClick = {
-                                        tarjetaInput = order.total.toString() // Llena el input de tarjeta
+                                        order.paymentBreakdownJson = "[]"
                                         orderViewModel.updatePayment(order, order.total, PaymentMethod.TRANSFERENCIA)
                                         coroutineScope.launch {
                                             snackbarHostState.showSnackbar("Pago con tarjeta registrado")

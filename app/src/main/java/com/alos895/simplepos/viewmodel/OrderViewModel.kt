@@ -64,10 +64,17 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         loadOrders()
     }
 
+    fun clearPaymentBreakdown(orderId: Long) {
+        viewModelScope.launch {
+            repository.clearPaymentBreakdown(orderId)
+            loadOrders()
+        }
+    }
+
     fun deleteOrderLogical(orderId: Long) {
         viewModelScope.launch {
             repository.deleteOrderLogical(orderId)
-            loadOrders() // Refresh the raw list after deletion
+            loadOrders()
         }
     }
 
