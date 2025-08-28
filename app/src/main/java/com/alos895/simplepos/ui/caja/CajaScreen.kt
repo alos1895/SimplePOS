@@ -26,9 +26,8 @@ fun CajaScreen(
     val selectedDate by cajaViewModel.selectedDate.collectAsState() // This is a State<Date>
     val context = LocalContext.current
 
-    // LaunchedEffect to observe selectedDate changes from ViewModel is no longer needed here,
-    // as CajaViewModel's setSelectedDate internally triggers data loading.
-    // The initial load happens in CajaViewModel's init block.
+    val orders by cajaViewModel.ordersForDate.collectAsState()
+    val transactions by cajaViewModel.transactionsForDate.collectAsState()
 
     val calendar = Calendar.getInstance()
     // selectedDate is State<Date>, so access its value. It's not nullable in CajaViewModel.
@@ -155,21 +154,38 @@ fun CajaScreen(
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = {
-                    coroutineScope.launch {
-                        // dailyStats is already a State, so access its value
-                        val cajaReport = cajaViewModel.buildCajaReport(dailyStats)
-                        bluetoothPrinterViewModel.print(cajaReport) { success, message ->
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar(message)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp) // espacio entre botones
+            ) {
+                Button(
+                    onClick = {
+                        coroutineScope.launch {
+                            val cajaReport = cajaViewModel.buildCajaReport(dailyStats)
+                            bluetoothPrinterViewModel.print(cajaReport) { success, message ->
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(message)
+                                }
                             }
                         }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Imprimir CAJA")
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Imprimir CAJA")
+                }
+
+                Button(
+                    onClick = {
+                        coroutineScope.launch {
+                            val csv = cajaViewModel.generateCsv(orders, transactions)
+                            val file = cajaViewModel.saveCsvToFile(context, csv)
+                            cajaViewModel.shareCsvFile(context, file)
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Exportar CSV")
+                }
             }
         }
     }

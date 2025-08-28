@@ -1,7 +1,9 @@
 package com.alos895.simplepos.ui.caja
 
 import android.app.Application
-import android.util.Log
+import android.content.Context
+import android.content.Intent
+import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.repository.OrderRepository
@@ -9,37 +11,30 @@ import com.alos895.simplepos.data.repository.TransactionsRepository
 import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.db.entity.TransactionEntity
 import com.alos895.simplepos.db.entity.TransactionType
-import com.alos895.simplepos.model.CartItem
-import com.alos895.simplepos.model.CartItemPostre
-import com.alos895.simplepos.model.DailyStats
-import com.alos895.simplepos.model.PaymentMethod
-import com.alos895.simplepos.model.PaymentPart
+import com.alos895.simplepos.model.*
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.File
 import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
+import java.util.*
 
 class CajaViewModel(application: Application) : AndroidViewModel(application) {
 
     private val orderRepository = OrderRepository(application)
-    val gson = Gson()
     private val transactionsRepository = TransactionsRepository(application)
+    private val gson = Gson()
 
     private val _selectedDate = MutableStateFlow(getToday())
     val selectedDate: StateFlow<Date> = _selectedDate.asStateFlow()
 
-    // Internal state for orders and transactions related to the selected date
+    // Flujos públicos para órdenes y transacciones
     private val _ordersForDate = MutableStateFlow<List<OrderEntity>>(emptyList())
+    val ordersForDate: StateFlow<List<OrderEntity>> = _ordersForDate.asStateFlow()
+
     private val _transactionsForDate = MutableStateFlow<List<TransactionEntity>>(emptyList())
+    val transactionsForDate: StateFlow<List<TransactionEntity>> = _transactionsForDate.asStateFlow()
 
     val dailyStats: StateFlow<DailyStats> = combine(
         _selectedDate,
@@ -48,58 +43,108 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
     ) { date, orders, transactions ->
         calculateDailyStatsInternal(date, orders, transactions)
     }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.Companion.Eagerly,
-        initialValue = DailyStats()
+        viewModelScope,
+        SharingStarted.Eagerly,
+        DailyStats()
     )
 
     init {
-        // Load data for the initial selected date (today)
         loadDataForSelectedDate()
     }
 
     fun setSelectedDate(date: Date) {
         _selectedDate.value = date
-        loadDataForSelectedDate() // Carga datos cuando la fecha cambia
+        loadDataForSelectedDate()
     }
 
     fun refreshCajaData() {
-        // This will reload data for the currently selected date
         loadDataForSelectedDate()
     }
 
     private fun loadDataForSelectedDate() {
         viewModelScope.launch {
-            val currentDate : Long = _selectedDate.value.time
-            _ordersForDate.value = orderRepository.getOrdersByDate(currentDate)
-            _transactionsForDate.value = transactionsRepository.getTransactionsByDate(currentDate)
+            val currentTime = _selectedDate.value.time
+            _ordersForDate.value = orderRepository.getOrdersByDate(currentTime)
+            _transactionsForDate.value = transactionsRepository.getTransactionsByDate(currentTime)
         }
     }
 
-    // Helper to get CartItems from OrderEntity - needed for calculateDailyStatsInternal
-    private fun getCartItems(order: OrderEntity): List<CartItem> {
-        val gson = Gson()
-        val type = object : TypeToken<List<CartItem>>() {}.type
-        return gson.fromJson(order.itemsJson, type) ?: emptyList()
-    }
+    // ---------------- CSV y compartición ----------------
 
-    // Helper to get DessertItems from OrderEntity - needed for calculateDailyStatsInternal
-    private fun getDessertItems(order: OrderEntity): List<CartItemPostre> {
-        val gson = Gson()
-        val type = object : TypeToken<List<CartItemPostre>>() {}.type
-        return try {
-            gson.fromJson(order.dessertsJson, type) ?: emptyList()
-        } catch (e: Exception) {
-            emptyList()
+    fun generateCsv(orders: List<OrderEntity>, transactions: List<TransactionEntity>): String {
+        val sb = StringBuilder()
+        val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+
+        // Cabeceras de órdenes
+        sb.appendLine("Tipo,ID,Fecha,Total,Detalle,Pago,Efectivo,Transferencia,Delivery")
+        orders.forEach { order ->
+            val paymentParts: List<PaymentPart> = try {
+                gson.fromJson(order.paymentBreakdownJson, object : TypeToken<List<PaymentPart>>() {}.type)
+            } catch (e: Exception) {
+                emptyList()
+            }
+
+            val efectivo = paymentParts.filter { it.method == PaymentMethod.EFECTIVO }.sumOf { it.amount }
+            val tarjeta = paymentParts.filter { it.method == PaymentMethod.TRANSFERENCIA }.sumOf { it.amount }
+
+            sb.appendLine(
+                listOf(
+                    "ORDEN",
+                    order.id,
+                    sdf.format(Date(order.timestamp)),
+                    order.total,
+                    order.itemsJson.replace(",", ";"),
+                    order.paymentBreakdownJson.replace(",", ";"),
+                    efectivo,
+                    tarjeta,
+                    order.deliveryServicePrice
+                ).joinToString(",")
+            )
         }
+
+        // Cabeceras de transacciones
+        sb.appendLine()
+        sb.appendLine("TipoTransaccion,ID,Fecha,Tipo,Gasto/Ingreso,Monto,Detalle")
+        transactions.forEach { tx ->
+            sb.appendLine(
+                listOf(
+                    "TRANSACCION",
+                    tx.id,
+                    sdf.format(Date(tx.date)),
+                    tx.type.name,
+                    if (tx.type == TransactionType.INGRESO) "Ingreso" else "Gasto",
+                    tx.amount,
+                    tx.concept.replace(",", ";")
+                ).joinToString(",")
+            )
+        }
+
+        return sb.toString()
     }
 
+    fun saveCsvToFile(context: Context, csvContent: String, fileName: String = "caja_export.csv"): File {
+        val file = File(context.cacheDir, fileName)
+        file.writeText(csvContent)
+        return file
+    }
 
-    private fun calculateDailyStatsInternal(
-        date: Date,
-        orders: List<OrderEntity>,
-        transactions: List<TransactionEntity>
-    ): DailyStats {
+    fun shareCsvFile(context: Context, file: File) {
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.provider",
+            file
+        )
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/csv"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(shareIntent, "Compartir reporte CSV"))
+    }
+
+    // ---------------- Helpers ----------------
+
+    private fun calculateDailyStatsInternal(date: Date, orders: List<OrderEntity>, transactions: List<TransactionEntity>): DailyStats {
         var totalPizzas = 0
         var totalChicas = 0
         var totalMedianas = 0
@@ -118,7 +163,6 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         var totalOrdenesTarjeta = 0.0
         var totalSoloOrdenes = 0.0
 
-        val gson = Gson()
         val paymentPartListType = object : TypeToken<List<PaymentPart>>() {}.type
 
         orders.filter { !it.isDeleted }.forEach { order ->
@@ -131,7 +175,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
                 when (item.tamano.nombre.lowercase(Locale.getDefault())) {
                     "chica" -> totalChicas += item.cantidad
                     "mediana" -> totalMedianas += item.cantidad
-                    "extra grande", "grande" -> totalGrandes += item.cantidad
+                    "grande", "extra grande" -> totalGrandes += item.cantidad
                 }
             }
 
@@ -161,20 +205,18 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
                         PaymentMethod.TRANSFERENCIA -> totalOrdenesTarjeta += part.amount
                     }
                 }
-            } catch (e: Exception) {
-                Log.e("CajaViewModel", "Error parsing paymentBreakdownJson", e)
-            }
+            } catch (_: Exception) {}
         }
 
-        transactions.forEach { transaction ->
-            when (transaction.type) {
+        transactions.forEach { tx ->
+            when (tx.type) {
                 TransactionType.INGRESO -> {
-                    totalIngresosCapturados += transaction.amount
-                    totalCaja += transaction.amount
+                    totalIngresosCapturados += tx.amount
+                    totalCaja += tx.amount
                 }
                 TransactionType.GASTO -> {
-                    totalGastosCapturados += transaction.amount
-                    totalCaja -= transaction.amount
+                    totalGastosCapturados += tx.amount
+                    totalCaja -= tx.amount
                 }
             }
         }
@@ -202,14 +244,30 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
+    private fun getCartItems(order: OrderEntity): List<CartItem> {
+        return try {
+            gson.fromJson(order.itemsJson, object : TypeToken<List<CartItem>>() {}.type)
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun getDessertItems(order: OrderEntity): List<CartItemPostre> {
+        return try {
+            gson.fromJson(order.dessertsJson, object : TypeToken<List<CartItemPostre>>() {}.type)
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
 
     fun buildCajaReport(dailyStats: DailyStats): String {
         val sdfReportDate = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
         val sdfReportTime = SimpleDateFormat("HH:mm", Locale.getDefault())
-        val reportDateStr = sdfReportDate.format(_selectedDate.value) // Use the selected date for the report title
+        val reportDateStr = sdfReportDate.format(_selectedDate.value)
 
         val sb = StringBuilder()
         val formatAmount = { amount: Double -> "$${"%,.2f".format(amount)}" }
+
         sb.appendLine("REPORTE DE CAJA: $reportDateStr")
         sb.appendLine("Hora Gen.: ${sdfReportTime.format(Date())}")
         sb.appendLine("--------------------------------------------------")
@@ -217,49 +275,17 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine("Órdenes totales: ${dailyStats.ordenes}")
         sb.appendLine("Órdenes no pagadas: ${formatAmount(dailyStats.ordenesNoPagadas)}")
         sb.appendLine()
-        sb.appendLine("PIZZAS")
-        sb.appendLine("  Chicas   : ${dailyStats.pizzasChicas}")
-        sb.appendLine("  Medianas : ${dailyStats.pizzasMedianas}")
-        sb.appendLine("  Grandes  : ${dailyStats.pizzasGrandes}")
-        sb.appendLine("  Total    : ${dailyStats.pizzas}")
-        sb.appendLine()
-        sb.appendLine("POSTRES Y EXTRAS")
-        sb.appendLine("  Postres  : ${dailyStats.postres}")
-        sb.appendLine("  Extras   : ${dailyStats.extras}")
-        sb.appendLine()
-        sb.appendLine("ENVIOS")
-        sb.appendLine("  Total envíos: ${dailyStats.envios}")
-        sb.appendLine()
-        sb.appendLine("INGRESOS POR VENTAS")
-        sb.appendLine("  Pizzas    : ${formatAmount(dailyStats.ingresosPizzas)}")
-        sb.appendLine("  Postres   : ${formatAmount(dailyStats.ingresosPostres)}")
-        sb.appendLine("  Extras    : ${formatAmount(dailyStats.ingresosExtras)}")
-        sb.appendLine("  Envíos    : ${formatAmount(dailyStats.ingresosEnvios)}")
-        sb.appendLine()
-        sb.appendLine("PAGOS POR MÉTODO")
-        sb.appendLine("  Efectivo     : ${formatAmount(dailyStats.totalOrdenesEfectivo)}")
-        sb.appendLine("  Transferencia: ${formatAmount(dailyStats.totalOrdenesTarjeta)}")
-        sb.appendLine()
-        sb.appendLine("MOVIMIENTOS MANUALES")
-        sb.appendLine("  Ingresos : ${formatAmount(dailyStats.ingresosCapturados)}")
-        sb.appendLine("  Gastos   : ${formatAmount(dailyStats.egresosCapturados)}")
-        sb.appendLine("--------------------------------------------------")
         sb.appendLine("TOTAL EN CAJA: ${formatAmount(dailyStats.totalCaja)}")
-        sb.appendLine("Total en efectivo en caja")
-        sb.appendLine(formatAmount(dailyStats.totalEfectivoCaja))
-        sb.appendLine("--------------------------------------------------")
-        sb.appendLine("¡Gracias por su trabajo!")
+        sb.appendLine("Total en efectivo en caja: ${formatAmount(dailyStats.totalEfectivoCaja)}")
         return sb.toString()
     }
 
     companion object {
-        fun getToday(): Date {
-            return Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }.time
-        }
+        fun getToday(): Date = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.time
     }
 }
