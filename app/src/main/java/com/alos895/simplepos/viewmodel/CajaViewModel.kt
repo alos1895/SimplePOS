@@ -115,6 +115,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         var totalGastosCapturados = 0.0
         var totalOrdenesEfectivo = 0.0
         var totalOrdenesTarjeta = 0.0
+        var totalSoloOrdenes = 0.0
 
         val gson = Gson()
         val paymentPartListType = object : com.google.gson.reflect.TypeToken<List<PaymentPart>>() {}.type
@@ -149,6 +150,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             totalCaja += order.total
+            totalSoloOrdenes += order.total
 
             try {
                 val paymentParts: List<PaymentPart>? = gson.fromJson(order.paymentBreakdownJson, paymentPartListType)
@@ -193,7 +195,9 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
             ingresosCapturados = totalIngresosCapturados,
             egresosCapturados = totalGastosCapturados,
             totalOrdenesEfectivo = totalOrdenesEfectivo,
-            totalOrdenesTarjeta = totalOrdenesTarjeta
+            totalOrdenesTarjeta = totalOrdenesTarjeta,
+            totalEfectivoCaja = totalOrdenesEfectivo + totalIngresosCapturados - totalGastosCapturados,
+            ordenesNoPagadas = (totalOrdenesEfectivo + totalOrdenesTarjeta - totalSoloOrdenes )
         )
     }
 
@@ -204,33 +208,45 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         val reportDateStr = sdfReportDate.format(_selectedDate.value) // Use the selected date for the report title
         
         val sb = StringBuilder()
+        val formatAmount = { amount: Double -> "$${"%,.2f".format(amount)}" }
         sb.appendLine("REPORTE DE CAJA: $reportDateStr")
-        sb.appendLine("Hora Gen.: ${sdfReportTime.format(Date())}") // Generation time
-        sb.appendLine("-------------------------------")
-        sb.appendLine("Ordenes: ${dailyStats.ordenes}")
-        sb.appendLine("Pizzas:")
-        sb.appendLine("  Chicas: ${dailyStats.pizzasChicas}")
-        sb.appendLine("  Medianas: ${dailyStats.pizzasMedianas}")
-        sb.appendLine("  Grandes: ${dailyStats.pizzasGrandes}")
-        sb.appendLine("  Total: ${dailyStats.pizzas}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("Postres: ${dailyStats.postres}")
-        sb.appendLine("Extras: ${dailyStats.extras}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("Envios: ${dailyStats.envios}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("Ingresos por Ventas:")
-        sb.appendLine("  Pizzas: $${"%.2f".format(dailyStats.ingresosPizzas)}")
-        sb.appendLine("  Postres: $${"%.2f".format(dailyStats.ingresosPostres)}")
-        sb.appendLine("  Extras: $${"%.2f".format(dailyStats.ingresosExtras)}")
-        sb.appendLine("  Envíos: $${"%.2f".format(dailyStats.ingresosEnvios)}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("Movimientos Manuales:")
-        sb.appendLine("  Otros Ingresos: $${"%.2f".format(dailyStats.ingresosCapturados)}")
-        sb.appendLine("  Gastos: $${"%.2f".format(dailyStats.egresosCapturados)}")
-        sb.appendLine("-------------------------------")
-        sb.appendLine("TOTAL EN CAJA: $${"%.2f".format(dailyStats.totalCaja)}")
-        sb.appendLine("-------------------------------")
+        sb.appendLine("Hora Gen.: ${sdfReportTime.format(Date())}")
+        sb.appendLine("--------------------------------------------------")
+        sb.appendLine("RESUMEN DE ÓRDENES")
+        sb.appendLine("Órdenes totales: ${dailyStats.ordenes}")
+        sb.appendLine("Órdenes no pagadas: ${formatAmount(dailyStats.ordenesNoPagadas)}")
+        sb.appendLine()
+        sb.appendLine("PIZZAS")
+        sb.appendLine("  Chicas   : ${dailyStats.pizzasChicas}")
+        sb.appendLine("  Medianas : ${dailyStats.pizzasMedianas}")
+        sb.appendLine("  Grandes  : ${dailyStats.pizzasGrandes}")
+        sb.appendLine("  Total    : ${dailyStats.pizzas}")
+        sb.appendLine()
+        sb.appendLine("POSTRES Y EXTRAS")
+        sb.appendLine("  Postres  : ${dailyStats.postres}")
+        sb.appendLine("  Extras   : ${dailyStats.extras}")
+        sb.appendLine()
+        sb.appendLine("ENVIOS")
+        sb.appendLine("  Total envíos: ${dailyStats.envios}")
+        sb.appendLine()
+        sb.appendLine("INGRESOS POR VENTAS")
+        sb.appendLine("  Pizzas    : ${formatAmount(dailyStats.ingresosPizzas)}")
+        sb.appendLine("  Postres   : ${formatAmount(dailyStats.ingresosPostres)}")
+        sb.appendLine("  Extras    : ${formatAmount(dailyStats.ingresosExtras)}")
+        sb.appendLine("  Envíos    : ${formatAmount(dailyStats.ingresosEnvios)}")
+        sb.appendLine()
+        sb.appendLine("PAGOS POR MÉTODO")
+        sb.appendLine("  Efectivo     : ${formatAmount(dailyStats.totalOrdenesEfectivo)}")
+        sb.appendLine("  Transferencia: ${formatAmount(dailyStats.totalOrdenesTarjeta)}")
+        sb.appendLine()
+        sb.appendLine("MOVIMIENTOS MANUALES")
+        sb.appendLine("  Ingresos : ${formatAmount(dailyStats.ingresosCapturados)}")
+        sb.appendLine("  Gastos   : ${formatAmount(dailyStats.egresosCapturados)}")
+        sb.appendLine("--------------------------------------------------")
+        sb.appendLine("TOTAL EN CAJA: ${formatAmount(dailyStats.totalCaja)}")
+        sb.appendLine("Total en efectivo en caja")
+        sb.appendLine(formatAmount(dailyStats.totalEfectivoCaja))
+        sb.appendLine("--------------------------------------------------")
         sb.appendLine("¡Gracias por su trabajo!")
         return sb.toString()
     }

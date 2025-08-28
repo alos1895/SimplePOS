@@ -114,12 +114,13 @@ fun CajaScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text("Gastos e Ingresos capturados", style = MaterialTheme.typography.titleMedium)
-                    Text("Gastos: $${"%.2f".format(dailyStats.egresosCapturados)}")
-                    Text("Ingresos: $${"%.2f".format(dailyStats.ingresosCapturados)}")
+                    Text("Ingresos ordenes", style = MaterialTheme.typography.titleMedium)
+                    Text("Ordenes no pagadas: $${"%.2f".format(dailyStats.ordenesNoPagadas)}")
+                    Text("Órdenes en efectivo: $${"%.2f".format(dailyStats.totalOrdenesEfectivo)}")
+                    Text("Órdenes con tarjeta: $${"%.2f".format(dailyStats.totalOrdenesTarjeta)}")
                 }
                 Column {
-                    Text("Ingresos", style = MaterialTheme.typography.titleMedium)
+                    Text("Ingresos desglose ", style = MaterialTheme.typography.titleMedium)
                     Text("Pizzas: $${"%.2f".format(dailyStats.ingresosPizzas)}")
                     Text("Postres: $${"%.2f".format(dailyStats.ingresosPostres)}")
                     Text("Extras: $${"%.2f".format(dailyStats.ingresosExtras)}")
@@ -127,13 +128,10 @@ fun CajaScreen(
                 }
                 Column {
                     Text("Total", style = MaterialTheme.typography.titleMedium)
+                    Text("Gastos: $${"%.2f".format(dailyStats.egresosCapturados)}")
+                    Text("Ingresos: $${"%.2f".format(dailyStats.ingresosCapturados)}")
                     Text(
-                        "Total efectivo: $${"%.2f".format(dailyStats.totalOrdenesEfectivo)}",
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text("Total transferencias: $${"%.2f".format(dailyStats.totalOrdenesTarjeta)}")
-                    Text(
-                        "TOTAL EN CAJA: $${"%.2f".format(dailyStats.totalCaja)}",
+                        "TOTAL: $${"%.2f".format(dailyStats.totalCaja)}",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
