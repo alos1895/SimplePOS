@@ -7,8 +7,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.alos895.simplepos.viewmodel.OrderViewModel
 import com.alos895.simplepos.viewmodel.BluetoothPrinterViewModel
@@ -25,7 +27,7 @@ import java.util.Calendar
 import java.util.Locale
 import kotlinx.coroutines.launch
 import com.alos895.simplepos.db.entity.OrderEntity
-import java.util.Date
+import com.alos895.simplepos.model.PaymentMethod
 
 @Composable
 fun OrderListScreen(
@@ -134,6 +136,19 @@ fun OrderListScreen(
                                 Column(
                                     horizontalAlignment = Alignment.End
                                 ) {
+                                    if(orderViewModel.isOrderPaid(order)) {
+                                        Text(
+                                            text = "Pagada",
+                                            color = Color(0xFF4CAF50), // Verde
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    } else {
+                                        Text(
+                                            text = "Pendiente",
+                                            color = Color(0xFFF44336), // Rojo
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
                                     if (!order.isDeliveried) {
                                         Icon(
                                             imageVector = Icons.Filled.ShoppingBag,
@@ -156,15 +171,22 @@ fun OrderListScreen(
                     .fillMaxHeight()
                     .padding(8.dp)
             ) {
-                selectedOrder?.let { order -> // Use selectedOrder directly
+                selectedOrder?.let { order ->
+
+                    var efectivoInput by remember {
+                        mutableStateOf(orderViewModel.getPaymentAmount(order, PaymentMethod.EFECTIVO).toString())
+                    }
+                    var tarjetaInput by remember {
+                        mutableStateOf(orderViewModel.getPaymentAmount(order, PaymentMethod.TRANSFERENCIA).toString())
+                    }
+
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         item { Text("Detalle de la orden", style = MaterialTheme.typography.titleLarge) }
                         item { Spacer(modifier = Modifier.height(8.dp)) }
-                        item { Text("Orden #${orderViewModel.getDailyOrderNumber(order)}") }
-                        item { Text("Nombre: ${orderViewModel.getUser(order)?.nombre ?: "Desconocido"}") }
+                        item { Text("Orden #${orderViewModel.getDailyOrderNumber(order)} --- Nombre: ${orderViewModel.getUser(order)?.nombre ?: "Desconocido"}") }
                         item { Text("Total: $${String.format(Locale.US, "%.2f", order.total)}") }
                         item { Text("Fecha: ${orderViewModel.formatDate(order.timestamp)}") }
                         item { HorizontalDivider(thickness = 1.dp, color = Color.Gray) }
@@ -233,6 +255,35 @@ fun OrderListScreen(
                                 ) {
                                     Text(if (isPrinting) "Imprimiendo..." else "Imprimir Cliente")
                                 }
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = efectivoInput,
+                                    onValueChange = { efectivoInput = it },
+                                    label = { Text("Efectivo") },
+                                    modifier = Modifier.weight(1f),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true,
+                                    // Guardar al perder foco
+                                    keyboardActions = KeyboardActions(onDone = {
+                                        orderViewModel.updatePayment(order, efectivoInput.toDoubleOrNull() ?: 0.0, PaymentMethod.EFECTIVO)
+                                    })
+                                )
+
+                                OutlinedTextField(
+                                    value = tarjetaInput,
+                                    onValueChange = { tarjetaInput = it },
+                                    label = { Text("Tarjeta") },
+                                    modifier = Modifier.weight(1f),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true,
+                                    keyboardActions = KeyboardActions(onDone = {
+                                        orderViewModel.updatePayment(order, tarjetaInput.toDoubleOrNull() ?: 0.0, PaymentMethod.TRANSFERENCIA)
+                                    })
+                                )
                             }
                         }
 

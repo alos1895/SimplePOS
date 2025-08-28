@@ -18,8 +18,6 @@ class OrderRepository(context: Context) {
 
     private val orderDao = db.orderDao()
 
-    fun showPaymentMethods(): List<PaymentMethod> = PaymentMethod.entries
-
     suspend fun addOrder(order: OrderEntity) {
         orderDao.insertOrder(order)
     }
@@ -54,7 +52,7 @@ class OrderRepository(context: Context) {
         return Pair(order, calculatePaymentStatus(order))
     }
 
-    private suspend fun updateOrder(order: OrderEntity) {
+    suspend fun updateOrder(order: OrderEntity) {
         orderDao.updateOrder(
             id = order.id,
             itemsJson = order.itemsJson,

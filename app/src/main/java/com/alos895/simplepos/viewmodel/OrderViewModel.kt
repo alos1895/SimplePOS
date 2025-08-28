@@ -5,9 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.repository.OrderRepository
 import com.alos895.simplepos.db.entity.OrderEntity
-import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.data.PizzeriaData
-import com.alos895.simplepos.model.User
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,12 +17,17 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import com.alos895.simplepos.data.datasource.MenuData
+import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.model.CartItemPostre
+import com.alos895.simplepos.model.PaymentMethod
+import com.alos895.simplepos.model.PaymentPart
+import com.alos895.simplepos.model.User
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.stateIn
 
 class OrderViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = OrderRepository(application)
-
+    private val gson = Gson()
     // For storing the full list of orders fetched from the repository
     private val _rawOrders = MutableStateFlow<List<OrderEntity>>(emptyList())
 
@@ -65,6 +68,52 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.deleteOrderLogical(orderId)
             loadOrders() // Refresh the raw list after deletion
+        }
+    }
+
+    fun isOrderPaid(order: OrderEntity): Boolean {
+        return try {
+            val gson = Gson()
+            val type = object : com.google.gson.reflect.TypeToken<List<PaymentPart>>() {}.type
+            val paymentParts: List<PaymentPart> = gson.fromJson(order.paymentBreakdownJson, type) ?: emptyList()
+            val totalPaid = paymentParts.sumOf { it.amount }
+            totalPaid >= order.total
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun getPaymentAmount(order: OrderEntity, method: PaymentMethod): Double {
+        val type = object : TypeToken<List<PaymentPart>>() {}.type
+        val paymentParts: List<PaymentPart> =
+            gson.fromJson<List<PaymentPart>>(order.paymentBreakdownJson, type) ?: emptyList()
+        return paymentParts.find { it.method == method }?.amount ?: 0.0
+    }
+
+    fun updatePayment(order: OrderEntity, amount: Double, method: PaymentMethod) {
+        val type = object : TypeToken<List<PaymentPart>>() {}.type
+        val paymentParts: MutableList<PaymentPart> =
+            gson.fromJson<List<PaymentPart>>(order.paymentBreakdownJson, type)?.toMutableList()
+                ?: mutableListOf()
+
+        // Busca si ya existe un pago con ese método
+        val existing = paymentParts.find { it.method == method }
+        if (existing != null) {
+            // reemplaza usando copy (inmutabilidad)
+            val updated = existing.copy(amount = amount)
+            paymentParts.remove(existing)
+            paymentParts.add(updated)
+        } else {
+            // agrega nuevo
+            paymentParts.add(PaymentPart(method, amount))
+        }
+
+        // actualiza el JSON
+        order.paymentBreakdownJson = gson.toJson(paymentParts)
+
+        viewModelScope.launch {
+            repository.updateOrder(order)
+            loadOrders()
         }
     }
 
