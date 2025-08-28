@@ -177,7 +177,7 @@ fun CajaScreen(
                 Button(
                     onClick = {
                         coroutineScope.launch {
-                            val csv = cajaViewModel.generateCsv(orders, transactions)
+                            val csv = cajaViewModel.generateCsvDetailed(orders, transactions)
                             val file = cajaViewModel.saveCsvToFile(context, csv)
                             cajaViewModel.shareCsvFile(context, file)
                         }

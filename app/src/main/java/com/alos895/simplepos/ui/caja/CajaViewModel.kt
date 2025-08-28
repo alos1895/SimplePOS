@@ -17,6 +17,7 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
+import java.text.Normalizer
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -71,50 +72,70 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
 
     // ---------------- CSV y compartición ----------------
 
-    fun generateCsv(orders: List<OrderEntity>, transactions: List<TransactionEntity>): String {
+    fun generateCsvDetailed(orders: List<OrderEntity>, transactions: List<TransactionEntity>
+    ): String {
         val sb = StringBuilder()
         val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+        val gson = Gson()
 
-        // Cabeceras de órdenes
-        sb.appendLine("Tipo,ID,Fecha,Total,Detalle,Pago,Efectivo,Transferencia,Delivery")
+        // Cabeceras
+        sb.appendLine("Orden,Lista Pizzas,Lista Extras,Lista Postres, Envio Total,Postres Total,Total")
+
         orders.forEach { order ->
-            val paymentParts: List<PaymentPart> = try {
-                gson.fromJson(order.paymentBreakdownJson, object : TypeToken<List<PaymentPart>>() {}.type)
+            // Deserializar pizzas
+            val itemsType = object : TypeToken<List<CartItem>>() {}.type
+            val items: List<CartItem> = try {
+                gson.fromJson(order.itemsJson ?: "[]", itemsType)
             } catch (e: Exception) {
                 emptyList()
             }
 
-            val efectivo = paymentParts.filter { it.method == PaymentMethod.EFECTIVO }.sumOf { it.amount }
-            val tarjeta = paymentParts.filter { it.method == PaymentMethod.TRANSFERENCIA }.sumOf { it.amount }
+            // Deserializar postres/extras
+            val dessertsType = object : TypeToken<List<CartItemPostre>>() {}.type
+            val desserts: List<CartItemPostre> = try {
+                gson.fromJson(order.dessertsJson ?: "[]", dessertsType)
+            } catch (e: Exception) {
+                emptyList()
+            }
+
+            // Generar strings legibles
+            val pizzasList = items.joinToString("; ") { item ->
+                val cantidad = item.cantidad ?: 0
+                val nombre = quitarAcentos(item.pizza?.nombre ?: "Desconocida")
+                val tamano = quitarAcentos(item.tamano?.nombre ?: "Sin tamaño")
+                "$cantidad x $nombre ($tamano)"
+            }
+
+            val postresList = desserts.filter { it.postreOrExtra?.esPostre == true }
+                .joinToString("; ") { d ->
+                    val cantidad = d.cantidad ?: 0
+                    val nombre = quitarAcentos(d.postreOrExtra?.nombre ?: "Desconocido")
+                    "$cantidad x $nombre"
+                }
+
+            val extrasList = desserts.filter { it.postreOrExtra?.esPostre == false }
+                .joinToString("; ") { d ->
+                    val cantidad = d.cantidad ?: 0
+                    val nombre = quitarAcentos(d.postreOrExtra?.nombre ?: "Desconocido")
+                    "$cantidad x $nombre"
+                }
+
+
+            // Calcular totales
+            val postresTotal = desserts.filter { it.postreOrExtra.esPostre == true }
+                .sumOf { it.subtotal ?: 0.0 }
+            val envioTotal = order.deliveryServicePrice ?: 0.0
+            val total = order.total ?: 0.0
 
             sb.appendLine(
                 listOf(
-                    "ORDEN",
-                    order.id,
-                    sdf.format(Date(order.timestamp)),
-                    order.total,
-                    order.itemsJson.replace(",", ";"),
-                    order.paymentBreakdownJson.replace(",", ";"),
-                    efectivo,
-                    tarjeta,
-                    order.deliveryServicePrice
-                ).joinToString(",")
-            )
-        }
-
-        // Cabeceras de transacciones
-        sb.appendLine()
-        sb.appendLine("TipoTransaccion,ID,Fecha,Tipo,Gasto/Ingreso,Monto,Detalle")
-        transactions.forEach { tx ->
-            sb.appendLine(
-                listOf(
-                    "TRANSACCION",
-                    tx.id,
-                    sdf.format(Date(tx.date)),
-                    tx.type.name,
-                    if (tx.type == TransactionType.INGRESO) "Ingreso" else "Gasto",
-                    tx.amount,
-                    tx.concept.replace(",", ";")
+                    order.id?.toString() ?: "Sin ID",
+                    pizzasList,
+                    extrasList,
+                    postresList,
+                    envioTotal,
+                    postresTotal,
+                    total
                 ).joinToString(",")
             )
         }
@@ -122,7 +143,12 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         return sb.toString()
     }
 
-    fun saveCsvToFile(context: Context, csvContent: String, fileName: String = "caja_export.csv"): File {
+    fun quitarAcentos(texto: String): String {
+        return Normalizer.normalize(texto, Normalizer.Form.NFD)
+            .replace("\\p{M}".toRegex(), "") // elimina los diacríticos
+    }
+
+    fun saveCsvToFile(context: Context, csvContent: String, fileName: String = "caja_export_${Date().time}.csv"): File {
         val file = File(context.cacheDir, fileName)
         file.writeText(csvContent)
         return file
