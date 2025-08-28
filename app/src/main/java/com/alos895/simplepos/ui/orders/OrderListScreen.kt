@@ -289,6 +289,43 @@ fun OrderListScreen(
                                 )
                             }
                         }
+                        // Botones para llenar automáticamente los inputs
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        efectivoInput = order.total.toString() // Llena el input de efectivo
+                                        orderViewModel.updatePayment(order, order.total, PaymentMethod.EFECTIVO)
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("Pago en efectivo registrado")
+                                        }
+                                        selectedOrder = null
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Pagar en Efectivo")
+                                }
+
+                                Button(
+                                    onClick = {
+                                        tarjetaInput = order.total.toString() // Llena el input de tarjeta
+                                        orderViewModel.updatePayment(order, order.total, PaymentMethod.TRANSFERENCIA)
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("Pago con tarjeta registrado")
+                                        }
+                                        selectedOrder = null
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Pagar con Tarjeta")
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
 
                         item { Spacer(modifier = Modifier.height(8.dp)) }
                         item {
