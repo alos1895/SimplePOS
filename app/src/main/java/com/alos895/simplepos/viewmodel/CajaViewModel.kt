@@ -1,6 +1,7 @@
 package com.alos895.simplepos.viewmodel
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.repository.OrderRepository
@@ -11,6 +12,8 @@ import com.alos895.simplepos.model.DailyStats
 import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.model.CartItemPostre
+import com.alos895.simplepos.model.PaymentMethod
+import com.alos895.simplepos.model.PaymentPart
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,6 +30,7 @@ import java.util.Locale
 class CajaViewModel(application: Application) : AndroidViewModel(application) {
 
     private val orderRepository = OrderRepository(application)
+    val gson = Gson()
     private val transactionsRepository = TransactionsRepository(application)
 
     private val _selectedDate = MutableStateFlow(getToday())
@@ -91,12 +95,10 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
 
 
     private fun calculateDailyStatsInternal(
-        date: Date, // date parameter is for consistency, actual filtering happens in loadDataForSelectedDate
+        date: Date,
         orders: List<OrderEntity>,
         transactions: List<TransactionEntity>
     ): DailyStats {
-        // The orders and transactions lists are already filtered for the selected date
-
         var totalPizzas = 0
         var totalChicas = 0
         var totalMedianas = 0
@@ -109,13 +111,17 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         var postreRevenue = 0.0
         var extraRevenue = 0.0
         var deliveryRevenue = 0.0
-        var totalIngresosCapturados = 0.0 // Renamed from totalIngresos to avoid confusion
-        var totalGastosCapturados = 0.0 // Renamed from totalGastos to avoid confusion
+        var totalIngresosCapturados = 0.0
+        var totalGastosCapturados = 0.0
+        var totalOrdenesEfectivo = 0.0
+        var totalOrdenesTarjeta = 0.0
 
-        orders.forEach { order ->
-            // No need to check for isDeleted or date here, as list is pre-filtered
-            val cartItems = getCartItems(order) // Use helper
-            val dessertItems = getDessertItems(order) // Use helper
+        val gson = Gson()
+        val paymentPartListType = object : com.google.gson.reflect.TypeToken<List<PaymentPart>>() {}.type
+
+        orders.filter { !it.isDeleted }.forEach { order ->
+            val cartItems = getCartItems(order)
+            val dessertItems = getDessertItems(order)
 
             cartItems.forEach { item ->
                 totalPizzas += item.cantidad
@@ -141,19 +147,31 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
                 totalDelivery++
                 deliveryRevenue += order.deliveryServicePrice
             }
-            totalCaja += order.total // Summing up order totals
+
+            totalCaja += order.total
+
+            try {
+                val paymentParts: List<PaymentPart>? = gson.fromJson(order.paymentBreakdownJson, paymentPartListType)
+                paymentParts?.forEach { part ->
+                    when (part.method) {
+                        PaymentMethod.EFECTIVO -> totalOrdenesEfectivo += part.amount
+                        PaymentMethod.TRANSFERENCIA -> totalOrdenesTarjeta += part.amount
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("CajaViewModel", "Error parsing paymentBreakdownJson", e)
+            }
         }
 
-        // Process transactions, which are already for the selected date
         transactions.forEach { transaction ->
             when (transaction.type) {
                 TransactionType.INGRESO -> {
                     totalIngresosCapturados += transaction.amount
-                    totalCaja += transaction.amount // Add manual income to caja
+                    totalCaja += transaction.amount
                 }
                 TransactionType.GASTO -> {
                     totalGastosCapturados += transaction.amount
-                    totalCaja -= transaction.amount // Subtract manual expenses from caja
+                    totalCaja -= transaction.amount
                 }
             }
         }
@@ -173,9 +191,12 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
             ingresosExtras = extraRevenue,
             ingresosEnvios = deliveryRevenue,
             ingresosCapturados = totalIngresosCapturados,
-            egresosCapturados = totalGastosCapturados
+            egresosCapturados = totalGastosCapturados,
+            totalOrdenesEfectivo = totalOrdenesEfectivo,
+            totalOrdenesTarjeta = totalOrdenesTarjeta
         )
     }
+
 
     fun buildCajaReport(dailyStats: DailyStats): String {
         val sdfReportDate = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())

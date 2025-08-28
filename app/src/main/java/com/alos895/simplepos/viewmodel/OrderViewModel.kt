@@ -74,7 +74,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
     fun isOrderPaid(order: OrderEntity): Boolean {
         return try {
             val gson = Gson()
-            val type = object : com.google.gson.reflect.TypeToken<List<PaymentPart>>() {}.type
+            val type = object : TypeToken<List<PaymentPart>>() {}.type
             val paymentParts: List<PaymentPart> = gson.fromJson(order.paymentBreakdownJson, type) ?: emptyList()
             val totalPaid = paymentParts.sumOf { it.amount }
             totalPaid >= order.total
@@ -124,7 +124,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
     fun getCartItems(order: OrderEntity): List<CartItem> {
         return try {
             val gson = Gson()
-            val type = object : com.google.gson.reflect.TypeToken<List<CartItem>>() {}.type
+            val type = object : TypeToken<List<CartItem>>() {}.type
             gson.fromJson(order.itemsJson, type) ?: emptyList()
         } catch (e: Exception) {
             emptyList()

@@ -107,17 +107,17 @@ fun CajaScreen(
                     Text("Órdenes: ${dailyStats.ordenes}")
                     Text("Envíos: ${dailyStats.envios}")
                 }
-                Column {
-                    Text("Gastos e Ingresos", style = MaterialTheme.typography.titleMedium)
-                    Text("Gastos: $${"%.2f".format(dailyStats.egresosCapturados)}")
-                    Text("Ingresos: $${"%.2f".format(dailyStats.ingresosCapturados)}")
-                }
             }
             Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                Column {
+                    Text("Gastos e Ingresos capturados", style = MaterialTheme.typography.titleMedium)
+                    Text("Gastos: $${"%.2f".format(dailyStats.egresosCapturados)}")
+                    Text("Ingresos: $${"%.2f".format(dailyStats.ingresosCapturados)}")
+                }
                 Column {
                     Text("Ingresos", style = MaterialTheme.typography.titleMedium)
                     Text("Pizzas: $${"%.2f".format(dailyStats.ingresosPizzas)}")
@@ -128,7 +128,13 @@ fun CajaScreen(
                 Column {
                     Text("Total", style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Total Caja: $${"%.2f".format(dailyStats.totalCaja)}",
+                        "Total efectivo: $${"%.2f".format(dailyStats.totalOrdenesEfectivo)}",
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text("Total transferencias: $${"%.2f".format(dailyStats.totalOrdenesTarjeta)}")
+                    Text(
+                        "TOTAL EN CAJA: $${"%.2f".format(dailyStats.totalCaja)}",
+                        style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
