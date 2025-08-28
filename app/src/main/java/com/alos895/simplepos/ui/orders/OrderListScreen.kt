@@ -196,7 +196,7 @@ fun OrderListScreen(
                         }
                         if (orderViewModel.getDessertItems(order).isNotEmpty()) {
                             item { Spacer(modifier = Modifier.height(8.dp)) }
-                            item { Text("Postres:") }
+                            item { Text("Extras:") }
                             items(orderViewModel.getDessertItems(order)) { item ->
                                 Text("- ${item.cantidad}x ${item.postreOrExtra.nombre}")
                             }
