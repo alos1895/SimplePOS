@@ -194,44 +194,48 @@ fun OrderListScreen(
                             item { Text("Pasan o Caminando!") }
                         }
                         item {
-                            Button(
-                                onClick = {
-                                    isPrinting = true
-                                    val cocinaTicket = orderViewModel.buildCocinaTicket(order)
-                                    bluetoothPrinterViewModel.print(cocinaTicket) { _, message ->
-                                        lastMessage = message
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar(message)
-                                        }
-                                        isPrinting = false
-                                    }
-                                },
-                                enabled = !isPrinting,
-                                modifier = Modifier.fillMaxWidth()
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text(if (isPrinting) "Imprimiendo..." else "Imprimir cocina")
+                                Button(
+                                    onClick = {
+                                        isPrinting = true
+                                        val cocinaTicket = orderViewModel.buildCocinaTicket(order)
+                                        bluetoothPrinterViewModel.print(cocinaTicket) { _, message ->
+                                            lastMessage = message
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar(message)
+                                            }
+                                            isPrinting = false
+                                        }
+                                    },
+                                    enabled = !isPrinting,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(if (isPrinting) "Imprimiendo..." else "Imprimir cocina")
+                                }
+
+                                Button(
+                                    onClick = {
+                                        isPrinting = true
+                                        val ticket = orderViewModel.buildOrderTicket(order)
+                                        bluetoothPrinterViewModel.print(ticket) { _, message ->
+                                            lastMessage = message
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar(message)
+                                            }
+                                            isPrinting = false
+                                        }
+                                    },
+                                    enabled = !isPrinting,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(if (isPrinting) "Imprimiendo..." else "Imprimir Cliente")
+                                }
                             }
                         }
-                        item { Spacer(modifier = Modifier.height(8.dp)) }
-                        item {
-                            Button(
-                                onClick = {
-                                    isPrinting = true
-                                    val ticket = orderViewModel.buildOrderTicket(order)
-                                    bluetoothPrinterViewModel.print(ticket) { _, message ->
-                                        lastMessage = message
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar(message)
-                                        }
-                                        isPrinting = false
-                                    }
-                                },
-                                enabled = !isPrinting,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(if (isPrinting) "Imprimiendo..." else "Imprimir Cliente")
-                            }
-                        }
+
                         item { Spacer(modifier = Modifier.height(8.dp)) }
                         item {
                             Button(

@@ -16,7 +16,7 @@ interface OrderDao {
     @Query("SELECT * FROM orders WHERE timestamp >= :day AND timestamp < :day + 86400000 AND isDeleted = 0 ORDER BY timestamp DESC")
     suspend fun getOrdersByDate(day: Long): List<OrderEntity>
 
-    @Query("UPDATE orders SET itemsJson = :itemsJson, total = :total, timestamp = :timestamp, userJson = :userJson, deliveryServicePrice = :deliveryServicePrice, isDeliveried = :isDeliveried, dessertsJson = :dessertsJson, comentarios = :comentarios, deliveryAddress = :deliveryAddress, pizzaStatus = :pizzaStatus, paymentMethod = :paymentMethod, isDeleted = :isDeleted WHERE id = :id")
+    @Query("UPDATE orders SET itemsJson = :itemsJson, total = :total, timestamp = :timestamp, userJson = :userJson, deliveryServicePrice = :deliveryServicePrice, isDeliveried = :isDeliveried, dessertsJson = :dessertsJson, comentarios = :comentarios, deliveryAddress = :deliveryAddress, pizzaStatus = :pizzaStatus, paymentBreakdownJson= :paymentBreakdownJson, isDeleted = :isDeleted WHERE id = :id")
     suspend fun updateOrder(
         id: Long,
         itemsJson: String,
@@ -29,7 +29,19 @@ interface OrderDao {
         comentarios: String,
         deliveryAddress: String,
         pizzaStatus: String,
-        paymentMethod: String,
-        isDeleted: Boolean
+        isDeleted: Boolean,
+        paymentBreakdownJson : String
+    )
+
+    @Query("UPDATE orders SET paymentBreakdownJson = :paymentBreakdownJson WHERE id = :id")
+    suspend fun updatePaymentBreakdown(
+        id: Long,
+        paymentBreakdownJson: String
+    )
+
+    // Delete paymentBreakdownJson field (set to empty array)
+    @Query("UPDATE orders SET paymentBreakdownJson = '[]' WHERE id = :id")
+    suspend fun clearPaymentBreakdown(
+        id: Long
     )
 }
