@@ -1,4 +1,4 @@
-package com.alos895.simplepos.viewmodel
+package com.alos895.simplepos.ui.clients
 
 import androidx.lifecycle.ViewModel
 import com.alos895.simplepos.model.User
@@ -17,4 +17,3 @@ class UserViewModel : ViewModel() {
         _users.value = _users.value.filter { it.id != id }
     }
 }
-

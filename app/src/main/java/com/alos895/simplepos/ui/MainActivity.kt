@@ -25,17 +25,17 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.alos895.simplepos.ui.menu.MenuScreen
-import com.alos895.simplepos.viewmodel.BluetoothPrinterViewModel
-import com.alos895.simplepos.viewmodel.BluetoothPrinterViewModelFactory
+import com.alos895.simplepos.ui.print.BluetoothPrinterViewModel
+import com.alos895.simplepos.ui.print.BluetoothPrinterViewModelFactory
 import com.alos895.simplepos.ui.theme.SimplePOSTheme
 import com.alos895.simplepos.ui.print.BluetoothPrinterScreen
 import com.alos895.simplepos.ui.orders.OrderListScreen
-import com.alos895.simplepos.viewmodel.OrderViewModel
+import com.alos895.simplepos.ui.orders.OrderViewModel
 import com.alos895.simplepos.ui.caja.CajaScreen
 import com.alos895.simplepos.ui.transaction.TransactionsScreen
-import com.alos895.simplepos.viewmodel.CajaViewModel
-import com.alos895.simplepos.viewmodel.PrintTicketViewModel
-import com.alos895.simplepos.viewmodel.TransactionViewModel
+import com.alos895.simplepos.ui.caja.CajaViewModel
+import com.alos895.simplepos.ui.print.PrintTicketViewModel
+import com.alos895.simplepos.ui.transaction.TransactionViewModel
 
 sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
     object Menu : BottomNavItem("menu", Icons.Filled.Home, "Menú")

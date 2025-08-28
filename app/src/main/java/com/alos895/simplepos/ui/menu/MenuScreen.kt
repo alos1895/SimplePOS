@@ -11,8 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.alos895.simplepos.viewmodel.BluetoothPrinterViewModel
-import com.alos895.simplepos.viewmodel.MenuViewModel
+import com.alos895.simplepos.ui.print.BluetoothPrinterViewModel
+import com.alos895.simplepos.ui.menu.MenuViewModel
 import com.alos895.simplepos.viewmodel.CartViewModel
 import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.model.User

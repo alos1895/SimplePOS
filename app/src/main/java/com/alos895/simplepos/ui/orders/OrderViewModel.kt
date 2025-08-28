@@ -1,29 +1,30 @@
-package com.alos895.simplepos.viewmodel
+package com.alos895.simplepos.ui.orders
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.alos895.simplepos.data.PizzeriaData
+import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.data.repository.OrderRepository
 import com.alos895.simplepos.db.entity.OrderEntity
-import com.alos895.simplepos.data.PizzeriaData
-import com.google.gson.Gson
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.launch
-import java.util.Date
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
-import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.model.CartItemPostre
 import com.alos895.simplepos.model.PaymentMethod
 import com.alos895.simplepos.model.PaymentPart
 import com.alos895.simplepos.model.User
+import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 class OrderViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = OrderRepository(application)
@@ -36,7 +37,10 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
     val selectedDate: StateFlow<Date?> = _selectedDate.asStateFlow()
 
     // The publicly exposed list of orders, filtered by selectedDate
-    val orders: StateFlow<List<OrderEntity>> = combine(_rawOrders, _selectedDate) { rawOrders, date ->
+    val orders: StateFlow<List<OrderEntity>> = combine(
+        _rawOrders,
+        _selectedDate
+    ) { rawOrders, date ->
         if (date == null) {
             rawOrders // Show all if no date is selected
         } else {
@@ -46,7 +50,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
                 sdf.format(Date(order.timestamp)) == selectedDay
             }
         }
-    }.stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, emptyList())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     init {
         loadOrders()
@@ -150,7 +154,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
     fun getDessertItems(order: OrderEntity): List<CartItemPostre> {
         return try {
             val gson = Gson()
-            val type = object : com.google.gson.reflect.TypeToken<List<CartItemPostre>>() {}.type
+            val type = object : TypeToken<List<CartItemPostre>>() {}.type
             gson.fromJson(order.dessertsJson, type) ?: emptyList()
         } catch (e: Exception) {
             emptyList()
@@ -226,7 +230,8 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine("Cliente: ${user?.nombre ?: "Cliente"} - ${if (order.isDeliveried && order.deliveryAddress.isNotBlank()) order.deliveryAddress else "Pasan/Caminando"}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
-            sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre.uppercase(Locale.getDefault())}")
+            sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre.uppercase(
+                Locale.getDefault())}")
             item.pizza.ingredientesBaseIds.forEach { ingredienteId ->
                 MenuData.ingredientes.find { it.id == ingredienteId }?.let { ingrediente ->
                     sb.appendLine("- ${ingrediente.nombre}")

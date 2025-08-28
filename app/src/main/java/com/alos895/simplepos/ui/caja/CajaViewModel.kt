@@ -1,4 +1,4 @@
-package com.alos895.simplepos.viewmodel
+package com.alos895.simplepos.ui.caja
 
 import android.app.Application
 import android.util.Log
@@ -6,15 +6,16 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.repository.OrderRepository
 import com.alos895.simplepos.data.repository.TransactionsRepository
+import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.db.entity.TransactionEntity
 import com.alos895.simplepos.db.entity.TransactionType
-import com.alos895.simplepos.model.DailyStats
-import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.model.CartItemPostre
+import com.alos895.simplepos.model.DailyStats
 import com.alos895.simplepos.model.PaymentMethod
 import com.alos895.simplepos.model.PaymentPart
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -48,7 +49,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         calculateDailyStatsInternal(date, orders, transactions)
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.Eagerly,
+        started = SharingStarted.Companion.Eagerly,
         initialValue = DailyStats()
     )
 
@@ -74,18 +75,18 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
             _transactionsForDate.value = transactionsRepository.getTransactionsByDate(currentDate)
         }
     }
-    
+
     // Helper to get CartItems from OrderEntity - needed for calculateDailyStatsInternal
     private fun getCartItems(order: OrderEntity): List<CartItem> {
         val gson = Gson()
-        val type = object : com.google.gson.reflect.TypeToken<List<CartItem>>() {}.type
+        val type = object : TypeToken<List<CartItem>>() {}.type
         return gson.fromJson(order.itemsJson, type) ?: emptyList()
     }
 
     // Helper to get DessertItems from OrderEntity - needed for calculateDailyStatsInternal
     private fun getDessertItems(order: OrderEntity): List<CartItemPostre> {
         val gson = Gson()
-        val type = object : com.google.gson.reflect.TypeToken<List<CartItemPostre>>() {}.type
+        val type = object : TypeToken<List<CartItemPostre>>() {}.type
         return try {
             gson.fromJson(order.dessertsJson, type) ?: emptyList()
         } catch (e: Exception) {
@@ -118,7 +119,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         var totalSoloOrdenes = 0.0
 
         val gson = Gson()
-        val paymentPartListType = object : com.google.gson.reflect.TypeToken<List<PaymentPart>>() {}.type
+        val paymentPartListType = object : TypeToken<List<PaymentPart>>() {}.type
 
         orders.filter { !it.isDeleted }.forEach { order ->
             val cartItems = getCartItems(order)
@@ -197,7 +198,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
             totalOrdenesEfectivo = totalOrdenesEfectivo,
             totalOrdenesTarjeta = totalOrdenesTarjeta,
             totalEfectivoCaja = totalOrdenesEfectivo + totalIngresosCapturados - totalGastosCapturados,
-            ordenesNoPagadas = (totalOrdenesEfectivo + totalOrdenesTarjeta - totalSoloOrdenes )
+            ordenesNoPagadas = (totalOrdenesEfectivo + totalOrdenesTarjeta - totalSoloOrdenes)
         )
     }
 
@@ -206,7 +207,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         val sdfReportDate = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
         val sdfReportTime = SimpleDateFormat("HH:mm", Locale.getDefault())
         val reportDateStr = sdfReportDate.format(_selectedDate.value) // Use the selected date for the report title
-        
+
         val sb = StringBuilder()
         val formatAmount = { amount: Double -> "$${"%,.2f".format(amount)}" }
         sb.appendLine("REPORTE DE CAJA: $reportDateStr")

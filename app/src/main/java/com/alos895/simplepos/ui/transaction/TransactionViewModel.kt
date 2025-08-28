@@ -1,4 +1,4 @@
-package com.alos895.simplepos.viewmodel
+package com.alos895.simplepos.ui.transaction
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel

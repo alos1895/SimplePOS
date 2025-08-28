@@ -1,4 +1,4 @@
-package com.alos895.simplepos.viewmodel
+package com.alos895.simplepos.ui.menu
 
 import androidx.lifecycle.ViewModel
 import com.alos895.simplepos.data.repository.MenuRepository
@@ -18,4 +18,4 @@ class MenuViewModel : ViewModel() {
     private fun loadMenu() {
         _pizzas.value = repository.getPizzas()
     }
-} 
+}

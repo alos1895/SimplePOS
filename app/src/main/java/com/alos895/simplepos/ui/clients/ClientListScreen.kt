@@ -8,7 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.alos895.simplepos.viewmodel.UserViewModel
+import com.alos895.simplepos.ui.clients.UserViewModel
 import com.alos895.simplepos.model.User
 
 @Composable

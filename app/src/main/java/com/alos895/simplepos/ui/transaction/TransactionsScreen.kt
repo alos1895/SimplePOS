@@ -20,7 +20,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.alos895.simplepos.db.entity.TransactionEntity
 import com.alos895.simplepos.db.entity.TransactionType
-import com.alos895.simplepos.viewmodel.TransactionViewModel
+import com.alos895.simplepos.ui.transaction.TransactionViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
