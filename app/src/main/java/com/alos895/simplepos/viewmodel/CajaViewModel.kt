@@ -8,7 +8,7 @@ import com.alos895.simplepos.data.repository.TransactionsRepository
 import com.alos895.simplepos.db.entity.TransactionEntity
 import com.alos895.simplepos.db.entity.TransactionType
 import com.alos895.simplepos.model.DailyStats
-import com.alos895.simplepos.model.OrderEntity
+import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.model.CartItemPostre
 import com.google.gson.Gson

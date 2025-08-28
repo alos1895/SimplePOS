@@ -6,7 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.alos895.simplepos.db.entity.TransactionEntity
-import com.alos895.simplepos.model.OrderEntity
+import com.alos895.simplepos.db.entity.OrderEntity
 
 @Database(
     entities = [

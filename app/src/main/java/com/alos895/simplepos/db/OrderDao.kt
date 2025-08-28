@@ -3,7 +3,7 @@ package com.alos895.simplepos.db
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
-import com.alos895.simplepos.model.OrderEntity
+import com.alos895.simplepos.db.entity.OrderEntity
 
 @Dao
 interface OrderDao {

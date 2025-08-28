@@ -4,7 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.repository.OrderRepository
-import com.alos895.simplepos.model.OrderEntity
+import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.data.PizzeriaData
 import com.alos895.simplepos.model.User

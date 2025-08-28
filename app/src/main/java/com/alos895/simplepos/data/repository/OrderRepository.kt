@@ -3,7 +3,7 @@ package com.alos895.simplepos.data.repository
 import android.content.Context
 import androidx.room.Room
 import com.alos895.simplepos.db.AppDatabase
-import com.alos895.simplepos.model.OrderEntity
+import com.alos895.simplepos.db.entity.OrderEntity
 
 class OrderRepository(context: Context) {
     private val db = Room.databaseBuilder(

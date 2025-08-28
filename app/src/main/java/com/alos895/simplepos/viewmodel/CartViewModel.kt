@@ -11,7 +11,7 @@ import com.alos895.simplepos.model.CartItemPostre
 import com.alos895.simplepos.model.Pizza
 import com.alos895.simplepos.model.TamanoPizza
 import com.alos895.simplepos.data.repository.OrderRepository
-import com.alos895.simplepos.model.OrderEntity
+import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.model.User
 import com.alos895.simplepos.model.DeliveryService
 import com.google.gson.Gson
