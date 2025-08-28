@@ -1,4 +1,4 @@
-package com.alos895.simplepos.viewmodel
+package com.alos895.simplepos.ui.menu
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.alos895.simplepos.data.datasource.MenuData
+import com.alos895.simplepos.model.PostreOrExtra
 
 class CartViewModel(application: Application) : AndroidViewModel(application) {
     private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
@@ -101,7 +102,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         _cartItems.value = current
     }
 
-    fun addDessertToCart(postreOrExtra: com.alos895.simplepos.model.PostreOrExtra) {
+    fun addDessertToCart(postreOrExtra: PostreOrExtra) {
         val current = _dessertItems.value.toMutableList()
         val index = current.indexOfFirst { it.postreOrExtra.id == postreOrExtra.id }
         if (index >= 0) {
@@ -113,7 +114,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         _dessertItems.value = current
     }
 
-    fun removeDessertFromCart(postreOrExtra: com.alos895.simplepos.model.PostreOrExtra) {
+    fun removeDessertFromCart(postreOrExtra: PostreOrExtra) {
         val current = _dessertItems.value.toMutableList()
         val index = current.indexOfFirst { it.postreOrExtra.id == postreOrExtra.id }
         if (index >= 0) {
