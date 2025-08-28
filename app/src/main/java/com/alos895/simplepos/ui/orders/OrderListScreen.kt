@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Motorcycle
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -149,9 +150,9 @@ fun OrderListScreen(
                                             style = MaterialTheme.typography.bodyMedium
                                         )
                                     }
-                                    if (!order.isDeliveried) {
+                                    if (order.isDeliveried) {
                                         Icon(
-                                            imageVector = Icons.Filled.ShoppingBag,
+                                            imageVector = Icons.Filled.Motorcycle,
                                             contentDescription = "Para llevar",
                                             tint = MaterialTheme.colorScheme.secondary,
                                             modifier = Modifier.padding(bottom = 4.dp)
