@@ -256,6 +256,9 @@ fun OrderListScreen(
                                     Text(if (isPrinting) "Imprimiendo..." else "Imprimir Cliente")
                                 }
                             }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            HorizontalDivider(thickness = 1.dp, color = Color.Gray)
+                            Spacer(modifier = Modifier.height(8.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
