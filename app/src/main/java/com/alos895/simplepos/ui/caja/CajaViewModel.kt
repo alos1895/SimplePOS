@@ -299,10 +299,40 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine("--------------------------------------------------")
         sb.appendLine("RESUMEN DE ÓRDENES")
         sb.appendLine("Órdenes totales: ${dailyStats.ordenes}")
-        sb.appendLine("Órdenes no pagadas: ${formatAmount(dailyStats.ordenesNoPagadas)}")
-        sb.appendLine()
-        sb.appendLine("TOTAL EN CAJA: ${formatAmount(dailyStats.totalCaja)}")
-        sb.appendLine("Total en efectivo en caja: ${formatAmount(dailyStats.totalEfectivoCaja)}")
+        sb.appendLine("Envios: ${dailyStats.envios}")
+        // Pizzas
+        sb.appendLine("--------------------------------------------------")
+        sb.appendLine("PIZZAS")
+        sb.appendLine("Chicas: ${dailyStats.pizzasChicas}")
+        sb.appendLine("Medianas: ${dailyStats.pizzasMedianas}")
+        sb.appendLine("Grandes: ${dailyStats.pizzasGrandes}")
+        // Postres y Extras
+        sb.appendLine("--------------------------------------------------")
+        sb.appendLine("POSTRES Y EXTRAS")
+        sb.appendLine("Postres: ${dailyStats.postres}")
+        sb.appendLine("Extras: ${dailyStats.extras}")
+        // Transacciones
+        sb.appendLine("--------------------------------------------------")
+        sb.appendLine("RESUMEN ORDENES")
+        sb.appendLine("Ordenes No pagadas: ${dailyStats.ordenesNoPagadas}")
+        sb.appendLine("Ordenes Efectivo: ${dailyStats.totalOrdenesEfectivo}")
+        sb.appendLine("Ordenes Tarjeta: ${dailyStats.totalOrdenesTarjeta}")
+        // Ingresos
+        sb.appendLine("--------------------------------------------------")
+        sb.appendLine("INGRESOS POR VENTAS")
+        sb.appendLine("Pizzas: ${dailyStats.ingresosPizzas}")
+        sb.appendLine("Postres: ${dailyStats.ingresosPostres}")
+        sb.appendLine("Extras: ${dailyStats.ingresosExtras}")
+        sb.appendLine("Envios: ${dailyStats.ingresosEnvios}")
+        // Totales
+        sb.appendLine("--------------------------------------------------")
+        sb.appendLine("TOTALES")
+        sb.appendLine("Ingresos manuales: ${dailyStats.ingresosCapturados}")
+        sb.appendLine("Gastos manuales: ${dailyStats.egresosCapturados}")
+        //TODO: Mover este calculo al viewmodel
+        val totalEfectivoCaja = dailyStats.totalOrdenesEfectivo + dailyStats.ingresosCapturados - dailyStats.egresosCapturados
+        sb.appendLine("TOTAL EFECTIVO: ${dailyStats.totalEfectivoCaja}")
+        sb.appendLine("TOTAL EN CAJA: ${dailyStats.totalCaja}")
         return sb.toString()
     }
 

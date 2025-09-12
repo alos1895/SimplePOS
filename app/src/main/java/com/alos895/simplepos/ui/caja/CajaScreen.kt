@@ -140,6 +140,7 @@ fun CajaScreen(
                     Spacer(Modifier.height(4.dp))
                     Text("Ingresos manuales: $${"%.2f".format(dailyStats.ingresosCapturados)}")
                     Text("Gastos manuales: $${"%.2f".format(dailyStats.egresosCapturados)}")
+                    //TODO: Mover este calculo al viewmodel
                     val totalEfectivoCaja = dailyStats.totalOrdenesEfectivo + dailyStats.ingresosCapturados - dailyStats.egresosCapturados
                     Text(
                         "TOTAL EFECTIVO: $${"%.2f".format(totalEfectivoCaja)}",
