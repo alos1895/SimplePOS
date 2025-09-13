@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessAlarm
+import androidx.compose.material.icons.filled.AddBusiness
 import androidx.compose.material.icons.filled.Motorcycle
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.*
@@ -130,7 +132,12 @@ fun OrderListScreen(
                                         text = "Orden #${orderViewModel.getDailyOrderNumber(order)} - ${orderViewModel.getUser(order)?.nombre ?: "Cliente"}",
                                         style = MaterialTheme.typography.titleMedium
                                     )
-                                    Text("Total: $${String.format(Locale.US, "%.2f", order.total)}")
+                                    if(order.isTOTODO) {
+                                        Text("Total Cliente: $${String.format(Locale.US, "%.2f", order.total)}")
+                                        Text("Total TOTODO: $${String.format(Locale.US, "%.2f", order.precioTOTODO)}")
+                                    } else {
+                                        Text("Total: $${String.format(Locale.US, "%.2f", order.total)}")
+                                    }
                                     Text("Fecha: ${orderViewModel.formatDate(order.timestamp)}")
                                 }
                                 Column(
@@ -153,6 +160,14 @@ fun OrderListScreen(
                                         Icon(
                                             imageVector = Icons.Filled.Motorcycle,
                                             contentDescription = "Para llevar",
+                                            tint = MaterialTheme.colorScheme.secondary,
+                                            modifier = Modifier.padding(bottom = 4.dp)
+                                        )
+                                    }
+                                    if (order.isTOTODO) {
+                                        Icon(
+                                            imageVector = Icons.Filled.AddBusiness,
+                                            contentDescription = "TOTODO",
                                             tint = MaterialTheme.colorScheme.secondary,
                                             modifier = Modifier.padding(bottom = 4.dp)
                                         )

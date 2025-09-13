@@ -228,6 +228,12 @@ object MenuData {
             description = "La llevamos caminando sin costo."
         ),
         DeliveryService(
+            price = 0,
+            zona = "TOTODO",
+            description = "Envio TOTODO.",
+            isTOTODO = true
+        ),
+        DeliveryService(
             price = 25,
             zona = "Zona 1",
             description = ""

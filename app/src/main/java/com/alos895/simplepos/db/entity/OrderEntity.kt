@@ -17,5 +17,7 @@ data class OrderEntity(
     val deliveryAddress: String = "",
     val pizzaStatus: String = "",
     val isDeleted: Boolean = false,
-    var paymentBreakdownJson: String = "[]"
+    var paymentBreakdownJson: String = "[]",
+    var isTOTODO: Boolean = false,
+    var precioTOTODO: Double = 0.0
 )

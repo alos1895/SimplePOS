@@ -15,6 +15,8 @@ import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.model.User
 import com.alos895.simplepos.model.DeliveryService
 import com.google.gson.Gson
+import kotlin.math.floor
+import kotlin.math.ceil
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -172,6 +174,16 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             val userJson = gson.toJson(user)
             val deliveryPrice = _selectedDelivery.value?.price ?: 0
             val isDeliveried = deliveryPrice > 0 // Si hay precio, es entrega a domicilio
+            // Ncesito agregar los tados del objeto d servicio a domicilio
+            val currentDeliveryService = _selectedDelivery.value
+            var isTOTODO = false
+            var precioTOTODO = 0.0
+            // Si es todoo, actualizar precio TOTODO = precio final - .10%
+            if (currentDeliveryService!!.isTOTODO) {
+                isTOTODO = true
+                precioTOTODO = calculateTOTODOPrice(total.value)
+            }
+
             val orderEntity = OrderEntity(
                 itemsJson = itemsJson,
                 total = total.value,
@@ -181,10 +193,23 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
                 isDeliveried = isDeliveried,
                 dessertsJson = dessertsJson,
                 comentarios = comentarios.value,
-                deliveryAddress = deliveryAddress
+                deliveryAddress = deliveryAddress,
+                isTOTODO = isTOTODO,
+                precioTOTODO = precioTOTODO
             )
             orderRepository.addOrder(orderEntity)
             clearCart()
+        }
+    }
+
+    private fun calculateTOTODOPrice(total: Double): Double {
+        val discounted = total * 0.9  // aplica 10% de descuento
+        val decimals = discounted - discounted.toInt()
+
+        return if (decimals < 0.5) {
+            floor(discounted)
+        } else {
+            ceil(discounted)
         }
     }
 }
