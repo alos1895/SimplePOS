@@ -46,6 +46,7 @@ fun OrderListScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var orderToDelete by remember { mutableStateOf<OrderEntity?>(null) }
     val listState = rememberLazyListState()
+    var showEditDialog by remember { mutableStateOf(false) }
 
     // Load orders once when the screen is first composed
     LaunchedEffect(Unit) {
@@ -296,6 +297,15 @@ fun OrderListScreen(
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                         }
+                        item {
+                            Button(
+                                onClick = { showEditDialog = true },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Editar orden")
+                            }
+                        }
+
 
 
                         item { Spacer(modifier = Modifier.height(8.dp)) }
@@ -362,4 +372,73 @@ fun OrderListScreen(
             }
         )
     }
+
+    if (showEditDialog && selectedOrder != null) {
+        EditOrderDialog(
+            order = selectedOrder!!,
+            orderViewModel = orderViewModel,
+            onDismiss = { showEditDialog = false }
+        )
+    }
+}
+@Composable
+fun EditOrderDialog(
+    order: OrderEntity,
+    orderViewModel: OrderViewModel,
+    onDismiss: () -> Unit
+) {
+    var comentarios by remember { mutableStateOf(order.comentarios) }
+    var direccion by remember { mutableStateOf(order.deliveryAddress) }
+    var deliveryPrice by remember { mutableStateOf(order.deliveryServicePrice.toString()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Editar Orden #${order.id}") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = comentarios,
+                    onValueChange = { comentarios = it },
+                    label = { Text("Comentarios") }
+                )
+
+                if (order.isDeliveried) {
+                    OutlinedTextField(
+                        value = direccion,
+                        onValueChange = { direccion = it },
+                        label = { Text("Dirección de entrega") }
+                    )
+                    OutlinedTextField(
+                        value = deliveryPrice,
+                        onValueChange = { deliveryPrice = it },
+                        label = { Text("Costo de envío") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                // Crear copia actualizada
+                val updatedOrder = order.copy(
+                    comentarios = comentarios,
+                    deliveryAddress = if (order.isDeliveried) direccion else "",
+                    deliveryServicePrice = deliveryPrice.toIntOrNull() ?: order.deliveryServicePrice
+                )
+
+                orderViewModel.updateOrder(updatedOrder)
+                onDismiss()
+            }) {
+                Text("Guardar")
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
 }
