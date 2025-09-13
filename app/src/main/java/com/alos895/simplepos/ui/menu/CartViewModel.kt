@@ -178,10 +178,12 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             val currentDeliveryService = _selectedDelivery.value
             var isTOTODO = false
             var precioTOTODO = 0.0
+            var descuentoTOTODO = 0.0
             // Si es todoo, actualizar precio TOTODO = precio final - .10%
             if (currentDeliveryService!!.isTOTODO) {
                 isTOTODO = true
                 precioTOTODO = calculateTOTODOPrice(total.value)
+                descuentoTOTODO = total.value - precioTOTODO
             }
 
             val orderEntity = OrderEntity(
@@ -195,7 +197,8 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
                 comentarios = comentarios.value,
                 deliveryAddress = deliveryAddress,
                 isTOTODO = isTOTODO,
-                precioTOTODO = precioTOTODO
+                precioTOTODO = precioTOTODO,
+                descuentoTOTODO = descuentoTOTODO
             )
             orderRepository.addOrder(orderEntity)
             clearCart()

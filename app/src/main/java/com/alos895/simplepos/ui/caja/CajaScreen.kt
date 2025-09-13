@@ -122,6 +122,7 @@ fun CajaScreen(
                     Text("Órdenes no pagadas: $${"%.2f".format(dailyStats.ordenesNoPagadas)}")
                     Text("Órdenes efectivo: $${"%.2f".format(dailyStats.totalOrdenesEfectivo)}")
                     Text("Órdenes tarjeta: $${"%.2f".format(dailyStats.totalOrdenesTarjeta)}")
+                    Text("Descuentos TOTODO: $${"%.2f".format(dailyStats.totalDescuentosTOTODO)}")
                 }
 
                 // Bloque 2: Ingresos por tipo de venta
@@ -141,7 +142,7 @@ fun CajaScreen(
                     Text("Ingresos manuales: $${"%.2f".format(dailyStats.ingresosCapturados)}")
                     Text("Gastos manuales: $${"%.2f".format(dailyStats.egresosCapturados)}")
                     //TODO: Mover este calculo al viewmodel
-                    val totalEfectivoCaja = dailyStats.totalOrdenesEfectivo + dailyStats.ingresosCapturados - dailyStats.egresosCapturados
+                    val totalEfectivoCaja = dailyStats.totalOrdenesEfectivo + dailyStats.ingresosCapturados - dailyStats.egresosCapturados - dailyStats.totalDescuentosTOTODO
                     Text(
                         "TOTAL EFECTIVO: $${"%.2f".format(totalEfectivoCaja)}",
                         style = MaterialTheme.typography.titleMedium,

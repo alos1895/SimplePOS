@@ -19,5 +19,6 @@ data class OrderEntity(
     val isDeleted: Boolean = false,
     var paymentBreakdownJson: String = "[]",
     var isTOTODO: Boolean = false,
-    var precioTOTODO: Double = 0.0
+    var precioTOTODO: Double = 0.0,
+    var descuentoTOTODO: Double = 0.0,
 )

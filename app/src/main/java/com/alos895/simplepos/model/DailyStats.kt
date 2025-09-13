@@ -19,5 +19,6 @@ data class DailyStats(
     val totalOrdenesEfectivo: Double = 0.0,
     val totalOrdenesTarjeta: Double = 0.0,
     val totalEfectivoCaja: Double = 0.0,
-    val ordenesNoPagadas: Double = 0.0
+    val ordenesNoPagadas: Double = 0.0,
+    val totalDescuentosTOTODO: Double = 0.0,
 )

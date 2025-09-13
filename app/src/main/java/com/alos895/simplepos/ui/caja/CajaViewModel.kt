@@ -188,6 +188,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         var totalOrdenesEfectivo = 0.0
         var totalOrdenesTarjeta = 0.0
         var totalSoloOrdenes = 0.0
+        var totalDescuentosTOTODO = 0.0
 
         val paymentPartListType = object : TypeToken<List<PaymentPart>>() {}.type
 
@@ -222,6 +223,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
 
             totalCaja += order.total
             totalSoloOrdenes += order.total
+            totalDescuentosTOTODO += order.descuentoTOTODO
 
             try {
                 val paymentParts: List<PaymentPart>? = gson.fromJson(order.paymentBreakdownJson, paymentPartListType)
@@ -256,7 +258,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
             extras = totalExtras,
             ordenes = orders.size,
             envios = totalDelivery,
-            totalCaja = totalCaja,
+            totalCaja = totalCaja - totalDescuentosTOTODO,
             ingresosPizzas = pizzaRevenue,
             ingresosPostres = postreRevenue,
             ingresosExtras = extraRevenue,
@@ -266,7 +268,8 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
             totalOrdenesEfectivo = totalOrdenesEfectivo,
             totalOrdenesTarjeta = totalOrdenesTarjeta,
             totalEfectivoCaja = totalOrdenesEfectivo + totalIngresosCapturados - totalGastosCapturados,
-            ordenesNoPagadas = (totalOrdenesEfectivo + totalOrdenesTarjeta - totalSoloOrdenes)
+            ordenesNoPagadas = (totalOrdenesEfectivo + totalOrdenesTarjeta - totalSoloOrdenes),
+            totalDescuentosTOTODO = totalDescuentosTOTODO
         )
     }
 
@@ -330,7 +333,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine("Ingresos manuales: ${dailyStats.ingresosCapturados}")
         sb.appendLine("Gastos manuales: ${dailyStats.egresosCapturados}")
         //TODO: Mover este calculo al viewmodel
-        val totalEfectivoCaja = dailyStats.totalOrdenesEfectivo + dailyStats.ingresosCapturados - dailyStats.egresosCapturados
+        val totalEfectivoCaja = dailyStats.totalOrdenesEfectivo + dailyStats.ingresosCapturados - dailyStats.egresosCapturados - dailyStats.totalDescuentosTOTODO
         sb.appendLine("TOTAL EFECTIVO: ${dailyStats.totalEfectivoCaja}")
         sb.appendLine("TOTAL EN CAJA: ${dailyStats.totalCaja}")
         return sb.toString()
