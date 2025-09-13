@@ -105,6 +105,7 @@ fun CajaScreen(
                     Text("Órdenes y Envíos", style = MaterialTheme.typography.titleMedium)
                     Text("Órdenes: ${dailyStats.ordenes}")
                     Text("Envíos: ${dailyStats.envios}")
+                    Text("TOTODOS: ${dailyStats.deliverysTOTODO}")
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))

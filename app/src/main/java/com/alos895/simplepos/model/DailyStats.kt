@@ -8,6 +8,7 @@ data class DailyStats(
     val postres: Int = 0,
     val ordenes: Int = 0,
     val envios: Int = 0,
+    val deliverysTOTODO: Int = 0,
     val totalCaja: Double = 0.0,
     val extras: Int = 0,
     val ingresosPizzas: Double = 0.0,

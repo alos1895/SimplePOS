@@ -178,6 +178,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         var totalPostres = 0
         var totalExtras = 0
         var totalDelivery = 0
+        var deliverysTOTODO = 0
         var totalCaja = 0.0
         var pizzaRevenue = 0.0
         var postreRevenue = 0.0
@@ -220,6 +221,9 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
                 totalDelivery++
                 deliveryRevenue += order.deliveryServicePrice
             }
+            if (order.isTOTODO) {
+                deliverysTOTODO++
+            }
 
             totalCaja += order.total
             totalSoloOrdenes += order.total
@@ -258,6 +262,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
             extras = totalExtras,
             ordenes = orders.size,
             envios = totalDelivery,
+            deliverysTOTODO = deliverysTOTODO,
             totalCaja = totalCaja - totalDescuentosTOTODO,
             ingresosPizzas = pizzaRevenue,
             ingresosPostres = postreRevenue,
