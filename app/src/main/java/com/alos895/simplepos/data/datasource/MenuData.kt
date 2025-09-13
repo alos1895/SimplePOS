@@ -192,6 +192,33 @@ object MenuData {
                 TamanoPizza("Mediana", 199.0),
                 TamanoPizza("Extra Grande", 249.0)
             )
+        ),
+        Pizza(
+            nombre = "Especial",
+            ingredientesBaseIds = listOf(1),
+            // Muestra todos los precios de pizzas
+            tamanos = listOf(
+                TamanoPizza("Chica", 69.0),
+                TamanoPizza("Chica", 79.0),
+                TamanoPizza("Chica", 89.0),
+                TamanoPizza("Chica", 99.0),
+                TamanoPizza("Mediana", 139.0),
+                TamanoPizza("Mediana", 159.0),
+                TamanoPizza("Mediana", 169.0),
+                TamanoPizza("Mediana", 179.0),
+                TamanoPizza("Mediana", 189.0),
+                TamanoPizza("Mediana", 199.0),
+                TamanoPizza("Extra Grande", 179.0),
+                TamanoPizza("Extra Grande", 189.0),
+                TamanoPizza("Extra Grande", 199.0),
+                TamanoPizza("Extra Grande", 209.0),
+                TamanoPizza("Extra Grande", 219.0),
+                TamanoPizza("Extra Grande", 229.0),
+                TamanoPizza("Extra Grande", 239.0),
+                TamanoPizza("Extra Grande", 249.0),
+                TamanoPizza("Extra Grande", 259.0),
+                TamanoPizza("Extra Grande", 269.0),
+            )
         )
     )
 
