@@ -7,18 +7,17 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Motorcycle
-import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.alos895.simplepos.ui.orders.OrderViewModel
 import com.alos895.simplepos.ui.print.BluetoothPrinterViewModel
@@ -29,6 +28,10 @@ import java.util.Locale
 import kotlinx.coroutines.launch
 import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.model.PaymentMethod
+import com.alos895.simplepos.data.datasource.MenuData
+import com.alos895.simplepos.model.DeliveryService
+import com.alos895.simplepos.model.User
+import com.google.gson.Gson
 
 @Composable
 fun OrderListScreen(
@@ -377,19 +380,79 @@ fun OrderListScreen(
         EditOrderDialog(
             order = selectedOrder!!,
             orderViewModel = orderViewModel,
-            onDismiss = { showEditDialog = false }
+            onDismiss = { showEditDialog = false },
+            onOrderUpdated = { updatedOrder ->
+                selectedOrder = updatedOrder
+            }
         )
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditOrderDialog(
     order: OrderEntity,
     orderViewModel: OrderViewModel,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onOrderUpdated: (OrderEntity) -> Unit = {}
 ) {
-    var comentarios by remember { mutableStateOf(order.comentarios) }
-    var direccion by remember { mutableStateOf(order.deliveryAddress) }
-    var deliveryPrice by remember { mutableStateOf(order.deliveryServicePrice.toString()) }
+    val gson = remember { Gson() }
+    val baseDeliveryOptions = remember { MenuData.deliveryOptions }
+    val initialUser = remember(order.id) {
+        orderViewModel.getUser(order) ?: User(id = order.id, nombre = "", telefono = "")
+    }
+    var nombreCliente by remember(order.id) { mutableStateOf(initialUser.nombre) }
+    var comentarios by remember(order.id) { mutableStateOf(order.comentarios) }
+    var direccion by remember(order.id) { mutableStateOf(order.deliveryAddress) }
+    var deliveryMenuExpanded by remember { mutableStateOf(false) }
+    val matchedDelivery = remember(order.id) {
+        baseDeliveryOptions.firstOrNull { option ->
+            option.price == order.deliveryServicePrice && (
+                if (order.isDeliveried) !option.pickUp else true
+            )
+        }
+    }
+    val customDelivery = remember(order.id) {
+        if (matchedDelivery == null && order.deliveryServicePrice != 0) {
+            DeliveryService(
+                price = order.deliveryServicePrice,
+                description = "",
+                zona = "Personalizado",
+                pickUp = !order.isDeliveried
+            )
+        } else {
+            null
+        }
+    }
+    val deliveryOptions = remember(order.id, customDelivery) {
+        if (customDelivery != null) baseDeliveryOptions + customDelivery else baseDeliveryOptions
+    }
+    var selectedDelivery by remember(order.id) {
+        mutableStateOf(matchedDelivery ?: customDelivery ?: baseDeliveryOptions.first())
+    }
+    val requiresAddress = selectedDelivery.price > 0
+
+    fun formatDeliveryLabel(delivery: DeliveryService): String {
+        return if (delivery.price > 0) "${delivery.zona} - $${delivery.price}" else delivery.zona
+    }
+
+    fun buildUpdatedOrder(): OrderEntity {
+        val updatedDeliveryPrice = selectedDelivery.price
+        val updatedIsDeliveried = updatedDeliveryPrice > 0
+        val sanitizedAddress = if (updatedIsDeliveried) direccion.trim() else ""
+        val updatedUser = initialUser.copy(nombre = nombreCliente)
+        val adjustedTotal = order.total - order.deliveryServicePrice + updatedDeliveryPrice
+        return order.copy(
+            comentarios = comentarios,
+            deliveryAddress = sanitizedAddress,
+            deliveryServicePrice = updatedDeliveryPrice,
+            isDeliveried = updatedIsDeliveried,
+            userJson = gson.toJson(updatedUser),
+            total = adjustedTotal
+        )
+    }
+
+    val confirmEnabled = !requiresAddress || direccion.isNotBlank()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -400,38 +463,76 @@ fun EditOrderDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedTextField(
+                    value = nombreCliente,
+                    onValueChange = { nombreCliente = it },
+                    label = { Text("Nombre del cliente") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
                     value = comentarios,
                     onValueChange = { comentarios = it },
                     label = { Text("Comentarios") }
                 )
 
-                if (order.isDeliveried) {
+                Text("Tipo de entrega", style = MaterialTheme.typography.titleSmall)
+
+                ExposedDropdownMenuBox(
+                    expanded = deliveryMenuExpanded,
+                    onExpandedChange = { deliveryMenuExpanded = it },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    TextField(
+                        value = formatDeliveryLabel(selectedDelivery),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Servicio a domicilio") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = deliveryMenuExpanded)
+                        },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = deliveryMenuExpanded,
+                        onDismissRequest = { deliveryMenuExpanded = false }
+                    ) {
+                        deliveryOptions.forEach { deliveryOption ->
+                            DropdownMenuItem(
+                                text = { Text(formatDeliveryLabel(deliveryOption)) },
+                                onClick = {
+                                    selectedDelivery = deliveryOption
+                                    if (deliveryOption.price == 0) {
+                                        direccion = ""
+                                    }
+                                    deliveryMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                if (requiresAddress) {
                     OutlinedTextField(
                         value = direccion,
                         onValueChange = { direccion = it },
-                        label = { Text("Dirección de entrega") }
-                    )
-                    OutlinedTextField(
-                        value = deliveryPrice,
-                        onValueChange = { deliveryPrice = it },
-                        label = { Text("Costo de envío") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        label = { Text("Dirección de entrega") },
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
         },
         confirmButton = {
-            Button(onClick = {
-                // Crear copia actualizada
-                val updatedOrder = order.copy(
-                    comentarios = comentarios,
-                    deliveryAddress = if (order.isDeliveried) direccion else "",
-                    deliveryServicePrice = deliveryPrice.toIntOrNull() ?: order.deliveryServicePrice
-                )
-
-                orderViewModel.updateOrder(updatedOrder)
-                onDismiss()
-            }) {
+            Button(
+                onClick = {
+                    val updatedOrder = buildUpdatedOrder()
+                    orderViewModel.updateOrder(updatedOrder)
+                    onOrderUpdated(updatedOrder)
+                    onDismiss()
+                },
+                enabled = confirmEnabled
+            ) {
                 Text("Guardar")
             }
         },
