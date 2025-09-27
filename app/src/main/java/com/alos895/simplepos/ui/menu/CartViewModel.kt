@@ -20,6 +20,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.model.PostreOrExtra
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class CartViewModel(application: Application) : AndroidViewModel(application) {
     private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
@@ -164,7 +167,63 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         return sb.toString()
     }
 
-    fun saveOrder(user: User, deliveryAddress: String = "") {
+    fun buildCocinaTicket(
+        user: User,
+        deliveryAddress: String,
+        deliveryService: DeliveryService?,
+        timestamp: Long
+    ): String {
+        val cartItems = _cartItems.value
+        val desserts = _dessertItems.value
+        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val hora = formatter.format(Date(timestamp))
+        val entrega = deliveryService ?: _selectedDelivery.value
+        val destino = when {
+            entrega?.price ?: 0 > 0 -> if (deliveryAddress.isNotBlank()) deliveryAddress else entrega?.zona ?: "Domicilio"
+            entrega?.pickUp == true -> entrega.zona
+            else -> "Pasan/Caminando"
+        }
+        val clienteNombre = user.nombre.ifBlank { "Cliente" }
+
+        val sb = StringBuilder()
+        sb.appendLine("ORDEN PARA COCINA")
+        sb.appendLine("Hora: $hora")
+        sb.appendLine("Cliente: $clienteNombre - $destino")
+        sb.appendLine("-------------------------------")
+
+        if (cartItems.isEmpty()) {
+            sb.appendLine("Sin productos")
+        } else {
+            cartItems.forEach { item ->
+                sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre.uppercase(Locale.getDefault())}")
+                item.pizza.ingredientesBaseIds.forEach { ingredienteId ->
+                    MenuData.ingredientes.find { it.id == ingredienteId }?.let { ingrediente ->
+                        sb.appendLine("- ${ingrediente.nombre}")
+                    }
+                }
+                sb.appendLine()
+            }
+        }
+
+        if (desserts.isNotEmpty()) {
+            sb.appendLine("-------------------------------")
+            sb.appendLine("Extras:")
+            desserts.forEach { item ->
+                sb.appendLine("${item.cantidad}x ${item.postreOrExtra.nombre}")
+            }
+        }
+
+        val comentariosActuales = _comentarios.value
+        if (comentariosActuales.isNotBlank()) {
+            sb.appendLine("-------------------------------")
+            sb.appendLine("COMENTARIOS:")
+            sb.appendLine(comentariosActuales)
+        }
+
+        return sb.toString()
+    }
+
+    fun saveOrder(user: User, deliveryAddress: String = "", timestamp: Long = System.currentTimeMillis()) {
         viewModelScope.launch {
             val gson = Gson()
             val itemsJson = gson.toJson(_cartItems.value)
@@ -175,7 +234,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             val orderEntity = OrderEntity(
                 itemsJson = itemsJson,
                 total = total.value,
-                timestamp = System.currentTimeMillis(),
+                timestamp = timestamp,
                 userJson = userJson,
                 deliveryServicePrice = deliveryPrice,
                 isDeliveried = isDeliveried,
