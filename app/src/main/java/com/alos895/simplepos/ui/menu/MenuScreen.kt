@@ -380,12 +380,27 @@ fun MenuScreen(
                 // Botón de Guardar Orden siempre pegado abajo
                 Button(
                     onClick = {
+                        val orderTimestamp = System.currentTimeMillis()
                         val user = User(
-                            id = System.currentTimeMillis(),
+                            id = orderTimestamp,
                             nombre = nombre,
                             telefono = telefono
                         )
-                        cartViewModel.saveOrder(user, deliveryAddress)
+                        val deliveryForTicket = selectedDelivery
+                        val cocinaTicket = cartViewModel.buildCocinaTicket(
+                            user = user,
+                            deliveryAddress = deliveryAddress,
+                            deliveryService = deliveryForTicket,
+                            timestamp = orderTimestamp
+                        )
+
+                        bluetoothPrinterViewModel.print(cocinaTicket) { _, message ->
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(message)
+                            }
+                        }
+
+                        cartViewModel.saveOrder(user, deliveryAddress, orderTimestamp)
                         // Limpiar formulario después de guardar
                         nombre = ""
                         telefono = ""

@@ -128,6 +128,13 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun updateOrder(order: OrderEntity) {
+        viewModelScope.launch {
+            repository.updateOrder(order)
+            loadOrders()
+        }
+    }
+
     fun formatDate(timestamp: Long): String {
         return SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(timestamp))
     }
