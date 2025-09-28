@@ -15,6 +15,7 @@ class OrderRepository(context: Context) {
         AppDatabase::class.java,
         "simplepos.db"
     ).addMigrations(AppDatabase.MIGRATION_4_5)
+        .fallbackToDestructiveMigration(true)
         .build()
 
     private val orderDao = db.orderDao()

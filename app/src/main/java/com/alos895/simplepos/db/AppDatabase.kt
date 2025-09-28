@@ -29,9 +29,21 @@ abstract class AppDatabase : RoomDatabase() {
 
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
+                val statements = listOf(
+                    "ALTER TABLE orders ADD COLUMN isTOTODO INTEGER NOT NULL DEFAULT 0",
+                    "ALTER TABLE orders ADD COLUMN precioTOTODO REAL NOT NULL DEFAULT 0.0",
+                    "ALTER TABLE orders ADD COLUMN descuentoTOTODO REAL NOT NULL DEFAULT 0.0",
                     "ALTER TABLE orders ADD COLUMN dailyOrderNumber INTEGER NOT NULL DEFAULT 0"
                 )
+                for (statement in statements) {
+                    try {
+                        database.execSQL(statement)
+                    } catch (throwable: Throwable) {
+                        if (throwable.message?.contains("duplicate column name", ignoreCase = true) != true) {
+                            throw throwable
+                        }
+                    }
+                }
             }
         }
 

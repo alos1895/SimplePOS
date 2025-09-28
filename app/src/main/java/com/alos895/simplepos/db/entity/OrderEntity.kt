@@ -1,5 +1,6 @@
 package com.alos895.simplepos.db.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -9,6 +10,7 @@ data class OrderEntity(
     val itemsJson: String,
     val total: Double,
     val timestamp: Long,
+    @ColumnInfo(defaultValue = "0")
     val dailyOrderNumber: Int = 0,
     val userJson: String,
     val deliveryServicePrice: Int = 0,
