@@ -9,6 +9,7 @@ data class OrderEntity(
     val itemsJson: String,
     val total: Double,
     val timestamp: Long,
+    val dailyOrderNumber: Int = 0,
     val userJson: String,
     val deliveryServicePrice: Int = 0,
     val isDeliveried: Boolean = false,

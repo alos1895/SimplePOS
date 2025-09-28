@@ -173,7 +173,8 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         user: User,
         deliveryAddress: String,
         deliveryService: DeliveryService?,
-        timestamp: Long
+        timestamp: Long,
+        dailyOrderNumber: Int
     ): String {
         val cartItems = _cartItems.value
         val desserts = _dessertItems.value
@@ -189,7 +190,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
 
         val sb = StringBuilder()
         sb.appendLine("ORDEN PARA COCINA")
-        sb.appendLine("Hora: $hora")
+        sb.appendLine("Hora: $hora - Orden: $dailyOrderNumber")
         sb.appendLine("Cliente: $clienteNombre - $destino")
         sb.appendLine("-------------------------------")
 
@@ -225,43 +226,44 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         return sb.toString()
     }
 
-    fun saveOrder(user: User, deliveryAddress: String = "", timestamp: Long = System.currentTimeMillis()) {
-        viewModelScope.launch {
-            val gson = Gson()
-            val itemsJson = gson.toJson(_cartItems.value)
-            val dessertsJson = gson.toJson(_dessertItems.value)
-            val userJson = gson.toJson(user)
-            val deliveryPrice = _selectedDelivery.value?.price ?: 0
-            val isDeliveried = deliveryPrice > 0 // Si hay precio, es entrega a domicilio
-            // Ncesito agregar los tados del objeto d servicio a domicilio
-            val currentDeliveryService = _selectedDelivery.value
-            var isTOTODO = false
-            var precioTOTODO = 0.0
-            var descuentoTOTODO = 0.0
-            // Si es todoo, actualizar precio TOTODO = precio final - .10%
-            if (currentDeliveryService!!.isTOTODO) {
-                isTOTODO = true
-                precioTOTODO = calculateTOTODOPrice(total.value)
-                descuentoTOTODO = total.value - precioTOTODO
-            }
 
-            val orderEntity = OrderEntity(
-                itemsJson = itemsJson,
-                total = total.value,
-                timestamp = timestamp,
-                userJson = userJson,
-                deliveryServicePrice = deliveryPrice,
-                isDeliveried = isDeliveried,
-                dessertsJson = dessertsJson,
-                comentarios = comentarios.value,
-                deliveryAddress = deliveryAddress,
-                isTOTODO = isTOTODO,
-                precioTOTODO = precioTOTODO,
-                descuentoTOTODO = descuentoTOTODO
-            )
-            orderRepository.addOrder(orderEntity)
-            clearCart()
+    suspend fun saveOrder(
+        user: User,
+        deliveryAddress: String = "",
+        timestamp: Long = System.currentTimeMillis()
+    ): OrderEntity {
+        val gson = Gson()
+        val itemsJson = gson.toJson(_cartItems.value)
+        val dessertsJson = gson.toJson(_dessertItems.value)
+        val userJson = gson.toJson(user)
+        val deliveryPrice = _selectedDelivery.value?.price ?: 0
+        val isDeliveried = deliveryPrice > 0
+        val currentDeliveryService = _selectedDelivery.value
+        var isTOTODO = false
+        var precioTOTODO = 0.0
+        var descuentoTOTODO = 0.0
+        if (currentDeliveryService?.isTOTODO == true) {
+            isTOTODO = true
+            precioTOTODO = calculateTOTODOPrice(total.value)
+            descuentoTOTODO = total.value - precioTOTODO
         }
+
+        val orderEntity = OrderEntity(
+            itemsJson = itemsJson,
+            total = total.value,
+            timestamp = timestamp,
+            userJson = userJson,
+            deliveryServicePrice = deliveryPrice,
+            isDeliveried = isDeliveried,
+            dessertsJson = dessertsJson,
+            comentarios = comentarios.value,
+            deliveryAddress = deliveryAddress,
+            isTOTODO = isTOTODO,
+            precioTOTODO = precioTOTODO,
+            descuentoTOTODO = descuentoTOTODO
+        )
+
+        return orderRepository.addOrder(orderEntity)
     }
 
     private fun calculateTOTODOPrice(total: Double): Double {

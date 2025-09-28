@@ -169,6 +169,9 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun getDailyOrderNumber(orderEntity: OrderEntity): Int {
+        if (orderEntity.dailyOrderNumber > 0) {
+            return orderEntity.dailyOrderNumber
+        }
         val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
         val orderDay = sdf.format(Date(orderEntity.timestamp))
         // Filter from _rawOrders as it contains all orders for potential daily numbering

@@ -2,24 +2,31 @@ package com.alos895.simplepos.data.repository
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.withTransaction
 import com.alos895.simplepos.db.AppDatabase
 import com.alos895.simplepos.db.entity.OrderEntity
-import com.alos895.simplepos.model.PaymentMethod
 import com.alos895.simplepos.model.PaymentPart
 import com.google.gson.Gson
-import kotlinx.coroutines.launch
+import java.util.Calendar
 
 class OrderRepository(context: Context) {
     private val db = Room.databaseBuilder(
         context,
         AppDatabase::class.java,
         "simplepos.db"
-    ).build()
+    ).addMigrations(AppDatabase.MIGRATION_4_5)
+        .build()
 
     private val orderDao = db.orderDao()
 
-    suspend fun addOrder(order: OrderEntity) {
-        orderDao.insertOrder(order)
+    suspend fun addOrder(order: OrderEntity): OrderEntity {
+        return db.withTransaction {
+            val (startOfDay, endOfDay) = calculateDayBounds(order.timestamp)
+            val nextNumber = (orderDao.getMaxDailyOrderNumberForRange(startOfDay, endOfDay) ?: 0) + 1
+            val orderWithNumber = order.copy(dailyOrderNumber = nextNumber)
+            val newId = orderDao.insertOrder(orderWithNumber)
+            orderWithNumber.copy(id = newId)
+        }
     }
 
     suspend fun getOrdersByDate(date: Long): List<OrderEntity> {
@@ -58,6 +65,7 @@ class OrderRepository(context: Context) {
             itemsJson = order.itemsJson,
             total = order.total,
             timestamp = order.timestamp,
+            dailyOrderNumber = order.dailyOrderNumber,
             userJson = order.userJson,
             deliveryServicePrice = order.deliveryServicePrice,
             isDeliveried = order.isDeliveried,
@@ -83,5 +91,21 @@ class OrderRepository(context: Context) {
         val totalPaid = paymentParts.sumOf { it.amount }
         val epsilon = 0.001
         return totalPaid >= (order.total - epsilon)
+    }
+
+    private fun calculateDayBounds(timestamp: Long): Pair<Long, Long> {
+        val calendar = Calendar.getInstance()
+        calendar.timeInMillis = timestamp
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startOfDay = calendar.timeInMillis
+        val endOfDay = startOfDay + MILLIS_IN_DAY
+        return startOfDay to endOfDay
+    }
+
+    private companion object {
+        private const val MILLIS_IN_DAY = 86_400_000L
     }
 }

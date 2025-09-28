@@ -378,36 +378,38 @@ fun MenuScreen(
                 }
 
                 // Botón de Guardar Orden siempre pegado abajo
+
                 Button(
                     onClick = {
-                        val orderTimestamp = System.currentTimeMillis()
-                        val user = User(
-                            id = orderTimestamp,
-                            nombre = nombre,
-                            telefono = telefono
-                        )
-                        val deliveryForTicket = selectedDelivery
-                        val cocinaTicket = cartViewModel.buildCocinaTicket(
-                            user = user,
-                            deliveryAddress = deliveryAddress,
-                            deliveryService = deliveryForTicket,
-                            timestamp = orderTimestamp
-                        )
-
-                        bluetoothPrinterViewModel.print(cocinaTicket) { _, message ->
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar(message)
-                            }
-                        }
-
-                        cartViewModel.saveOrder(user, deliveryAddress, orderTimestamp)
-                        // Limpiar formulario después de guardar
-                        nombre = ""
-                        telefono = ""
-                        deliveryAddress = ""
-                        cartViewModel.setComentarios("")
-                        cartViewModel.setDeliveryService(MenuData.deliveryOptions.first())
                         coroutineScope.launch {
+                            val orderTimestamp = System.currentTimeMillis()
+                            val user = User(
+                                id = orderTimestamp,
+                                nombre = nombre,
+                                telefono = telefono
+                            )
+                            val deliveryForTicket = selectedDelivery
+                            val savedOrder = cartViewModel.saveOrder(user, deliveryAddress, orderTimestamp)
+                            val cocinaTicket = cartViewModel.buildCocinaTicket(
+                                user = user,
+                                deliveryAddress = deliveryAddress,
+                                deliveryService = deliveryForTicket,
+                                timestamp = orderTimestamp,
+                                dailyOrderNumber = savedOrder.dailyOrderNumber
+                            )
+
+                            bluetoothPrinterViewModel.print(cocinaTicket) { _, message ->
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(message)
+                                }
+                            }
+
+                            cartViewModel.clearCart()
+                            nombre = ""
+                            telefono = ""
+                            deliveryAddress = ""
+                            cartViewModel.setComentarios("")
+                            cartViewModel.setDeliveryService(MenuData.deliveryOptions.first())
                             snackbarHostState.showSnackbar("Orden guardada exitosamente")
                         }
                     },
