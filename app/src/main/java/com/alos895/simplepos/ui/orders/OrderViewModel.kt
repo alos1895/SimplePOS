@@ -13,6 +13,7 @@ import com.alos895.simplepos.model.PaymentMethod
 import com.alos895.simplepos.model.PaymentPart
 import com.alos895.simplepos.model.User
 import com.google.gson.Gson
+import com.alos895.simplepos.ui.common.CartItemFormatter
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -202,9 +203,9 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine("Direccion: ${if (order.isDeliveried && order.deliveryAddress.isNotBlank()) order.deliveryAddress else "Recoge en tienda"}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
-            sb.appendLine(
-                "${item.cantidad} x ${item.pizza.nombre} ${item.tamano.nombre.uppercase(Locale.getDefault())}   $${"%.2f".format(item.subtotal)}"
-            )
+            CartItemFormatter.toCustomerLines(item).forEach { line ->
+                sb.appendLine(line)
+            }
         }
         if (dessertItems.isNotEmpty()) {
             sb.appendLine("-------------------------------")
@@ -240,12 +241,8 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine("Cliente: ${user?.nombre ?: "Cliente"} - ${if (order.isDeliveried && order.deliveryAddress.isNotBlank()) order.deliveryAddress else "Pasan/Caminando"}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
-            sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre.uppercase(
-                Locale.getDefault())}")
-            item.pizza.ingredientesBaseIds.forEach { ingredienteId ->
-                MenuData.ingredientes.find { it.id == ingredienteId }?.let { ingrediente ->
-                    sb.appendLine("- ${ingrediente.nombre}")
-                }
+            CartItemFormatter.toKitchenLines(item).forEach { line ->
+                sb.appendLine(line)
             }
             sb.appendLine()
         }
@@ -270,7 +267,13 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine("-------------------------------")
         sb.appendLine("Items:")
         getCartItems(order).forEach { item ->
-            sb.appendLine("- ${item.cantidad}x ${item.pizza.nombre} (${item.tamano.nombre})")
+            val linesForTicket = CartItemFormatter.toCustomerLines(item)
+            linesForTicket.firstOrNull()?.let { header ->
+                sb.appendLine("- ${header}")
+            }
+            linesForTicket.drop(1).forEach { detail ->
+                sb.appendLine("  ${detail}")
+            }
         }
         if (getDessertItems(order).isNotEmpty()) {
             sb.appendLine("Postres:")

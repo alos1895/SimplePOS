@@ -1,6 +1,7 @@
 package com.alos895.simplepos.ui.orders
 
 import android.app.DatePickerDialog
+import com.alos895.simplepos.ui.common.CartItemFormatter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -211,7 +212,13 @@ fun OrderListScreen(
                         item { HorizontalDivider(thickness = 1.dp, color = Color.Gray) }
                         item { Text("Items:") }
                         items(orderViewModel.getCartItems(order)) { item ->
-                            Text("- ${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}")
+                            val itemLines = CartItemFormatter.toCustomerLines(item)
+                            itemLines.firstOrNull()?.let { header ->
+                                Text("- ${header}")
+                            }
+                            itemLines.drop(1).forEach { detail ->
+                                Text("  ${detail}")
+                            }
                         }
                         if (orderViewModel.getDessertItems(order).isNotEmpty()) {
                             item { Spacer(modifier = Modifier.height(8.dp)) }
@@ -558,3 +565,4 @@ fun EditOrderDialog(
         }
     )
 }
+

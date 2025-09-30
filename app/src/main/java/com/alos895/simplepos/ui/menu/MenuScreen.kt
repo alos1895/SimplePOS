@@ -1,5 +1,8 @@
 package com.alos895.simplepos.ui.menu
 
+import java.util.Locale
+import com.alos895.simplepos.model.PizzaFractionType
+import com.alos895.simplepos.model.sizeLabel
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -34,8 +37,20 @@ fun MenuScreen(
     val deliveryOptions = MenuData.deliveryOptions
 
     var deliveryMenuExpanded by remember { mutableStateOf(false) }
-    var showPizzas by remember { mutableStateOf(true) }
-    var showComments by remember { mutableStateOf(false) }
+    var selectedSection by remember { mutableStateOf(MenuSection.PIZZAS) }
+    val largeComboPatterns = remember {
+        listOf(
+            FractionPattern("quarters", "4 cuartos (1/4)", List(4) { PizzaFractionType.QUARTER }),
+            FractionPattern("thirds", "3 tercios (1/3)", List(3) { PizzaFractionType.THIRD }),
+            FractionPattern("halves", "2 mitades (1/2)", List(2) { PizzaFractionType.HALF })
+        )
+    }
+    val mediumComboPatterns = remember {
+        listOf(
+            FractionPattern("halves", "2 mitades (1/2)", List(2) { PizzaFractionType.HALF })
+        )
+    }
+    var comboDialogConfig by remember { mutableStateOf<ComboDialogConfig?>(null) }
 
     val total by remember(cartItems, dessertItems, selectedDelivery) {
         derivedStateOf {
@@ -67,31 +82,40 @@ fun MenuScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Button(
-                        onClick = { showPizzas = true; showComments = false },
+                        onClick = { selectedSection = MenuSection.PIZZAS },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (showPizzas && !showComments) MaterialTheme.colorScheme.primary
+                            containerColor = if (selectedSection == MenuSection.PIZZAS) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.surfaceVariant
                         )
                     ) { Text("Pizzas") }
 
                     Button(
-                        onClick = { showPizzas = false; showComments = false },
+                        onClick = { selectedSection = MenuSection.POSTRES_EXTRAS },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (!showPizzas && !showComments) MaterialTheme.colorScheme.secondary
+                            containerColor = if (selectedSection == MenuSection.POSTRES_EXTRAS) MaterialTheme.colorScheme.secondary
                             else MaterialTheme.colorScheme.surfaceVariant
                         )
                     ) { Text("Postres & Extras") }
 
                     Button(
-                        onClick = { showPizzas = false; showComments = true },
+                        onClick = { selectedSection = MenuSection.COMENTARIOS },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (showComments) MaterialTheme.colorScheme.tertiary
+                            containerColor = if (selectedSection == MenuSection.COMENTARIOS) MaterialTheme.colorScheme.tertiary
                             else MaterialTheme.colorScheme.surfaceVariant
                         )
                     ) { Text("Comentarios") }
+
+                    Button(
+                        onClick = { selectedSection = MenuSection.PIZZAS_COMBINADAS },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (selectedSection == MenuSection.PIZZAS_COMBINADAS) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) { Text("Pizzas combinadas") }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -100,137 +124,171 @@ fun MenuScreen(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    if (showPizzas) {
-                        items(pizzas) { pizza ->
-                            var expanded by remember { mutableStateOf(false) }
-                            var selectedTamano by remember { mutableStateOf(pizza.tamanos.first()) }
-                            Card(modifier = Modifier.fillMaxWidth()) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Text(pizza.nombre, style = MaterialTheme.typography.titleLarge)
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        pizza.ingredientesBaseIds
-                                            .mapNotNull { id -> MenuData.ingredientes.find { it.id == id }?.nombre }
-                                            .joinToString(", "),
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        ExposedDropdownMenuBox(
-                                            expanded = expanded,
-                                            onExpandedChange = { expanded = !expanded },
-                                            modifier = Modifier.weight(1f)
+                    when (selectedSection) {
+                        MenuSection.PIZZAS -> {
+                            items(pizzas) { pizza ->
+                                var expanded by remember { mutableStateOf(false) }
+                                var selectedTamano by remember { mutableStateOf(pizza.tamanos.first()) }
+                                Card(modifier = Modifier.fillMaxWidth()) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Text(pizza.nombre, style = MaterialTheme.typography.titleLarge)
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            pizza.ingredientesBaseIds
+                                                .mapNotNull { id -> MenuData.ingredientes.find { it.id == id }?.nombre }
+                                                .joinToString(", "),
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
-                                            TextField(
-                                                value = "${selectedTamano.nombre} ($${
-                                                    "%.2f".format(
-                                                        selectedTamano.precioBase
-                                                    ) })",
-                                                onValueChange = {},
-                                                readOnly = true,
-                                                label = { Text("Tamaño") },
-                                                trailingIcon = {
-                                                    ExposedDropdownMenuDefaults.TrailingIcon(
-                                                        expanded
-                                                    )
-                                                },
-                                                modifier = Modifier
-                                                    .menuAnchor()
-                                                    .fillMaxWidth()
-                                            )
-                                            ExposedDropdownMenu(
+                                            ExposedDropdownMenuBox(
                                                 expanded = expanded,
-                                                onDismissRequest = { expanded = false }
+                                                onExpandedChange = { expanded = !expanded }
                                             ) {
-                                                pizza.tamanos.forEach { tamano ->
-                                                    DropdownMenuItem(
-                                                        text = {
-                                                            Text(
-                                                                "${tamano.nombre} ($${
-                                                                    "%.2f".format(
-                                                                        tamano.precioBase
-                                                                    )
-                                                                })"
-                                                            )
-                                                        },
-                                                        onClick = {
-                                                            selectedTamano = tamano
-                                                            expanded = false
-                                                        }
-                                                    )
+                                                OutlinedTextField(
+                                                    value = "${selectedTamano.nombre} ($${"%.2f".format(selectedTamano.precioBase) })",
+                                                    onValueChange = {},
+                                                    readOnly = true,
+                                                    label = { Text("Tama?o") },
+                                                    trailingIcon = {
+                                                        ExposedDropdownMenuDefaults.TrailingIcon(
+                                                            expanded
+                                                        )
+                                                    },
+                                                    modifier = Modifier
+                                                        .menuAnchor()
+                                                        .fillMaxWidth()
+                                                )
+                                                ExposedDropdownMenu(
+                                                    expanded = expanded,
+                                                    onDismissRequest = { expanded = false }
+                                                ) {
+                                                    pizza.tamanos.forEach { tamano ->
+                                                        DropdownMenuItem(
+                                                            text = {
+                                                                Text(
+                                                                    "${tamano.nombre} ($${"%.2f".format(tamano.precioBase)})"
+                                                                )
+                                                            },
+                                                            onClick = {
+                                                                selectedTamano = tamano
+                                                                expanded = false
+                                                            }
+                                                        )
+                                                    }
                                                 }
                                             }
+                                            Button(onClick = {
+                                                cartViewModel.addToCart(
+                                                    pizza,
+                                                    selectedTamano
+                                                )
+                                            }) {
+                                                Text("Agregar")
+                                            }
                                         }
-                                        Button(onClick = {
-                                            cartViewModel.addToCart(
-                                                pizza,
-                                                selectedTamano
+                                    }
+                                }
+                            }
+                        }
+                        MenuSection.COMENTARIOS -> {
+                            item {
+                                Card(modifier = Modifier.fillMaxWidth()) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Text(
+                                            "Comentarios de la Orden",
+                                            style = MaterialTheme.typography.titleLarge
+                                        )
+                                        Spacer(modifier = Modifier.height(16.dp))
+
+                                        OutlinedTextField(
+                                            value = comentarios,
+                                            onValueChange = { cartViewModel.setComentarios(it) },
+                                            label = { Text("Escribe aqu? los comentarios de la orden") },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            minLines = 5,
+                                            maxLines = 8,
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
                                             )
-                                        }) {
+                                        )
+
+                                        if (comentarios.isNotEmpty()) {
+                                            Spacer(modifier = Modifier.height(16.dp))
+                                            Text(
+                                                "Comentarios actuales:",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                comentarios,
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        MenuSection.POSTRES_EXTRAS -> {
+                            items(MenuData.postreOrExtras) { postre ->
+                                Card(modifier = Modifier.fillMaxWidth()) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(postre.nombre, style = MaterialTheme.typography.titleMedium)
+                                            Text("$${"%.2f".format(postre.precio)}", style = MaterialTheme.typography.bodyMedium)
+                                        }
+                                        Spacer(modifier = Modifier.width(16.dp))
+                                        Button(onClick = { cartViewModel.addDessertToCart(postre) }) {
                                             Text("Agregar")
                                         }
                                     }
                                 }
                             }
                         }
-                    } else if (showComments) {
-                        item {
-                            Card(modifier = Modifier.fillMaxWidth()) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Text(
-                                        "Comentarios de la Orden",
-                                        style = MaterialTheme.typography.titleLarge
-                                    )
-                                    Spacer(modifier = Modifier.height(16.dp))
-
-                                    OutlinedTextField(
-                                        value = comentarios,
-                                        onValueChange = { cartViewModel.setComentarios(it) },
-                                        label = { Text("Escribe aquí los comentarios de la orden") },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        minLines = 5,
-                                        maxLines = 8,
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                                        )
-                                    )
-
-                                    if (comentarios.isNotEmpty()) {
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        Text(
-                                            "Comentarios actuales:",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
+                        MenuSection.PIZZAS_COMBINADAS -> {
+                            item {
+                                Card(modifier = Modifier.fillMaxWidth()) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Text("Pizzas combinadas", style = MaterialTheme.typography.titleMedium)
                                         Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            comentarios,
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        items(MenuData.postreOrExtras) { postre ->
-                            Card(modifier = Modifier.fillMaxWidth()) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(postre.nombre, style = MaterialTheme.typography.titleMedium)
-                                        Text("$${"%.2f".format(postre.precio)}", style = MaterialTheme.typography.bodyMedium)
-                                    }
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Button(onClick = { cartViewModel.addDessertToCart(postre) }) {
-                                        Text("Agregar")
+                                        Text("Arma pizzas grandes o medianas con varias especialidades.")
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Button(
+                                            onClick = {
+                                                comboDialogConfig = ComboDialogConfig(
+                                                    title = "Arma tu pizza grande combinada",
+                                                    sizeName = "Extra Grande",
+                                                    patterns = largeComboPatterns
+                                                )
+                                            },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text("Pizza grande combinada")
+                                        }
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Button(
+                                            onClick = {
+                                                comboDialogConfig = ComboDialogConfig(
+                                                    title = "Arma tu pizza mediana 1/2 y 1/2",
+                                                    sizeName = "Mediana",
+                                                    patterns = mediumComboPatterns
+                                                )
+                                            },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text("Pizza mediana 1/2 y 1/2")
+                                        }
                                     }
                                 }
                             }
@@ -258,26 +316,44 @@ fun MenuScreen(
                     }
 
                     // Items de pizzas
-                    items(cartItems) { item ->
+                    items(items = cartItems, key = { it.id }) { item ->
                         Card(modifier = Modifier.fillMaxWidth()) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column {
-                                    Text(item.pizza.nombre)
-                                    Text(item.tamano.nombre)
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                val sizeLabel = item.sizeLabel
+                                val title = if (item.isCombo) {
+                                    if (sizeLabel.isBlank()) "Pizza combinada" else "Pizza ${sizeLabel} combinada"
+                                } else {
+                                    item.pizza?.nombre ?: "Pizza"
                                 }
-                                Text("x${item.cantidad}")
-                                Text("$${"%.2f".format(item.subtotal)}")
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Button(onClick = { cartViewModel.removeFromCart(item.pizza, item.tamano) }) { Text("-") }
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Button(onClick = { cartViewModel.addToCart(item.pizza, item.tamano) }) { Text("+") }
+                                Text(title, style = MaterialTheme.typography.titleMedium)
+                                if (!item.isCombo && sizeLabel.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(sizeLabel, style = MaterialTheme.typography.bodyMedium)
+                                }
+                                if (item.isCombo) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    item.portions.forEach { portion ->
+                                        Text("- ${portion.fraction.label} ${portion.pizzaName}", style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Button(onClick = { cartViewModel.decrementItem(item.id) }) { Text("-") }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("x${item.cantidad}")
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Button(onClick = { cartViewModel.incrementItem(item.id) }) { Text("+") }
+                                    }
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    Text("$${String.format(Locale.getDefault(), "%.2f", item.subtotal)}")
+                                }
                             }
                         }
                     }
-
                     // Items de postres
                     items(dessertItems) { item ->
                         Card(modifier = Modifier.fillMaxWidth()) {
@@ -423,4 +499,33 @@ fun MenuScreen(
             }
         }
     }
+    comboDialogConfig?.let { config ->
+        ComboPizzaDialog(
+            title = config.title,
+            sizeName = config.sizeName,
+            patterns = config.patterns,
+            pizzas = pizzas,
+            onDismiss = { comboDialogConfig = null },
+            onConfirm = { portions ->
+                cartViewModel.addComboToCart(config.sizeName, portions)
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("Pizza combinada agregada al carrito")
+                }
+            }
+        )
+    }
 }
+
+private enum class MenuSection {
+    PIZZAS,
+    POSTRES_EXTRAS,
+    COMENTARIOS,
+    PIZZAS_COMBINADAS
+}
+
+private data class ComboDialogConfig(
+    val title: String,
+    val sizeName: String,
+    val patterns: List<FractionPattern>
+)
+

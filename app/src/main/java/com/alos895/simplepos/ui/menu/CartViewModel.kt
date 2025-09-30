@@ -6,22 +6,25 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.PizzeriaData
-import com.alos895.simplepos.model.CartItem
-import com.alos895.simplepos.model.CartItemPostre
-import com.alos895.simplepos.model.Pizza
-import com.alos895.simplepos.model.TamanoPizza
+import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.data.repository.OrderRepository
 import com.alos895.simplepos.db.entity.OrderEntity
-import com.alos895.simplepos.model.User
+import com.alos895.simplepos.model.CartItem
+import com.alos895.simplepos.model.CartItemPortion
+import com.alos895.simplepos.model.CartItemPostre
 import com.alos895.simplepos.model.DeliveryService
+import com.alos895.simplepos.model.Pizza
+import com.alos895.simplepos.model.PostreOrExtra
+import com.alos895.simplepos.model.TamanoPizza
+import com.alos895.simplepos.model.User
+import com.alos895.simplepos.model.sizeLabel
+import com.alos895.simplepos.ui.common.CartItemFormatter
 import com.google.gson.Gson
-import kotlin.math.floor
 import kotlin.math.ceil
+import kotlin.math.floor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import com.alos895.simplepos.data.datasource.MenuData
-import com.alos895.simplepos.model.PostreOrExtra
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -29,10 +32,10 @@ import java.util.Locale
 class CartViewModel(application: Application) : AndroidViewModel(application) {
     private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
     val cartItems: StateFlow<List<CartItem>> = _cartItems
-    
+
     private val _dessertItems = MutableStateFlow<List<CartItemPostre>>(emptyList())
     val dessertItems: StateFlow<List<CartItemPostre>> = _dessertItems
-    
+
     private val orderRepository = OrderRepository(application)
 
     private val _selectedDelivery = MutableStateFlow<DeliveryService?>(null)
@@ -45,9 +48,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     val comentarios: StateFlow<String> = _comentarios
 
     init {
-        // Inicializa el servicio a domicilio con el primero disponible
         _selectedDelivery.value = MenuData.deliveryOptions.first()
-        // Observa cambios en carrito y servicio para actualizar el total
         viewModelScope.launch {
             cartItems.collect { items ->
                 val deliveryPrice = _selectedDelivery.value?.price ?: 0
@@ -59,7 +60,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             selectedDelivery.collect {
                 val deliveryPrice = it?.price ?: 0
                 val pizzasTotal = _cartItems.value.sumOf { item -> item.subtotal }
-                val dessertsTotal = _dessertItems.value.sumOf { it.subtotal }
+                val dessertsTotal = _dessertItems.value.sumOf { dessert -> dessert.subtotal }
                 _total.value = pizzasTotal + dessertsTotal + deliveryPrice
             }
         }
@@ -74,7 +75,6 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setDeliveryService(delivery: DeliveryService) {
         _selectedDelivery.value = delivery
-        // El total se actualizarÃ¡ automÃ¡ticamente por el colector
     }
 
     fun setComentarios(comentarios: String) {
@@ -82,29 +82,83 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addToCart(pizza: Pizza, tamano: TamanoPizza) {
-        val current = _cartItems.value.toMutableList()
-        val index = current.indexOfFirst { it.pizza.nombre == pizza.nombre && it.tamano.nombre == tamano.nombre }
-        if (index >= 0) {
-            val item = current[index]
-            current[index] = item.copy(cantidad = item.cantidad + 1)
-        } else {
-            current.add(CartItem(pizza, tamano))
+        updateCartItems { current ->
+            val index = current.indexOfFirst { it.matchesStandard(pizza, tamano) }
+            if (index >= 0) {
+                val existing = current[index]
+                current[index] = existing.copy(
+                    cantidad = existing.cantidad + 1,
+                    sizeName = existing.sizeLabel.ifBlank { tamano.nombre },
+                    unitPrice = existing.unitPrice ?: tamano.precioBase
+                )
+            } else {
+                current.add(
+                    CartItem(
+                        pizza = pizza,
+                        tamano = tamano,
+                        sizeName = tamano.nombre,
+                        unitPrice = tamano.precioBase,
+                        cantidad = 1
+                    )
+                )
+            }
         }
-        _cartItems.value = current
     }
 
     fun removeFromCart(pizza: Pizza, tamano: TamanoPizza) {
-        val current = _cartItems.value.toMutableList()
-        val index = current.indexOfFirst { it.pizza.nombre == pizza.nombre && it.tamano.nombre == tamano.nombre }
-        if (index >= 0) {
-            val item = current[index]
-            if (item.cantidad > 1) {
-                current[index] = item.copy(cantidad = item.cantidad - 1)
+        val target = _cartItems.value.firstOrNull { it.matchesStandard(pizza, tamano) } ?: return
+        decrementItem(target.id)
+    }
+
+    fun addComboToCart(sizeName: String, portions: List<CartItemPortion>) {
+        val normalizedSize = sizeName.trim()
+        updateCartItems { current ->
+            val price = calculateComboPrice(normalizedSize, portions)
+            val index = current.indexOfFirst { it.matchesCombo(normalizedSize, portions) }
+            if (index >= 0) {
+                val existing = current[index]
+                current[index] = existing.copy(cantidad = existing.cantidad + 1, unitPrice = price)
             } else {
-                current.removeAt(index)
+                current.add(
+                    CartItem(
+                        sizeName = normalizedSize,
+                        unitPrice = price,
+                        portions = portions,
+                        cantidad = 1
+                    )
+                )
             }
         }
-        _cartItems.value = current
+    }
+
+    fun incrementItem(itemId: String) {
+        updateCartItems { current ->
+            val index = current.indexOfFirst { it.id == itemId }
+            if (index >= 0) {
+                val existing = current[index]
+                current[index] = existing.copy(cantidad = existing.cantidad + 1)
+            }
+        }
+    }
+
+    fun decrementItem(itemId: String) {
+        updateCartItems { current ->
+            val index = current.indexOfFirst { it.id == itemId }
+            if (index >= 0) {
+                val existing = current[index]
+                if (existing.cantidad > 1) {
+                    current[index] = existing.copy(cantidad = existing.cantidad - 1)
+                } else {
+                    current.removeAt(index)
+                }
+            }
+        }
+    }
+
+    fun removeItem(itemId: String) {
+        updateCartItems { current ->
+            current.removeAll { it.id == itemId }
+        }
     }
 
     fun addDessertToCart(postreOrExtra: PostreOrExtra) {
@@ -142,7 +196,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         val cartItems = _cartItems.value
         val dessertItems = _dessertItems.value
         if (cartItems.isEmpty() && dessertItems.isEmpty()) {
-            return "El carrito estÃ¡ vacÃ­o."
+            return "El carrito está vacío."
         }
         var result = 0.0
         val info = PizzeriaData.info
@@ -153,19 +207,21 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine(info.direccion)
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
-            sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}   $${"%.2f".format(item.subtotal)}")
+            CartItemFormatter.toCustomerLines(item).forEach { line ->
+                sb.appendLine(line)
+            }
             result += item.subtotal
         }
         if (dessertItems.isNotEmpty()) {
             sb.appendLine("-------------------------------")
             dessertItems.forEach { item ->
-                sb.appendLine("${item.cantidad}x ${item.postreOrExtra.nombre}   $${"%.2f".format(item.subtotal)}")
+                sb.appendLine("${item.cantidad}x ${item.postreOrExtra.nombre}   $${String.format(Locale.getDefault(), "%.2f", item.subtotal)}")
                 result += item.subtotal
             }
         }
         sb.appendLine("-------------------------------")
-        sb.appendLine("TOTAL: $${"%.2f".format(result)}")
-        sb.appendLine("Â¡Gracias por su compra!")
+        sb.appendLine("TOTAL: $${String.format(Locale.getDefault(), "%.2f", result)}")
+        sb.appendLine("¡Gracias por su compra!")
         return sb.toString()
     }
 
@@ -198,11 +254,8 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             sb.appendLine("Sin productos")
         } else {
             cartItems.forEach { item ->
-                sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre.uppercase(Locale.getDefault())}")
-                item.pizza.ingredientesBaseIds.forEach { ingredienteId ->
-                    MenuData.ingredientes.find { it.id == ingredienteId }?.let { ingrediente ->
-                        sb.appendLine("- ${ingrediente.nombre}")
-                    }
+                CartItemFormatter.toKitchenLines(item).forEach { line ->
+                    sb.appendLine(line)
                 }
                 sb.appendLine()
             }
@@ -225,7 +278,6 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
 
         return sb.toString()
     }
-
 
     suspend fun saveOrder(
         user: User,
@@ -266,10 +318,38 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         return orderRepository.addOrder(orderEntity)
     }
 
-    private fun calculateTOTODOPrice(total: Double): Double {
-        val discounted = total * 0.9  // aplica 10% de descuento
-        val decimals = discounted - discounted.toInt()
+    private fun calculateComboPrice(sizeName: String, portions: List<CartItemPortion>): Double {
+        val candidates = portions.mapNotNull { portion ->
+            MenuData.pizzas.firstOrNull { it.nombre == portion.pizzaName }
+                ?.tamanos
+                ?.firstOrNull { it.nombre.equals(sizeName, ignoreCase = true) }
+                ?.precioBase
+        }
+        return candidates.maxOrNull() ?: 0.0
+    }
 
+    private fun updateCartItems(block: (MutableList<CartItem>) -> Unit) {
+        val current = _cartItems.value.toMutableList()
+        block(current)
+        _cartItems.value = current
+    }
+
+    private fun CartItem.matchesStandard(pizza: Pizza, tamano: TamanoPizza): Boolean {
+        return !isCombo && this.pizza?.nombre == pizza.nombre && this.tamano?.nombre == tamano.nombre
+    }
+
+    private fun CartItem.matchesCombo(sizeName: String, portions: List<CartItemPortion>): Boolean {
+        if (!isCombo) return false
+        if (!sizeLabel.equals(sizeName, ignoreCase = true)) return false
+        if (this.portions.size != portions.size) return false
+        return this.portions.zip(portions).all { (existing, incoming) ->
+            existing.pizzaName == incoming.pizzaName && existing.fraction == incoming.fraction
+        }
+    }
+
+    private fun calculateTOTODOPrice(total: Double): Double {
+        val discounted = total * 0.9
+        val decimals = discounted - discounted.toInt()
         return if (decimals < 0.5) {
             floor(discounted)
         } else {
@@ -278,7 +358,6 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     }
 }
 
-// Factory para CartViewModel
 class CartViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(CartViewModel::class.java)) {
