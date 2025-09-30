@@ -19,6 +19,9 @@ object CartItemFormatter {
             if (size.isBlank()) baseName else "$baseName $size"
         }
         lines.add("${item.cantidad}x $headerName   $${formatCurrency(item.subtotal)}")
+        if (item.isGolden) {
+            lines.add("   Doradita")
+        }
         if (item.isCombo) {
             item.portions.forEach { portion ->
                 lines.add("   ${portion.fraction.label} ${portion.pizzaName}")
@@ -39,6 +42,10 @@ object CartItemFormatter {
             if (sizeUpper.isBlank()) "${item.cantidad}x ${baseName}" else "${item.cantidad}x ${baseName} ${sizeUpper}"
         }
         lines.add(header)
+
+        if (item.isGolden) {
+            lines.add("   * DORADITA")
+        }
 
         if (item.isCombo) {
             item.portions.forEach { portion ->
