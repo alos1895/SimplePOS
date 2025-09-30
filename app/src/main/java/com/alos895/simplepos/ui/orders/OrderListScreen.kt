@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessAlarm
 import androidx.compose.material.icons.filled.AddBusiness
+import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Motorcycle
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -165,6 +166,14 @@ fun OrderListScreen(
                                         Icon(
                                             imageVector = Icons.Filled.Motorcycle,
                                             contentDescription = "Para llevar",
+                                            tint = MaterialTheme.colorScheme.secondary,
+                                            modifier = Modifier.padding(bottom = 4.dp)
+                                        )
+                                    }
+                                    if (order.isWalkingDelivery) {
+                                        Icon(
+                                            imageVector = Icons.Filled.DirectionsWalk,
+                                            contentDescription = "Entrega caminando",
                                             tint = MaterialTheme.colorScheme.secondary,
                                             modifier = Modifier.padding(bottom = 4.dp)
                                         )

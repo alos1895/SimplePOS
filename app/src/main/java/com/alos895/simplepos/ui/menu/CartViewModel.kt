@@ -308,6 +308,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         val deliveryPrice = _selectedDelivery.value?.price ?: 0
         val isDeliveried = deliveryPrice > 0
         val currentDeliveryService = _selectedDelivery.value
+        val isWalkingDelivery = currentDeliveryService?.zona.equals("Caminando", ignoreCase = true)
         var isTOTODO = false
         var precioTOTODO = 0.0
         var descuentoTOTODO = 0.0
@@ -324,6 +325,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             userJson = userJson,
             deliveryServicePrice = deliveryPrice,
             isDeliveried = isDeliveried,
+            isWalkingDelivery = isWalkingDelivery,
             dessertsJson = dessertsJson,
             comentarios = comentarios.value,
             deliveryAddress = deliveryAddress,
