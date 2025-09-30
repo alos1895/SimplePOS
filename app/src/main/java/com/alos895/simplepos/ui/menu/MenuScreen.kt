@@ -335,53 +335,88 @@ fun MenuScreen(
                     // Items de pizzas
                     items(items = cartItems, key = { it.id }) { item ->
                         Card(modifier = Modifier.fillMaxWidth()) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                val sizeLabel = item.sizeLabel
-                                val title = if (item.isCombo) {
-                                    if (sizeLabel.isBlank()) "Pizza combinada" else "Pizza ${sizeLabel} combinada"
-                                } else {
-                                    item.pizza?.nombre ?: "Pizza"
-                                }
-                                Text(title, style = MaterialTheme.typography.titleMedium)
-                                if (!item.isCombo && sizeLabel.isNotBlank()) {
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(sizeLabel, style = MaterialTheme.typography.bodyMedium)
-                                }
-                                if (item.isCombo) {
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    item.portions.forEach { portion ->
-                                        Text("- ${portion.fraction.label} ${portion.pizzaName}", style = MaterialTheme.typography.bodySmall)
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                FilterChip(
-                                    selected = item.isGolden,
-                                    onClick = { cartViewModel.toggleGolden(item.id) },
-                                    label = { Text("Doradita") },
-                                    leadingIcon = if (item.isGolden) {
-                                        { Icon(Icons.Filled.Check, contentDescription = null) }
-                                    } else {
-                                        null
-                                    }
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
+                            Column(modifier = Modifier.padding(12.dp)) {
+
+                                // Fila 1: Pizza y precio
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Button(onClick = { cartViewModel.decrementItem(item.id) }) { Text("-") }
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("x${item.cantidad}")
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Button(onClick = { cartViewModel.incrementItem(item.id) }) { Text("+") }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            if (item.isCombo) {
+                                                if (item.sizeLabel.isBlank()) "Pizza combinada"
+                                                else "Pizza ${item.sizeLabel} combinada"
+                                            } else {
+                                                item.pizza?.nombre ?: "Pizza"
+                                            },
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                        if (!item.isCombo && item.sizeLabel.isNotBlank()) {
+                                            Text(item.sizeLabel, style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        // Ingredientes o especialidades de combos
+                                        if (item.isCombo) {
+                                            Column {
+                                                item.portions.forEach { portion ->
+                                                    Text(
+                                                        "- ${portion.fraction.label}: ${portion.pizzaName}",
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                }
+                                            }
+                                        } else {
+                                            Text(
+                                                item.pizza?.ingredientesBaseIds
+                                                    ?.mapNotNull { id -> MenuData.ingredientes.find { it.id == id }?.nombre }
+                                                    ?.joinToString(", ") ?: "",
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
                                     }
-                                    Spacer(modifier = Modifier.weight(1f))
-                                    Text("$${String.format(Locale.getDefault(), "%.2f", item.unitPriceSingle)}")
+                                    Text(
+                                        "$${String.format(Locale.getDefault(), "%.2f", item.unitPriceSingle)}",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                // Fila 2: Doradita + Ingredientes  |  Controles de cantidad
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        // Doradita
+                                        FilterChip(
+                                            selected = item.isGolden,
+                                            onClick = { cartViewModel.toggleGolden(item.id) },
+                                            label = { Text("Doradita") },
+                                            leadingIcon = if (item.isGolden) {
+                                                { Icon(Icons.Filled.Check, contentDescription = null) }
+                                            } else null
+                                        )
+                                    }
+
+                                    // Controles de cantidad
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Button(
+                                            onClick = { cartViewModel.decrementItem(item.id) },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                                        ) { Text("-") }
+                                        Text("x${item.cantidad}", modifier = Modifier.padding(horizontal = 8.dp))
+                                        Button(
+                                            onClick = { cartViewModel.incrementItem(item.id) },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                                        ) { Text("+") }
+                                    }
                                 }
                             }
                         }
                     }
+
+
                     // Items de postres
                     items(dessertItems) { item ->
                         Card(modifier = Modifier.fillMaxWidth()) {
