@@ -7,6 +7,8 @@ import com.alos895.simplepos.model.unitPriceSingle
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -351,6 +353,17 @@ fun MenuScreen(
                                         Text("- ${portion.fraction.label} ${portion.pizzaName}", style = MaterialTheme.typography.bodySmall)
                                     }
                                 }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                FilterChip(
+                                    selected = item.isGolden,
+                                    onClick = { cartViewModel.toggleGolden(item.id) },
+                                    label = { Text("Doradita") },
+                                    leadingIcon = if (item.isGolden) {
+                                        { Icon(Icons.Filled.Check, contentDescription = null) }
+                                    } else {
+                                        null
+                                    }
+                                )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),

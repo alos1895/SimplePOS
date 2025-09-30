@@ -23,7 +23,8 @@ data class CartItem(
     val sizeName: String? = null,
     val unitPrice: Double? = null,
     val portions: List<CartItemPortion> = emptyList(),
-    val cantidad: Int = 1
+    val cantidad: Int = 1,
+    val isGolden: Boolean = false
 ) {
     val isCombo: Boolean get() = portions.isNotEmpty()
 

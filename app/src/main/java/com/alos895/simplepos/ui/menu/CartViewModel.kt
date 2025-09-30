@@ -136,7 +136,8 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
                             sizeName = item.sizeLabel,
                             unitPrice = price,
                             portions = item.portions,
-                            cantidad = 1
+                            cantidad = 1,
+                            isGolden = item.isGolden
                         )
                     )
                 } else {
@@ -164,6 +165,16 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     fun removeItem(itemId: String) {
         updateCartItems { current ->
             current.removeAll { it.id == itemId }
+        }
+    }
+
+    fun toggleGolden(itemId: String) {
+        updateCartItems { current ->
+            val index = current.indexOfFirst { it.id == itemId }
+            if (index != -1) {
+                val item = current[index]
+                current[index] = item.copy(isGolden = !item.isGolden)
+            }
         }
     }
 
