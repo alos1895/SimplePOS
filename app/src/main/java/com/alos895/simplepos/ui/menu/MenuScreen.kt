@@ -3,6 +3,7 @@ package com.alos895.simplepos.ui.menu
 import java.util.Locale
 import com.alos895.simplepos.model.PizzaFractionType
 import com.alos895.simplepos.model.sizeLabel
+import com.alos895.simplepos.model.unitPriceSingle
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -51,6 +52,11 @@ fun MenuScreen(
         )
     }
     var comboDialogConfig by remember { mutableStateOf<ComboDialogConfig?>(null) }
+    val combinablePizzas = remember(pizzas) { pizzas.filter { it.esCombinable } }
+
+    val expandedCartItems = remember(cartItems) {
+        cartItems.flatMap { item -> List(item.cantidad) { index -> item to index } }
+    }
 
     val total by remember(cartItems, dessertItems, selectedDelivery) {
         derivedStateOf {
@@ -264,30 +270,39 @@ fun MenuScreen(
                                         Spacer(modifier = Modifier.height(8.dp))
                                         Text("Arma pizzas grandes o medianas con varias especialidades.")
                                         Spacer(modifier = Modifier.height(12.dp))
-                                        Button(
-                                            onClick = {
-                                                comboDialogConfig = ComboDialogConfig(
-                                                    title = "Arma tu pizza grande combinada",
-                                                    sizeName = "Extra Grande",
-                                                    patterns = largeComboPatterns
-                                                )
-                                            },
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Text("Pizza grande combinada")
-                                        }
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Button(
-                                            onClick = {
-                                                comboDialogConfig = ComboDialogConfig(
-                                                    title = "Arma tu pizza mediana 1/2 y 1/2",
-                                                    sizeName = "Mediana",
-                                                    patterns = mediumComboPatterns
-                                                )
-                                            },
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Text("Pizza mediana 1/2 y 1/2")
+                                        if (combinablePizzas.isEmpty()) {
+                                            Text(
+                                                "No hay pizzas combinables disponibles en este momento.",
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                        } else {
+                                            Button(
+                                                onClick = {
+                                                    comboDialogConfig = ComboDialogConfig(
+                                                        title = "Arma tu pizza grande combinada",
+                                                        sizeName = "Extra Grande",
+                                                        patterns = largeComboPatterns
+                                                    )
+                                                },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                enabled = combinablePizzas.isNotEmpty()
+                                            ) {
+                                                Text("Pizza grande combinada")
+                                            }
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Button(
+                                                onClick = {
+                                                    comboDialogConfig = ComboDialogConfig(
+                                                        title = "Arma tu pizza mediana 1/2 y 1/2",
+                                                        sizeName = "Mediana",
+                                                        patterns = mediumComboPatterns
+                                                    )
+                                                },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                enabled = combinablePizzas.isNotEmpty()
+                                            ) {
+                                                Text("Pizza mediana 1/2 y 1/2")
+                                            }
                                         }
                                     }
                                 }
@@ -316,7 +331,10 @@ fun MenuScreen(
                     }
 
                     // Items de pizzas
-                    items(items = cartItems, key = { it.id }) { item ->
+                    items(
+                        items = expandedCartItems,
+                        key = { (item, index) -> "${item.id}-$index" }
+                    ) { (item, index) ->
                         Card(modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 val sizeLabel = item.sizeLabel
@@ -336,20 +354,24 @@ fun MenuScreen(
                                         Text("- ${portion.fraction.label} ${portion.pizzaName}", style = MaterialTheme.typography.bodySmall)
                                     }
                                 }
+                                if (item.cantidad > 1) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        "Unidad ${index + 1} de ${item.cantidad}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Button(onClick = { cartViewModel.decrementItem(item.id) }) { Text("-") }
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("x${item.cantidad}")
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Button(onClick = { cartViewModel.incrementItem(item.id) }) { Text("+") }
-                                    }
+                                    Button(onClick = { cartViewModel.decrementItem(item.id) }) { Text("Eliminar") }
                                     Spacer(modifier = Modifier.weight(1f))
-                                    Text("$${String.format(Locale.getDefault(), "%.2f", item.subtotal)}")
+                                    Button(onClick = { cartViewModel.incrementItem(item.id) }) { Text("+1") }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("$${String.format(Locale.getDefault(), "%.2f", item.unitPriceSingle)}")
                                 }
                             }
                         }
@@ -504,7 +526,7 @@ fun MenuScreen(
             title = config.title,
             sizeName = config.sizeName,
             patterns = config.patterns,
-            pizzas = pizzas,
+            pizzas = combinablePizzas,
             onDismiss = { comboDialogConfig = null },
             onConfirm = { portions ->
                 cartViewModel.addComboToCart(config.sizeName, portions)

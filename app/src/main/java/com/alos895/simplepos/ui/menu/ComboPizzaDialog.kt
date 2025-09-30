@@ -43,6 +43,9 @@ fun ComboPizzaDialog(
 ) {
     if (patterns.isEmpty()) return
 
+    val combinablePizzas = remember(pizzas) { pizzas.filter { it.esCombinable } }
+    val hasCombinables = combinablePizzas.isNotEmpty()
+
     var selectedPattern by remember { mutableStateOf(patterns.first()) }
     var selections by remember { mutableStateOf(List(selectedPattern.fractions.size) { null as String? }) }
 
@@ -50,7 +53,7 @@ fun ComboPizzaDialog(
         selections = List(selectedPattern.fractions.size) { null }
     }
 
-    val confirmEnabled = selections.all { !it.isNullOrBlank() }
+    val confirmEnabled = hasCombinables && selections.all { !it.isNullOrBlank() }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -63,57 +66,61 @@ fun ComboPizzaDialog(
             ) {
                 Text("Selecciona la combinacion para la pizza $sizeName")
                 Spacer(modifier = Modifier.height(12.dp))
-                patterns.forEach { pattern ->
-                    val selected = pattern.id == selectedPattern.id
-                    TextButton(
-                        onClick = { selectedPattern = pattern },
-                        colors = ButtonDefaults.textButtonColors()
-                    ) {
-                        RadioButton(selected = selected, onClick = { selectedPattern = pattern })
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(pattern.label)
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                selectedPattern.fractions.forEachIndexed { index, fraction ->
-                    var expanded by remember(selectedPattern.id, index) { mutableStateOf(false) }
-                    val value = selections.getOrNull(index)
-                    ExposedDropdownMenuBox(
-                        expanded = expanded,
-                        onExpandedChange = { expanded = it },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        TextField(
-                            value = value ?: "",
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("${fraction.label} de la pizza") },
-                            placeholder = { Text("Selecciona especialidad") },
-                            trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                            },
-                            modifier = Modifier
-                                .menuAnchor()
-                                .fillMaxWidth()
-                        )
-                        DropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
+                if (!hasCombinables) {
+                    Text("No hay pizzas combinables disponibles en este momento.")
+                } else {
+                    patterns.forEach { pattern ->
+                        val selected = pattern.id == selectedPattern.id
+                        TextButton(
+                            onClick = { selectedPattern = pattern },
+                            colors = ButtonDefaults.textButtonColors()
                         ) {
-                            pizzas.forEach { pizza ->
-                                DropdownMenuItem(
-                                    text = { Text(pizza.nombre) },
-                                    onClick = {
-                                        selections = selections.toMutableList().also { list ->
-                                            list[index] = pizza.nombre
-                                        }
-                                        expanded = false
-                                    }
-                                )
-                            }
+                            RadioButton(selected = selected, onClick = { selectedPattern = pattern })
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(pattern.label)
                         }
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
+                    selectedPattern.fractions.forEachIndexed { index, fraction ->
+                        var expanded by remember(selectedPattern.id, index) { mutableStateOf(false) }
+                        val value = selections.getOrNull(index)
+                        ExposedDropdownMenuBox(
+                            expanded = expanded,
+                            onExpandedChange = { expanded = it },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            TextField(
+                                value = value ?: "",
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("${fraction.label} de la pizza") },
+                                placeholder = { Text("Selecciona especialidad") },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                                },
+                                modifier = Modifier
+                                    .menuAnchor()
+                                    .fillMaxWidth()
+                            )
+                            DropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }
+                            ) {
+                                combinablePizzas.forEach { pizza ->
+                                    DropdownMenuItem(
+                                        text = { Text(pizza.nombre) },
+                                        onClick = {
+                                            selections = selections.toMutableList().also { list ->
+                                                list[index] = pizza.nombre
+                                            }
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
                 }
             }
         },
