@@ -149,13 +149,14 @@ fun MenuScreen(
                                         ) {
                                             ExposedDropdownMenuBox(
                                                 expanded = expanded,
-                                                onExpandedChange = { expanded = !expanded }
+                                                onExpandedChange = { expanded = !expanded },
+                                                modifier = Modifier.weight(1f)
                                             ) {
                                                 OutlinedTextField(
                                                     value = "${selectedTamano.nombre} ($${"%.2f".format(selectedTamano.precioBase) })",
                                                     onValueChange = {},
                                                     readOnly = true,
-                                                    label = { Text("Tama?o") },
+                                                    label = { Text("Tamaño") },
                                                     trailingIcon = {
                                                         ExposedDropdownMenuDefaults.TrailingIcon(
                                                             expanded
@@ -184,12 +185,15 @@ fun MenuScreen(
                                                     }
                                                 }
                                             }
-                                            Button(onClick = {
-                                                cartViewModel.addToCart(
-                                                    pizza,
-                                                    selectedTamano
-                                                )
-                                            }) {
+                                            Button(
+                                                onClick = {
+                                                    cartViewModel.addToCart(
+                                                        pizza,
+                                                        selectedTamano
+                                                    )
+                                                },
+                                                modifier = Modifier.widthIn(min = 120.dp)
+                                            ) {
                                                 Text("Agregar")
                                             }
                                         }
