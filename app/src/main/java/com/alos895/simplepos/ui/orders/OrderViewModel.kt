@@ -182,6 +182,20 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         return if (index >= 0) index + 1 else 0
     }
 
+    fun getDeliverySummary(order: OrderEntity): String {
+        val trimmedAddress = order.deliveryAddress.trim()
+        if (trimmedAddress.isNotEmpty()) {
+            return trimmedAddress
+        }
+
+        return when {
+            order.isTOTODO -> "TOTODO"
+            order.isDeliveried -> "Envío a domicilio"
+            order.deliveryServicePrice == 0 -> "Pasan/Caminando"
+            else -> "Recoge en tienda"
+        }
+    }
+
 
     fun buildOrderTicket(order: OrderEntity): String {
         val info = PizzeriaData.info
@@ -199,7 +213,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         }
         sb.appendLine("-------------------------------")
         sb.appendLine("Cliente: ${user?.nombre ?: "Cliente"}")
-        sb.appendLine("Direccion: ${if (order.isDeliveried && order.deliveryAddress.isNotBlank()) order.deliveryAddress else "Recoge en tienda"}")
+        sb.appendLine("Direccion: ${getDeliverySummary(order)}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
             sb.appendLine(
@@ -237,7 +251,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine(
             "Hora: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(order.timestamp))} - Orden: ${getDailyOrderNumber(order)}"
         )
-        sb.appendLine("Cliente: ${user?.nombre ?: "Cliente"} - ${if (order.isDeliveried && order.deliveryAddress.isNotBlank()) order.deliveryAddress else "Pasan/Caminando"}")
+        sb.appendLine("Cliente: ${user?.nombre ?: "Cliente"} - ${getDeliverySummary(order)}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
             sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre.uppercase(
@@ -283,13 +297,8 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
             sb.appendLine("Comentarios:")
             sb.appendLine(order.comentarios)
         }
-        if (order.isDeliveried) {
-            sb.appendLine("-------------------------------")
-            sb.appendLine("Envío a: ${order.deliveryAddress}")
-        } else {
-            sb.appendLine("-------------------------------")
-            sb.appendLine("Recogida en tienda")
-        }
+        sb.appendLine("-------------------------------")
+        sb.appendLine("Envío/Entrega: ${getDeliverySummary(order)}")
         sb.appendLine("-------------------------------")
         sb.appendLine("¡Orden eliminada correctamente!")
         return sb.toString()

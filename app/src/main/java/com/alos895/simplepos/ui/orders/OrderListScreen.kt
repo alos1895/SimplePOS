@@ -227,13 +227,8 @@ fun OrderListScreen(
                         }
                         item { Spacer(modifier = Modifier.height(16.dp)) }
                         item { HorizontalDivider(thickness = 1.dp, color = Color.Gray) }
-                        if (order.isDeliveried) {
-                            item { Spacer(modifier = Modifier.height(8.dp)) }
-                            item { Text("Envío: ${order.deliveryAddress}") }
-                        } else {
-                            item { Spacer(modifier = Modifier.height(8.dp)) }
-                            item { Text("Pasan o Caminando!") }
-                        }
+                        item { Spacer(modifier = Modifier.height(8.dp)) }
+                        item { Text("Tipo de envío: ${orderViewModel.getDeliverySummary(order)}") }
                         item {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),

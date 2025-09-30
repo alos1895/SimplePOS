@@ -182,8 +182,10 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         val hora = formatter.format(Date(timestamp))
         val entrega = deliveryService ?: _selectedDelivery.value
         val destino = when {
-            entrega?.price ?: 0 > 0 -> if (deliveryAddress.isNotBlank()) deliveryAddress else entrega?.zona ?: "Domicilio"
-            entrega?.pickUp == true -> entrega.zona
+            entrega?.price ?: 0 > 0 ->
+                if (deliveryAddress.isNotBlank()) deliveryAddress else entrega?.zona ?: "Domicilio"
+            deliveryAddress.isNotBlank() -> deliveryAddress
+            entrega != null -> entrega.zona
             else -> "Pasan/Caminando"
         }
         val clienteNombre = user.nombre.ifBlank { "Cliente" }
@@ -248,6 +250,12 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             descuentoTOTODO = total.value - precioTOTODO
         }
 
+        val resolvedDeliveryAddress = when {
+            deliveryAddress.isNotBlank() -> deliveryAddress
+            currentDeliveryService != null -> currentDeliveryService.zona
+            else -> ""
+        }
+
         val orderEntity = OrderEntity(
             itemsJson = itemsJson,
             total = total.value,
@@ -257,7 +265,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             isDeliveried = isDeliveried,
             dessertsJson = dessertsJson,
             comentarios = comentarios.value,
-            deliveryAddress = deliveryAddress,
+            deliveryAddress = resolvedDeliveryAddress,
             isTOTODO = isTOTODO,
             precioTOTODO = precioTOTODO,
             descuentoTOTODO = descuentoTOTODO
