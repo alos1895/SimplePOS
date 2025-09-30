@@ -1,14 +1,14 @@
 package com.alos895.simplepos.ui.orders
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.PizzeriaData
-import com.alos895.simplepos.data.datasource.MenuData
+import com.alos895.simplepos.data.repository.MenuRepository
 import com.alos895.simplepos.data.repository.OrderRepository
 import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.model.CartItemPostre
+import com.alos895.simplepos.model.DeliveryService
 import com.alos895.simplepos.model.PaymentMethod
 import com.alos895.simplepos.model.PaymentPart
 import com.alos895.simplepos.model.User
@@ -26,23 +26,29 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-class OrderViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = OrderRepository(application)
-    private val gson = Gson()
-    // For storing the full list of orders fetched from the repository
-    private val _rawOrders = MutableStateFlow<List<OrderEntity>>(emptyList())
+class OrderViewModel(
+    private val orderRepository: OrderRepository,
+    private val menuRepository: MenuRepository
+) : ViewModel() {
 
-    // For managing the selected date for filtering
-    private val _selectedDate = MutableStateFlow(getToday()) // Default to today
+    private val gson = Gson()
+    private val _rawOrders = MutableStateFlow<List<OrderEntity>>(emptyList())
+    private val _selectedDate = MutableStateFlow(getToday())
     val selectedDate: StateFlow<Date?> = _selectedDate.asStateFlow()
 
-    // The publicly exposed list of orders, filtered by selectedDate
+    private val _deliveryOptions = MutableStateFlow<List<DeliveryService>>(emptyList())
+    val deliveryOptions: StateFlow<List<DeliveryService>> = _deliveryOptions.asStateFlow()
+
+    private val ingredientesPorId by lazy {
+        menuRepository.getIngredientes().associateBy { it.id }
+    }
+
     val orders: StateFlow<List<OrderEntity>> = combine(
         _rawOrders,
         _selectedDate
     ) { rawOrders, date ->
         if (date == null) {
-            rawOrders // Show all if no date is selected
+            rawOrders
         } else {
             val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
             val selectedDay = sdf.format(date)
@@ -53,13 +59,14 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     init {
+        _deliveryOptions.value = menuRepository.getDeliveryOptions()
         loadOrders()
     }
 
     fun loadOrders() {
         viewModelScope.launch {
-            val currentDate : Long = _selectedDate.value.time
-            _rawOrders.value = repository.getOrdersByDate(currentDate)
+            val currentDate: Long = _selectedDate.value.time
+            _rawOrders.value = orderRepository.getOrdersByDate(currentDate)
         }
     }
 
@@ -70,14 +77,14 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearPaymentBreakdown(orderId: Long) {
         viewModelScope.launch {
-            repository.clearPaymentBreakdown(orderId)
+            orderRepository.clearPaymentBreakdown(orderId)
             loadOrders()
         }
     }
 
     fun deleteOrderLogical(orderId: Long) {
         viewModelScope.launch {
-            repository.deleteOrderLogical(orderId)
+            orderRepository.deleteOrderLogical(orderId)
             loadOrders()
         }
     }
@@ -107,30 +114,26 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
             gson.fromJson<List<PaymentPart>>(order.paymentBreakdownJson, type)?.toMutableList()
                 ?: mutableListOf()
 
-        // Busca si ya existe un pago con ese método
         val existing = paymentParts.find { it.method == method }
         if (existing != null) {
-            // reemplaza usando copy (inmutabilidad)
             val updated = existing.copy(amount = amount)
             paymentParts.remove(existing)
             paymentParts.add(updated)
         } else {
-            // agrega nuevo
             paymentParts.add(PaymentPart(method, amount))
         }
 
-        // actualiza el JSON
         order.paymentBreakdownJson = gson.toJson(paymentParts)
 
         viewModelScope.launch {
-            repository.updateOrder(order)
+            orderRepository.updateOrder(order)
             loadOrders()
         }
     }
 
     fun updateOrder(order: OrderEntity) {
         viewModelScope.launch {
-            repository.updateOrder(order)
+            orderRepository.updateOrder(order)
             loadOrders()
         }
     }
@@ -171,14 +174,12 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
     fun getDailyOrderNumber(orderEntity: OrderEntity): Int {
         val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
         val orderDay = sdf.format(Date(orderEntity.timestamp))
-        // Filter from _rawOrders as it contains all orders for potential daily numbering
         val sameDayOrders = _rawOrders.value
             .filter { !it.isDeleted && sdf.format(Date(it.timestamp)) == orderDay }
             .sortedBy { it.timestamp }
         val index = sameDayOrders.indexOfFirst { it.id == orderEntity.id }
         return if (index >= 0) index + 1 else 0
     }
-
 
     fun buildOrderTicket(order: OrderEntity): String {
         val info = PizzeriaData.info
@@ -234,13 +235,17 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine(
             "Hora: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(order.timestamp))} - Orden: ${getDailyOrderNumber(order)}"
         )
-        sb.appendLine("Cliente: ${user?.nombre ?: "Cliente"} - ${if (order.isDeliveried && order.deliveryAddress.isNotBlank()) order.deliveryAddress else "Pasan/Caminando"}")
+        val destino = if (order.isDeliveried && order.deliveryAddress.isNotBlank()) {
+            order.deliveryAddress
+        } else {
+            "Pasan/Caminando"
+        }
+        sb.appendLine("Cliente: ${user?.nombre ?: "Cliente"} - $destino")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
-            sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre.uppercase(
-                Locale.getDefault())}")
+            sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre.uppercase(Locale.getDefault())}")
             item.pizza.ingredientesBaseIds.forEach { ingredienteId ->
-                MenuData.ingredientes.find { it.id == ingredienteId }?.let { ingrediente ->
+                ingredientesPorId[ingredienteId]?.let { ingrediente ->
                     sb.appendLine("- ${ingrediente.nombre}")
                 }
             }

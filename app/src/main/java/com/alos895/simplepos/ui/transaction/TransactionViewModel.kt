@@ -1,7 +1,6 @@
 package com.alos895.simplepos.ui.transaction
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.repository.TransactionsRepository
 import com.alos895.simplepos.db.entity.TransactionEntity
@@ -12,9 +11,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.Date
 
-class TransactionViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val repository = TransactionsRepository(application)
+class TransactionViewModel(
+    private val repository: TransactionsRepository
+) : ViewModel() {
     private val _transactions = MutableStateFlow<List<TransactionEntity>>(emptyList())
     val transactions: StateFlow<List<TransactionEntity>> = _transactions.asStateFlow()
 

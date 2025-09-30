@@ -1,22 +1,11 @@
 package com.alos895.simplepos.data.repository
 
-import android.content.Context
-import androidx.room.Room
-import com.alos895.simplepos.db.AppDatabase
+import com.alos895.simplepos.db.OrderDao
 import com.alos895.simplepos.db.entity.OrderEntity
-import com.alos895.simplepos.model.PaymentMethod
 import com.alos895.simplepos.model.PaymentPart
 import com.google.gson.Gson
-import kotlinx.coroutines.launch
 
-class OrderRepository(context: Context) {
-    private val db = Room.databaseBuilder(
-        context,
-        AppDatabase::class.java,
-        "simplepos.db"
-    ).build()
-
-    private val orderDao = db.orderDao()
+class OrderRepository(private val orderDao: OrderDao) {
 
     suspend fun addOrder(order: OrderEntity) {
         orderDao.insertOrder(order)

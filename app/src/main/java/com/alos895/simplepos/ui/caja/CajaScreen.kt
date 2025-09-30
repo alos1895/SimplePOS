@@ -8,16 +8,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext // Importado
 import androidx.compose.ui.unit.dp
 import com.alos895.simplepos.ui.print.BluetoothPrinterViewModel
-import com.alos895.simplepos.ui.caja.CajaViewModel
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import kotlinx.coroutines.launch
 import java.util.Date
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.alos895.simplepos.ui.simplePosViewModelFactory
 
 @Composable
 fun CajaScreen(
-    cajaViewModel: CajaViewModel,
+    cajaViewModel: CajaViewModel = viewModel(factory = simplePosViewModelFactory()),
     bluetoothPrinterViewModel: BluetoothPrinterViewModel
 ) {
     val snackbarHostState = remember { SnackbarHostState() }

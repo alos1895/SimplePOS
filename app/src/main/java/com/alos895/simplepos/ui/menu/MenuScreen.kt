@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.alos895.simplepos.ui.print.BluetoothPrinterViewModel
-import com.alos895.simplepos.data.datasource.MenuData
+import com.alos895.simplepos.ui.simplePosViewModelFactory
 import com.alos895.simplepos.model.User
 import kotlinx.coroutines.launch
 
@@ -20,29 +20,26 @@ import kotlinx.coroutines.launch
 @Composable
 fun MenuScreen(
     onPrintRequested: ((String) -> Unit)? = null,
-    bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel()
+    bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel(),
+    menuViewModel: MenuViewModel = viewModel(factory = simplePosViewModelFactory()),
+    cartViewModel: CartViewModel = viewModel(factory = simplePosViewModelFactory())
 ) {
-    val menuViewModel: MenuViewModel = viewModel()
-    val cartViewModel: CartViewModel = viewModel()
-
     val pizzas by menuViewModel.pizzas.collectAsState()
+    val ingredientes by menuViewModel.ingredientes.collectAsState()
+    val postres by menuViewModel.postres.collectAsState()
+    val deliveryOptions by menuViewModel.deliveryOptions.collectAsState()
     val cartItems by cartViewModel.cartItems.collectAsState()
     val dessertItems by cartViewModel.dessertItems.collectAsState()
     val comentarios by cartViewModel.comentarios.collectAsState()
-    val selectedDelivery by cartViewModel.selectedDelivery.collectAsState(initial = MenuData.deliveryOptions.first())
+    val selectedDelivery by cartViewModel.selectedDelivery.collectAsState()
+    val total by cartViewModel.total.collectAsState()
+    val totalItems by cartViewModel.totalItems.collectAsState()
 
-    val deliveryOptions = MenuData.deliveryOptions
+    val ingredientesPorId = remember(ingredientes) { ingredientes.associateBy { it.id } }
 
     var deliveryMenuExpanded by remember { mutableStateOf(false) }
     var showPizzas by remember { mutableStateOf(true) }
     var showComments by remember { mutableStateOf(false) }
-
-    val total by remember(cartItems, dessertItems, selectedDelivery) {
-        derivedStateOf {
-            cartItems.sumOf { it.subtotal } + dessertItems.sumOf { it.subtotal } + (selectedDelivery?.price
-                ?: 0)
-        }
-    }
 
     var nombre by remember { mutableStateOf("") }
     var telefono by remember { mutableStateOf("") }
@@ -110,7 +107,7 @@ fun MenuScreen(
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         pizza.ingredientesBaseIds
-                                            .mapNotNull { id -> MenuData.ingredientes.find { it.id == id }?.nombre }
+                                            .mapNotNull { id -> ingredientesPorId[id]?.nombre }
                                             .joinToString(", "),
                                         style = MaterialTheme.typography.bodyMedium
                                     )
@@ -216,7 +213,7 @@ fun MenuScreen(
                             }
                         }
                     } else {
-                        items(MenuData.postreOrExtras) { postre ->
+                        items(postres) { postre ->
                             Card(modifier = Modifier.fillMaxWidth()) {
                                 Row(
                                     modifier = Modifier
@@ -299,7 +296,6 @@ fun MenuScreen(
                     // Total
                     item {
                         Spacer(modifier = Modifier.height(16.dp))
-                        val totalItems = cartItems.sumOf { it.cantidad } + dessertItems.sumOf { it.cantidad }
                         Text(
                             "Total: $${"%.2f".format(total)} ($totalItems items)",
                             style = MaterialTheme.typography.titleMedium
@@ -335,14 +331,19 @@ fun MenuScreen(
                                             modifier = Modifier.fillMaxWidth()
                                         ) {
                                             TextField(
-                                                value = selectedDelivery?.let { "${it.zona} - $${it.price}" } ?: "Sin entrega",
+                                                value = selectedDelivery?.let {
+                                                    if (it.price > 0) "${it.zona} - $${it.price}" else it.zona
+                                                } ?: "Sin entrega",
                                                 onValueChange = {},
                                                 readOnly = true,
                                                 label = { Text("Precio de domicilio") },
                                                 trailingIcon = {
                                                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = deliveryMenuExpanded)
                                                 },
-                                                modifier = Modifier.menuAnchor().fillMaxWidth()
+                                                modifier = Modifier
+                                                    .menuAnchor()
+                                                    .fillMaxWidth(),
+                                                enabled = deliveryOptions.isNotEmpty()
                                             )
                                             ExposedDropdownMenu(
                                                 expanded = deliveryMenuExpanded,
@@ -406,7 +407,7 @@ fun MenuScreen(
                         telefono = ""
                         deliveryAddress = ""
                         cartViewModel.setComentarios("")
-                        cartViewModel.setDeliveryService(MenuData.deliveryOptions.first())
+                        cartViewModel.resetDeliverySelection()
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar("Orden guardada exitosamente")
                         }

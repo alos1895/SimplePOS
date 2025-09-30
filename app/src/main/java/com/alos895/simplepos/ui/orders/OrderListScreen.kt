@@ -30,18 +30,19 @@ import java.util.Locale
 import kotlinx.coroutines.launch
 import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.model.PaymentMethod
-import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.model.DeliveryService
 import com.alos895.simplepos.model.User
 import com.google.gson.Gson
+import com.alos895.simplepos.ui.simplePosViewModelFactory
 
 @Composable
 fun OrderListScreen(
-    orderViewModel: OrderViewModel = viewModel(),
+    orderViewModel: OrderViewModel = viewModel(factory = simplePosViewModelFactory()),
     bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel()
 ) {
     val orders by orderViewModel.orders.collectAsState()
     val selectedDate by orderViewModel.selectedDate.collectAsState()
+    val deliveryOptions by orderViewModel.deliveryOptions.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     var isPrinting by remember { mutableStateOf(false) }
@@ -395,6 +396,7 @@ fun OrderListScreen(
         EditOrderDialog(
             order = selectedOrder!!,
             orderViewModel = orderViewModel,
+            deliveryOptions = deliveryOptions,
             onDismiss = { showEditDialog = false },
             onOrderUpdated = { updatedOrder ->
                 selectedOrder = updatedOrder
@@ -408,11 +410,11 @@ fun OrderListScreen(
 fun EditOrderDialog(
     order: OrderEntity,
     orderViewModel: OrderViewModel,
+    deliveryOptions: List<DeliveryService>,
     onDismiss: () -> Unit,
     onOrderUpdated: (OrderEntity) -> Unit = {}
 ) {
     val gson = remember { Gson() }
-    val baseDeliveryOptions = remember { MenuData.deliveryOptions }
     val initialUser = remember(order.id) {
         orderViewModel.getUser(order) ?: User(id = order.id, nombre = "", telefono = "")
     }
@@ -420,8 +422,8 @@ fun EditOrderDialog(
     var comentarios by remember(order.id) { mutableStateOf(order.comentarios) }
     var direccion by remember(order.id) { mutableStateOf(order.deliveryAddress) }
     var deliveryMenuExpanded by remember { mutableStateOf(false) }
-    val matchedDelivery = remember(order.id) {
-        baseDeliveryOptions.firstOrNull { option ->
+    val matchedDelivery = remember(order.id, deliveryOptions) {
+        deliveryOptions.firstOrNull { option ->
             option.price == order.deliveryServicePrice && (
                 if (order.isDeliveried) !option.pickUp else true
             )
@@ -439,11 +441,14 @@ fun EditOrderDialog(
             null
         }
     }
-    val deliveryOptions = remember(order.id, customDelivery) {
-        if (customDelivery != null) baseDeliveryOptions + customDelivery else baseDeliveryOptions
+    val availableOptions = remember(order.id, deliveryOptions, customDelivery) {
+        if (customDelivery != null) deliveryOptions + customDelivery else deliveryOptions
     }
     var selectedDelivery by remember(order.id) {
-        mutableStateOf(matchedDelivery ?: customDelivery ?: baseDeliveryOptions.first())
+        mutableStateOf(
+            matchedDelivery ?: customDelivery ?: availableOptions.firstOrNull()
+                ?: DeliveryService(price = 0, description = "", zona = "Sin entrega", pickUp = true)
+        )
     }
     val requiresAddress = selectedDelivery.price > 0
 
@@ -513,7 +518,7 @@ fun EditOrderDialog(
                         expanded = deliveryMenuExpanded,
                         onDismissRequest = { deliveryMenuExpanded = false }
                     ) {
-                        deliveryOptions.forEach { deliveryOption ->
+                        availableOptions.forEach { deliveryOption ->
                             DropdownMenuItem(
                                 text = { Text(formatDeliveryLabel(deliveryOption)) },
                                 onClick = {

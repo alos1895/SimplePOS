@@ -8,12 +8,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.alos895.simplepos.ui.clients.UserViewModel
 import com.alos895.simplepos.model.User
+import com.alos895.simplepos.ui.simplePosViewModelFactory
 
 @Composable
-fun ClientListScreen(userViewModel: UserViewModel = viewModel()) {
+fun ClientListScreen(userViewModel: UserViewModel = viewModel(factory = simplePosViewModelFactory())) {
     val users by userViewModel.users.collectAsState()
+    val isLoading by userViewModel.isLoading.collectAsState()
+    val error by userViewModel.error.collectAsState()
     var nombre by remember { mutableStateOf("") }
     var telefono by remember { mutableStateOf("") }
 
@@ -45,6 +47,17 @@ fun ClientListScreen(userViewModel: UserViewModel = viewModel()) {
             Text("Agregar cliente")
         }
         Spacer(modifier = Modifier.height(24.dp))
+        if (isLoading && users.isEmpty()) {
+            CircularProgressIndicator()
+        }
+        error?.let {
+            Text("Error: $it", color = MaterialTheme.colorScheme.error)
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(onClick = { userViewModel.clearError() }) {
+                Text("Aceptar")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
         LazyColumn {
             items(users) { user ->
                 Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {

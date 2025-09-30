@@ -1,10 +1,9 @@
 package com.alos895.simplepos.ui.caja
 
-import android.app.Application
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.repository.OrderRepository
 import com.alos895.simplepos.data.repository.TransactionsRepository
@@ -21,10 +20,10 @@ import java.text.Normalizer
 import java.text.SimpleDateFormat
 import java.util.*
 
-class CajaViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val orderRepository = OrderRepository(application)
-    private val transactionsRepository = TransactionsRepository(application)
+class CajaViewModel(
+    private val orderRepository: OrderRepository,
+    private val transactionsRepository: TransactionsRepository
+) : ViewModel() {
     private val gson = Gson()
 
     private val _selectedDate = MutableStateFlow(getToday())

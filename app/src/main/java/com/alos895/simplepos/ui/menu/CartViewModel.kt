@@ -1,80 +1,82 @@
 package com.alos895.simplepos.ui.menu
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.PizzeriaData
-import com.alos895.simplepos.model.CartItem
-import com.alos895.simplepos.model.CartItemPostre
-import com.alos895.simplepos.model.Pizza
-import com.alos895.simplepos.model.TamanoPizza
+import com.alos895.simplepos.data.repository.MenuRepository
 import com.alos895.simplepos.data.repository.OrderRepository
 import com.alos895.simplepos.db.entity.OrderEntity
-import com.alos895.simplepos.model.User
+import com.alos895.simplepos.model.CartItem
+import com.alos895.simplepos.model.CartItemPostre
 import com.alos895.simplepos.model.DeliveryService
+import com.alos895.simplepos.model.Pizza
+import com.alos895.simplepos.model.PostreOrExtra
+import com.alos895.simplepos.model.TamanoPizza
+import com.alos895.simplepos.model.User
 import com.google.gson.Gson
-import kotlin.math.floor
 import kotlin.math.ceil
+import kotlin.math.floor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import com.alos895.simplepos.data.datasource.MenuData
-import com.alos895.simplepos.model.PostreOrExtra
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class CartViewModel(application: Application) : AndroidViewModel(application) {
+class CartViewModel(
+    private val menuRepository: MenuRepository,
+    private val orderRepository: OrderRepository
+) : ViewModel() {
+
     private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
-    val cartItems: StateFlow<List<CartItem>> = _cartItems
-    
+    val cartItems: StateFlow<List<CartItem>> = _cartItems.asStateFlow()
+
     private val _dessertItems = MutableStateFlow<List<CartItemPostre>>(emptyList())
-    val dessertItems: StateFlow<List<CartItemPostre>> = _dessertItems
-    
-    private val orderRepository = OrderRepository(application)
+    val dessertItems: StateFlow<List<CartItemPostre>> = _dessertItems.asStateFlow()
 
     private val _selectedDelivery = MutableStateFlow<DeliveryService?>(null)
-    val selectedDelivery: StateFlow<DeliveryService?> = _selectedDelivery
+    val selectedDelivery: StateFlow<DeliveryService?> = _selectedDelivery.asStateFlow()
 
     private val _total = MutableStateFlow(0.0)
-    val total: StateFlow<Double> = _total
+    val total: StateFlow<Double> = _total.asStateFlow()
+
+    private val _totalItems = MutableStateFlow(0)
+    val totalItems: StateFlow<Int> = _totalItems.asStateFlow()
 
     private val _comentarios = MutableStateFlow("")
-    val comentarios: StateFlow<String> = _comentarios
+    val comentarios: StateFlow<String> = _comentarios.asStateFlow()
+
+    private val ingredientesPorId by lazy {
+        menuRepository.getIngredientes().associateBy { it.id }
+    }
+
+    private val defaultDelivery = menuRepository.getDefaultDelivery()
 
     init {
-        // Inicializa el servicio a domicilio con el primero disponible
-        _selectedDelivery.value = MenuData.deliveryOptions.first()
-        // Observa cambios en carrito y servicio para actualizar el total
+        _selectedDelivery.value = defaultDelivery
+
         viewModelScope.launch {
-            cartItems.collect { items ->
-                val deliveryPrice = _selectedDelivery.value?.price ?: 0
-                val dessertsTotal = _dessertItems.value.sumOf { it.subtotal }
-                _total.value = items.sumOf { it.subtotal } + dessertsTotal + deliveryPrice
-            }
-        }
-        viewModelScope.launch {
-            selectedDelivery.collect {
-                val deliveryPrice = it?.price ?: 0
-                val pizzasTotal = _cartItems.value.sumOf { item -> item.subtotal }
-                val dessertsTotal = _dessertItems.value.sumOf { it.subtotal }
-                _total.value = pizzasTotal + dessertsTotal + deliveryPrice
-            }
-        }
-        viewModelScope.launch {
-            dessertItems.collect { desserts ->
-                val deliveryPrice = _selectedDelivery.value?.price ?: 0
-                val pizzasTotal = _cartItems.value.sumOf { item -> item.subtotal }
-                _total.value = pizzasTotal + desserts.sumOf { it.subtotal } + deliveryPrice
+            combine(_cartItems, _dessertItems, _selectedDelivery) { pizzas, desserts, delivery ->
+                val pizzasTotal = pizzas.sumOf { it.subtotal }
+                val dessertsTotal = desserts.sumOf { it.subtotal }
+                val deliveryPrice = delivery?.price ?: 0
+                val itemCount = pizzas.sumOf { it.cantidad } + desserts.sumOf { it.cantidad }
+                Pair(pizzasTotal + dessertsTotal + deliveryPrice, itemCount)
+            }.collect { (totalAmount, itemsCount) ->
+                _total.value = totalAmount
+                _totalItems.value = itemsCount
             }
         }
     }
 
     fun setDeliveryService(delivery: DeliveryService) {
         _selectedDelivery.value = delivery
-        // El total se actualizará automáticamente por el colector
+    }
+
+    fun resetDeliverySelection() {
+        _selectedDelivery.value = defaultDelivery
     }
 
     fun setComentarios(comentarios: String) {
@@ -199,7 +201,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             cartItems.forEach { item ->
                 sb.appendLine("${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre.uppercase(Locale.getDefault())}")
                 item.pizza.ingredientesBaseIds.forEach { ingredienteId ->
-                    MenuData.ingredientes.find { it.id == ingredienteId }?.let { ingrediente ->
+                    ingredientesPorId[ingredienteId]?.let { ingrediente ->
                         sb.appendLine("- ${ingrediente.nombre}")
                     }
                 }
@@ -231,29 +233,27 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             val itemsJson = gson.toJson(_cartItems.value)
             val dessertsJson = gson.toJson(_dessertItems.value)
             val userJson = gson.toJson(user)
-            val deliveryPrice = _selectedDelivery.value?.price ?: 0
-            val isDeliveried = deliveryPrice > 0 // Si hay precio, es entrega a domicilio
-            // Ncesito agregar los tados del objeto d servicio a domicilio
             val currentDeliveryService = _selectedDelivery.value
+            val deliveryPrice = currentDeliveryService?.price ?: 0
+            val isDeliveried = deliveryPrice > 0
             var isTOTODO = false
             var precioTOTODO = 0.0
             var descuentoTOTODO = 0.0
-            // Si es todoo, actualizar precio TOTODO = precio final - .10%
-            if (currentDeliveryService!!.isTOTODO) {
+            if (currentDeliveryService?.isTOTODO == true) {
                 isTOTODO = true
-                precioTOTODO = calculateTOTODOPrice(total.value)
-                descuentoTOTODO = total.value - precioTOTODO
+                precioTOTODO = calculateTOTODOPrice(_total.value)
+                descuentoTOTODO = _total.value - precioTOTODO
             }
 
             val orderEntity = OrderEntity(
                 itemsJson = itemsJson,
-                total = total.value,
+                total = _total.value,
                 timestamp = timestamp,
                 userJson = userJson,
                 deliveryServicePrice = deliveryPrice,
                 isDeliveried = isDeliveried,
                 dessertsJson = dessertsJson,
-                comentarios = comentarios.value,
+                comentarios = _comentarios.value,
                 deliveryAddress = deliveryAddress,
                 isTOTODO = isTOTODO,
                 precioTOTODO = precioTOTODO,
@@ -261,6 +261,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             )
             orderRepository.addOrder(orderEntity)
             clearCart()
+            resetDeliverySelection()
         }
     }
 
@@ -273,16 +274,5 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         } else {
             ceil(discounted)
         }
-    }
-}
-
-// Factory para CartViewModel
-class CartViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(CartViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return CartViewModel(application) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

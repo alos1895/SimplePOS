@@ -30,12 +30,9 @@ import com.alos895.simplepos.ui.print.BluetoothPrinterViewModelFactory
 import com.alos895.simplepos.ui.theme.SimplePOSTheme
 import com.alos895.simplepos.ui.print.BluetoothPrinterScreen
 import com.alos895.simplepos.ui.orders.OrderListScreen
-import com.alos895.simplepos.ui.orders.OrderViewModel
 import com.alos895.simplepos.ui.caja.CajaScreen
 import com.alos895.simplepos.ui.transaction.TransactionsScreen
-import com.alos895.simplepos.ui.caja.CajaViewModel
 import com.alos895.simplepos.ui.print.PrintTicketViewModel
-import com.alos895.simplepos.ui.transaction.TransactionViewModel
 
 sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
     object Menu : BottomNavItem("menu", Icons.Filled.Home, "Menú")
@@ -107,17 +104,13 @@ class MainActivity : ComponentActivity() {
                             MenuScreen(onPrintRequested = { navController.navigate(BottomNavItem.Print.route) }, bluetoothPrinterViewModel = bluetoothPrinterViewModel)
                         }
                         composable(BottomNavItem.Orders.route) {
-                            val orderViewModel: OrderViewModel = viewModel()
-                            OrderListScreen(orderViewModel)
+                            OrderListScreen()
                         }
                         composable(BottomNavItem.Transactions.route) {
-                            val transactionViewModel: TransactionViewModel = viewModel()
-                            TransactionsScreen(transactionViewModel)
+                            TransactionsScreen()
                         }
                         composable(BottomNavItem.Caja.route) {
-                            val cajaViewModel: CajaViewModel = viewModel()
-                            val bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel()
-                            CajaScreen(cajaViewModel, bluetoothPrinterViewModel)
+                            CajaScreen(bluetoothPrinterViewModel = bluetoothPrinterViewModel)
                         }
                         composable(BottomNavItem.Print.route) @androidx.annotation.RequiresPermission(
                             android.Manifest.permission.BLUETOOTH_CONNECT
