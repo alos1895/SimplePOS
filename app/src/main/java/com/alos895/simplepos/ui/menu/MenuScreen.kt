@@ -54,10 +54,6 @@ fun MenuScreen(
     var comboDialogConfig by remember { mutableStateOf<ComboDialogConfig?>(null) }
     val combinablePizzas = remember(pizzas) { pizzas.filter { it.esCombinable } }
 
-    val expandedCartItems = remember(cartItems) {
-        cartItems.flatMap { item -> List(item.cantidad) { index -> item to index } }
-    }
-
     val total by remember(cartItems, dessertItems, selectedDelivery) {
         derivedStateOf {
             cartItems.sumOf { it.subtotal } + dessertItems.sumOf { it.subtotal } + (selectedDelivery?.price
@@ -331,10 +327,7 @@ fun MenuScreen(
                     }
 
                     // Items de pizzas
-                    items(
-                        items = expandedCartItems,
-                        key = { (item, index) -> "${item.id}-$index" }
-                    ) { (item, index) ->
+                    items(items = cartItems, key = { it.id }) { item ->
                         Card(modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 val sizeLabel = item.sizeLabel
@@ -354,23 +347,19 @@ fun MenuScreen(
                                         Text("- ${portion.fraction.label} ${portion.pizzaName}", style = MaterialTheme.typography.bodySmall)
                                     }
                                 }
-                                if (item.cantidad > 1) {
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        "Unidad ${index + 1} de ${item.cantidad}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Button(onClick = { cartViewModel.decrementItem(item.id) }) { Text("Eliminar") }
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Button(onClick = { cartViewModel.decrementItem(item.id) }) { Text("-") }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("x${item.cantidad}")
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Button(onClick = { cartViewModel.incrementItem(item.id) }) { Text("+") }
+                                    }
                                     Spacer(modifier = Modifier.weight(1f))
-                                    Button(onClick = { cartViewModel.incrementItem(item.id) }) { Text("+1") }
-                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text("$${String.format(Locale.getDefault(), "%.2f", item.unitPriceSingle)}")
                                 }
                             }
@@ -380,16 +369,25 @@ fun MenuScreen(
                     items(dessertItems) { item ->
                         Card(modifier = Modifier.fillMaxWidth()) {
                             Row(
-                                modifier = Modifier.padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column { Text(item.postreOrExtra.nombre); Text("Postre") }
-                                Text("x${item.cantidad}")
-                                Text("$${"%.2f".format(item.subtotal)}")
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Button(onClick = { cartViewModel.removeDessertFromCart(item.postreOrExtra) }) { Text("-") }
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Button(onClick = { cartViewModel.addDessertToCart(item.postreOrExtra) }) { Text("+") }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(item.postreOrExtra.nombre, style = MaterialTheme.typography.titleMedium)
+                                    Text("$${String.format(Locale.getDefault(), "%.2f", item.postreOrExtra.precio)}", style = MaterialTheme.typography.bodyMedium)
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Button(onClick = { cartViewModel.removeDessertFromCart(item.postreOrExtra) }) { Text("-") }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("x${item.cantidad}")
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Button(onClick = { cartViewModel.addDessertToCart(item.postreOrExtra) }) { Text("+") }
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Text("$${String.format(Locale.getDefault(), "%.2f", item.subtotal)}")
                             }
                         }
                     }

@@ -74,12 +74,8 @@ fun CajaScreen(
                         Text("Elegir día")
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = { cajaViewModel.setSelectedDate(CajaViewModel.getToday()) }) { // Corrected
-                        Text("Hoy")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp)) // Espacio antes del nuevo botón
-                    Button(onClick = { cajaViewModel.refreshCajaData() }) { // Corrected
-                        Text("Refrescar Datos")
+                    Button(onClick = { cajaViewModel.setSelectedDate(CajaViewModel.getToday()) }) {
+                        Text("Refrescar Datos de Hoy")
                     }
                 }
             }

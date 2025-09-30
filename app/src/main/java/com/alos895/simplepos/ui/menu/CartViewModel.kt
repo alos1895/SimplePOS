@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 class CartViewModel(application: Application) : AndroidViewModel(application) {
     private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
@@ -83,14 +84,13 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
 
     fun addToCart(pizza: Pizza, tamano: TamanoPizza) {
         updateCartItems { current ->
-            val index = current.indexOfFirst { it.matchesStandard(pizza, tamano) }
-            if (index >= 0) {
-                val existing = current[index]
-                current[index] = existing.copy(
-                    cantidad = existing.cantidad + 1,
-                    sizeName = existing.sizeLabel.ifBlank { tamano.nombre },
-                    unitPrice = existing.unitPrice ?: tamano.precioBase
-                )
+            val existingItemIndex = current.indexOfFirst {
+                !it.isCombo && it.pizza?.id == pizza.id && it.tamano?.nombre == tamano.nombre
+            }
+            
+            if (existingItemIndex != -1) {
+                val existingItem = current[existingItemIndex]
+                current[existingItemIndex] = existingItem.copy(cantidad = existingItem.cantidad + 1)
             } else {
                 current.add(
                     CartItem(
@@ -106,37 +106,52 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun removeFromCart(pizza: Pizza, tamano: TamanoPizza) {
-        val target = _cartItems.value.firstOrNull { it.matchesStandard(pizza, tamano) } ?: return
-        decrementItem(target.id)
+        updateCartItems { current ->
+            val index = current.indexOfFirst {
+                !it.isCombo && it.pizza?.nombre == pizza.nombre && it.tamano?.nombre == tamano.nombre
+            }
+            if (index >= 0) {
+                current.removeAt(index)
+            }
+        }
     }
 
     fun addComboToCart(sizeName: String, portions: List<CartItemPortion>) {
         val normalizedSize = sizeName.trim()
         updateCartItems { current ->
             val price = calculateComboPrice(normalizedSize, portions)
-            val index = current.indexOfFirst { it.matchesCombo(normalizedSize, portions) }
-            if (index >= 0) {
-                val existing = current[index]
-                current[index] = existing.copy(cantidad = existing.cantidad + 1, unitPrice = price)
-            } else {
-                current.add(
-                    CartItem(
-                        sizeName = normalizedSize,
-                        unitPrice = price,
-                        portions = portions,
-                        cantidad = 1
-                    )
+            current.add(
+                CartItem(
+                    sizeName = normalizedSize,
+                    unitPrice = price,
+                    portions = portions,
+                    cantidad = 1 // Combos are always added as new items with quantity 1
                 )
-            }
+            )
         }
     }
 
     fun incrementItem(itemId: String) {
         updateCartItems { current ->
             val index = current.indexOfFirst { it.id == itemId }
-            if (index >= 0) {
-                val existing = current[index]
-                current[index] = existing.copy(cantidad = existing.cantidad + 1)
+            if (index != -1) {
+                val item = current[index]
+                if (item.isCombo) {
+                    // For combos, add a new instance with the same configuration
+                    val price = calculateComboPrice(item.sizeLabel, item.portions)
+                    current.add(
+                        CartItem(
+                            id = UUID.randomUUID().toString(), // Ensure new ID for distinct combo
+                            sizeName = item.sizeLabel,
+                            unitPrice = price,
+                            portions = item.portions,
+                            cantidad = 1
+                        )
+                    )
+                } else {
+                    // For regular pizzas, increment quantity
+                    current[index] = item.copy(cantidad = item.cantidad + 1)
+                }
             }
         }
     }
@@ -144,10 +159,10 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     fun decrementItem(itemId: String) {
         updateCartItems { current ->
             val index = current.indexOfFirst { it.id == itemId }
-            if (index >= 0) {
-                val existing = current[index]
-                if (existing.cantidad > 1) {
-                    current[index] = existing.copy(cantidad = existing.cantidad - 1)
+            if (index != -1) {
+                val item = current[index]
+                if (item.cantidad > 1) {
+                    current[index] = item.copy(cantidad = item.cantidad - 1)
                 } else {
                     current.removeAt(index)
                 }
@@ -196,7 +211,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         val cartItems = _cartItems.value
         val dessertItems = _dessertItems.value
         if (cartItems.isEmpty() && dessertItems.isEmpty()) {
-            return "El carrito está vacío."
+            return "El carrito estÃ¡ vacÃ­o."
         }
         var result = 0.0
         val info = PizzeriaData.info
@@ -221,7 +236,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         }
         sb.appendLine("-------------------------------")
         sb.appendLine("TOTAL: $${String.format(Locale.getDefault(), "%.2f", result)}")
-        sb.appendLine("¡Gracias por su compra!")
+        sb.appendLine("Â¡Gracias por su compra!")
         return sb.toString()
     }
 
@@ -331,20 +346,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     private fun updateCartItems(block: (MutableList<CartItem>) -> Unit) {
         val current = _cartItems.value.toMutableList()
         block(current)
-        _cartItems.value = current
-    }
-
-    private fun CartItem.matchesStandard(pizza: Pizza, tamano: TamanoPizza): Boolean {
-        return !isCombo && this.pizza?.nombre == pizza.nombre && this.tamano?.nombre == tamano.nombre
-    }
-
-    private fun CartItem.matchesCombo(sizeName: String, portions: List<CartItemPortion>): Boolean {
-        if (!isCombo) return false
-        if (!sizeLabel.equals(sizeName, ignoreCase = true)) return false
-        if (this.portions.size != portions.size) return false
-        return this.portions.zip(portions).all { (existing, incoming) ->
-            existing.pizzaName == incoming.pizzaName && existing.fraction == incoming.fraction
-        }
+        _cartItems.value = current // Directly assign the modified list
     }
 
     private fun calculateTOTODOPrice(total: Double): Double {
