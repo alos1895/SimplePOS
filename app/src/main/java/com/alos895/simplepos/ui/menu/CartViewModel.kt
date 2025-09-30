@@ -84,24 +84,15 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
 
     fun addToCart(pizza: Pizza, tamano: TamanoPizza) {
         updateCartItems { current ->
-            val existingItemIndex = current.indexOfFirst {
-                !it.isCombo && it.pizza?.nombre == pizza.nombre && it.tamano?.nombre == tamano.nombre
-            }
-            
-            if (existingItemIndex != -1) {
-                val existingItem = current[existingItemIndex]
-                current[existingItemIndex] = existingItem.copy(cantidad = existingItem.cantidad + 1)
-            } else {
-                current.add(
-                    CartItem(
-                        pizza = pizza,
-                        tamano = tamano,
-                        sizeName = tamano.nombre,
-                        unitPrice = tamano.precioBase,
-                        cantidad = 1
-                    )
+            current.add(
+                CartItem(
+                    pizza = pizza,
+                    tamano = tamano,
+                    sizeName = tamano.nombre,
+                    unitPrice = tamano.precioBase,
+                    cantidad = 1
                 )
-            }
+            )
         }
     }
 
