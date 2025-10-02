@@ -464,7 +464,6 @@ fun EditOrderDialog(
         mutableStateOf(matchedDelivery ?: customDelivery ?: baseDeliveryOptions.first())
     }
     val requiresAddress = selectedDelivery.type == DeliveryType.DOMICILIO ||
-        selectedDelivery.type == DeliveryType.TOTODO ||
         selectedDelivery.type == DeliveryType.CAMINANDO
 
     fun formatDeliveryLabel(delivery: DeliveryService): String {

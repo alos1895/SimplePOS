@@ -326,7 +326,9 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
 
         val resolvedDeliveryAddress = when {
             deliveryAddress.isNotBlank() -> deliveryAddress
-            currentDeliveryService != null -> currentDeliveryService.zona
+            currentDeliveryService != null &&
+                (deliveryType == DeliveryType.DOMICILIO || deliveryType == DeliveryType.CAMINANDO) ->
+                currentDeliveryService.zona
             else -> ""
         }
 
