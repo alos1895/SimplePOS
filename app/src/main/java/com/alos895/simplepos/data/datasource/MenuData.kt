@@ -196,6 +196,7 @@ object MenuData {
         Pizza(
             nombre = "Especial",
             ingredientesBaseIds = listOf(1),
+            esCombinable = false,
             // Muestra todos los precios de pizzas
             tamanos = listOf(
                 TamanoPizza("Chica", 69.0),

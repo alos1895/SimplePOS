@@ -1,6 +1,7 @@
 package com.alos895.simplepos.ui.orders
 
 import android.app.DatePickerDialog
+import com.alos895.simplepos.ui.common.CartItemFormatter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,6 +11,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessAlarm
 import androidx.compose.material.icons.filled.AddBusiness
+import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Motorcycle
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -168,6 +170,14 @@ fun OrderListScreen(
                                             modifier = Modifier.padding(bottom = 4.dp)
                                         )
                                     }
+                                    if (order.isWalkingDelivery) {
+                                        Icon(
+                                            imageVector = Icons.Filled.DirectionsWalk,
+                                            contentDescription = "Entrega caminando",
+                                            tint = MaterialTheme.colorScheme.secondary,
+                                            modifier = Modifier.padding(bottom = 4.dp)
+                                        )
+                                    }
                                     if (order.isTOTODO) {
                                         Icon(
                                             imageVector = Icons.Filled.AddBusiness,
@@ -211,7 +221,13 @@ fun OrderListScreen(
                         item { HorizontalDivider(thickness = 1.dp, color = Color.Gray) }
                         item { Text("Items:") }
                         items(orderViewModel.getCartItems(order)) { item ->
-                            Text("- ${item.cantidad}x ${item.pizza.nombre} ${item.tamano.nombre}")
+                            val itemLines = CartItemFormatter.toCustomerLines(item)
+                            itemLines.firstOrNull()?.let { header ->
+                                Text("- ${header}")
+                            }
+                            itemLines.drop(1).forEach { detail ->
+                                Text("  ${detail}")
+                            }
                         }
                         if (orderViewModel.getDessertItems(order).isNotEmpty()) {
                             item { Spacer(modifier = Modifier.height(8.dp)) }
@@ -553,3 +569,4 @@ fun EditOrderDialog(
         }
     )
 }
+

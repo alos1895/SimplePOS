@@ -12,6 +12,7 @@ import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.db.entity.TransactionEntity
 import com.alos895.simplepos.db.entity.TransactionType
 import com.alos895.simplepos.model.*
+import com.alos895.simplepos.model.sizeLabel
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.*
@@ -101,9 +102,18 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
             // Generar strings legibles
             val pizzasList = items.joinToString("; ") { item ->
                 val cantidad = item.cantidad ?: 0
-                val nombre = quitarAcentos(item.pizza?.nombre ?: "Desconocida")
-                val tamano = quitarAcentos(item.tamano?.nombre ?: "Sin tamaño")
-                "$cantidad x $nombre ($tamano)"
+                if (item.portions.isNotEmpty()) {
+                    val size = quitarAcentos(item.sizeLabel.ifBlank { "Sin tamano" })
+                    val portions = item.portions.joinToString(" + ") { portion ->
+                        val name = quitarAcentos(portion.pizzaName)
+                        "${portion.fraction.label} ${name}"
+                    }
+                    "$cantidad x Pizza $size [$portions]"
+                } else {
+                    val nombre = quitarAcentos(item.pizza?.nombre ?: "Desconocida")
+                    val tamano = quitarAcentos(item.tamano?.nombre ?: "Sin tamano")
+                    "$cantidad x $nombre ($tamano)"
+                }
             }
 
             val postresList = desserts.filter { it.postreOrExtra?.esPostre == true }
@@ -200,7 +210,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
             cartItems.forEach { item ->
                 totalPizzas += item.cantidad
                 pizzaRevenue += item.subtotal
-                when (item.tamano.nombre.lowercase(Locale.getDefault())) {
+                when (item.sizeLabel.lowercase(Locale.getDefault())) {
                     "chica" -> totalChicas += item.cantidad
                     "mediana" -> totalMedianas += item.cantidad
                     "grande", "extra grande" -> totalGrandes += item.cantidad

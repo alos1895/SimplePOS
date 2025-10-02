@@ -19,7 +19,7 @@ interface OrderDao {
     suspend fun getMaxDailyOrderNumberForRange(start: Long, end: Long): Int?
 
 
-    @Query("UPDATE orders SET itemsJson = :itemsJson, total = :total, timestamp = :timestamp, dailyOrderNumber = :dailyOrderNumber, userJson = :userJson, deliveryServicePrice = :deliveryServicePrice, isDeliveried = :isDeliveried, dessertsJson = :dessertsJson, comentarios = :comentarios, deliveryAddress = :deliveryAddress, pizzaStatus = :pizzaStatus, paymentBreakdownJson= :paymentBreakdownJson, isDeleted = :isDeleted WHERE id = :id")
+    @Query("UPDATE orders SET itemsJson = :itemsJson, total = :total, timestamp = :timestamp, dailyOrderNumber = :dailyOrderNumber, userJson = :userJson, deliveryServicePrice = :deliveryServicePrice, isDeliveried = :isDeliveried, isWalkingDelivery = :isWalkingDelivery, dessertsJson = :dessertsJson, comentarios = :comentarios, deliveryAddress = :deliveryAddress, pizzaStatus = :pizzaStatus, paymentBreakdownJson= :paymentBreakdownJson, isDeleted = :isDeleted WHERE id = :id")
     suspend fun updateOrder(
         id: Long,
         itemsJson: String,
@@ -29,6 +29,7 @@ interface OrderDao {
         userJson: String,
         deliveryServicePrice: Int,
         isDeliveried: Boolean,
+        isWalkingDelivery: Boolean,
         dessertsJson: String,
         comentarios: String,
         deliveryAddress: String,

@@ -15,6 +15,7 @@ data class OrderEntity(
     val userJson: String,
     val deliveryServicePrice: Int = 0,
     val isDeliveried: Boolean = false,
+    val isWalkingDelivery: Boolean = false,
     val dessertsJson: String = "[]",
     val comentarios: String = "",
     val deliveryAddress: String = "",
