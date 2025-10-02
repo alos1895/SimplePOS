@@ -255,19 +255,23 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
         val hora = formatter.format(Date(timestamp))
         val entrega = deliveryService ?: _selectedDelivery.value
-        val destino = when {
-            entrega?.price ?: 0 > 0 ->
-                if (deliveryAddress.isNotBlank()) deliveryAddress else entrega?.zona ?: "Domicilio"
-            deliveryAddress.isNotBlank() -> deliveryAddress
-            entrega != null -> entrega.zona
-            else -> "Pasan/Caminando"
-        }
+        val deliveryType = entrega?.type ?: DeliveryType.PASAN
+        val deliveryTypeLabel = getDeliveryTypeLabel(deliveryType)
+        val trimmedAddress = deliveryAddress.trim()
+        val detail = when {
+            trimmedAddress.isNotEmpty() && deliveryType != DeliveryType.TOTODO -> trimmedAddress
+            deliveryType == DeliveryType.DOMICILIO && entrega?.zona?.isNotBlank() == true -> entrega.zona
+            else -> null
+        }?.takeIf { it.isNotBlank() && it != deliveryTypeLabel }
+        val detailLabel = if (trimmedAddress.isNotEmpty()) "Dirección" else "Detalle"
         val clienteNombre = user.nombre.ifBlank { "Cliente" }
 
         val sb = StringBuilder()
         sb.appendLine("ORDEN PARA COCINA")
         sb.appendLine("Hora: $hora - Orden: $dailyOrderNumber")
-        sb.appendLine("Cliente: $clienteNombre - $destino")
+        sb.appendLine("Cliente: $clienteNombre")
+        sb.appendLine("Entrega: $deliveryTypeLabel")
+        detail?.let { sb.appendLine("$detailLabel: $it") }
         sb.appendLine("-------------------------------")
 
         if (cartItems.isEmpty()) {
@@ -350,6 +354,15 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         )
 
         return orderRepository.addOrder(orderEntity)
+    }
+
+    private fun getDeliveryTypeLabel(type: DeliveryType): String {
+        return when (type) {
+            DeliveryType.PASAN -> "Recoge en pizzería"
+            DeliveryType.CAMINANDO -> "Entrega caminando"
+            DeliveryType.TOTODO -> "TOTODO"
+            DeliveryType.DOMICILIO -> "Envío a domicilio"
+        }
     }
 
     private fun calculateComboPrice(sizeName: String, portions: List<CartItemPortion>): Double {
