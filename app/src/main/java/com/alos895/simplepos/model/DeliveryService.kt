@@ -5,6 +5,6 @@ data class DeliveryService(
     val description: String,
     val zona: String,
     val pickUp: Boolean = false,
-    var isTOTODO: Boolean = false
+    val type: DeliveryType
 )
 

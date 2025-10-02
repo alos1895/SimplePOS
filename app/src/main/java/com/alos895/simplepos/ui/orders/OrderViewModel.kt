@@ -11,6 +11,7 @@ import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.model.CartItemPostre
 import com.alos895.simplepos.model.PaymentMethod
 import com.alos895.simplepos.model.PaymentPart
+import com.alos895.simplepos.model.DeliveryType
 import com.alos895.simplepos.model.User
 import com.google.gson.Gson
 import com.alos895.simplepos.ui.common.CartItemFormatter
@@ -189,12 +190,22 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
             return trimmedAddress
         }
 
-        return when {
-            order.isTOTODO -> "TOTODO"
-            order.isDeliveried -> "Envío a domicilio"
-            order.deliveryServicePrice == 0 -> "Pasan/Caminando"
-            else -> "Recoge en tienda"
+        return getDeliveryTypeLabel(order)
+    }
+
+    fun getDeliveryTypeLabel(order: OrderEntity): String {
+        return when (order.deliveryType) {
+            DeliveryType.PASAN -> "PASAN"
+            DeliveryType.CAMINANDO -> "CAMINANDO"
+            DeliveryType.TOTODO -> "TOTODO"
+            DeliveryType.DOMICILIO -> "ENVIO"
         }
+    }
+
+    fun getDeliveryDetail(order: OrderEntity): String? {
+        val summary = getDeliverySummary(order)
+        val typeLabel = getDeliveryTypeLabel(order)
+        return summary.takeIf { it.isNotBlank() && it != typeLabel }
     }
 
 
@@ -252,7 +263,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine(
             "Hora: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(order.timestamp))} - Orden: ${getDailyOrderNumber(order)}"
         )
-        sb.appendLine("Cliente: ${user?.nombre ?: "Cliente"} - ${getDeliverySummary(order)}")
+        sb.appendLine("Cliente: ${user?.nombre ?: "Cliente"} : ${getDeliveryTypeLabel(order)}")
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
             CartItemFormatter.toKitchenLines(item).forEach { line ->

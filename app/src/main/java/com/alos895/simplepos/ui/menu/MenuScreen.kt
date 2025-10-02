@@ -20,6 +20,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.alos895.simplepos.ui.print.BluetoothPrinterViewModel
 import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.model.User
+import com.alos895.simplepos.model.DeliveryType
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -510,8 +511,9 @@ fun MenuScreen(
                                     }
                                 }
 
-                                // Caja de dirección solo si el precio > 0
-                                if ((selectedDelivery?.price ?: 0) > 0) {
+                                val requiresAddress = selectedDelivery?.type == DeliveryType.DOMICILIO ||
+                                    selectedDelivery?.type == DeliveryType.CAMINANDO
+                                if (requiresAddress) {
                                     Spacer(modifier = Modifier.height(16.dp))
                                     OutlinedTextField(
                                         value = deliveryAddress,

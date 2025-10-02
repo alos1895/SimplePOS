@@ -227,12 +227,15 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
 
-            if (order.isDeliveried) {
-                totalDelivery++
-                deliveryRevenue += order.deliveryServicePrice
-            }
-            if (order.isTOTODO) {
-                deliverysTOTODO++
+            when (order.deliveryType) {
+                DeliveryType.DOMICILIO -> {
+                    totalDelivery++
+                    deliveryRevenue += order.deliveryServicePrice
+                }
+                DeliveryType.TOTODO -> {
+                    deliverysTOTODO++
+                }
+                else -> {}
             }
 
             totalCaja += order.total

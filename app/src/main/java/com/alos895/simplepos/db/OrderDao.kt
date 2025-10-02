@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import com.alos895.simplepos.db.entity.OrderEntity
+import com.alos895.simplepos.model.DeliveryType
 
 @Dao
 interface OrderDao {
@@ -19,7 +20,7 @@ interface OrderDao {
     suspend fun getMaxDailyOrderNumberForRange(start: Long, end: Long): Int?
 
 
-    @Query("UPDATE orders SET itemsJson = :itemsJson, total = :total, timestamp = :timestamp, dailyOrderNumber = :dailyOrderNumber, userJson = :userJson, deliveryServicePrice = :deliveryServicePrice, isDeliveried = :isDeliveried, isWalkingDelivery = :isWalkingDelivery, dessertsJson = :dessertsJson, comentarios = :comentarios, deliveryAddress = :deliveryAddress, pizzaStatus = :pizzaStatus, paymentBreakdownJson= :paymentBreakdownJson, isDeleted = :isDeleted WHERE id = :id")
+    @Query("UPDATE orders SET itemsJson = :itemsJson, total = :total, timestamp = :timestamp, dailyOrderNumber = :dailyOrderNumber, userJson = :userJson, deliveryServicePrice = :deliveryServicePrice, isDeliveried = :isDeliveried, isWalkingDelivery = :isWalkingDelivery, dessertsJson = :dessertsJson, comentarios = :comentarios, deliveryAddress = :deliveryAddress, pizzaStatus = :pizzaStatus, paymentBreakdownJson= :paymentBreakdownJson, isDeleted = :isDeleted, deliveryType = :deliveryType, isTOTODO = :isTOTODO, precioTOTODO = :precioTOTODO, descuentoTOTODO = :descuentoTOTODO WHERE id = :id")
     suspend fun updateOrder(
         id: Long,
         itemsJson: String,
@@ -35,7 +36,11 @@ interface OrderDao {
         deliveryAddress: String,
         pizzaStatus: String,
         isDeleted: Boolean,
-        paymentBreakdownJson : String
+        paymentBreakdownJson : String,
+        deliveryType: DeliveryType,
+        isTOTODO: Boolean,
+        precioTOTODO: Double,
+        descuentoTOTODO: Double
     )
 
     @Query("UPDATE orders SET paymentBreakdownJson = :paymentBreakdownJson WHERE id = :id")
