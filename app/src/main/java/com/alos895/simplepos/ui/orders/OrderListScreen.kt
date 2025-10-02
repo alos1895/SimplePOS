@@ -313,18 +313,20 @@ fun OrderListScreen(
                                     Text("Pagar en Efectivo")
                                 }
 
-                                Button(
-                                    onClick = {
-                                        order.paymentBreakdownJson = "[]"
-                                        orderViewModel.updatePayment(order, order.total, PaymentMethod.TRANSFERENCIA)
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar("Pago con tarjeta registrado")
-                                        }
-                                        selectedOrder = null
-                                    },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text("Pagar con Tarjeta")
+                                if (order.deliveryType != DeliveryType.TOTODO) {
+                                    Button(
+                                        onClick = {
+                                            order.paymentBreakdownJson = "[]"
+                                            orderViewModel.updatePayment(order, order.total, PaymentMethod.TRANSFERENCIA)
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("Pago con tarjeta registrado")
+                                            }
+                                            selectedOrder = null
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Pagar con Tarjeta")
+                                    }
                                 }
                             }
                             Spacer(modifier = Modifier.height(8.dp))
