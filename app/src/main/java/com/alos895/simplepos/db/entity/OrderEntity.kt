@@ -3,6 +3,7 @@ package com.alos895.simplepos.db.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.alos895.simplepos.model.DeliveryType
 
 @Entity(tableName = "orders")
 data class OrderEntity(
@@ -19,6 +20,8 @@ data class OrderEntity(
     val dessertsJson: String = "[]",
     val comentarios: String = "",
     val deliveryAddress: String = "",
+    @ColumnInfo(defaultValue = "'PASAN'")
+    val deliveryType: DeliveryType = DeliveryType.PASAN,
     val pizzaStatus: String = "",
     val isDeleted: Boolean = false,
     var paymentBreakdownJson: String = "[]",

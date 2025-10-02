@@ -34,8 +34,11 @@ import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.model.PaymentMethod
 import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.model.DeliveryService
+import com.alos895.simplepos.model.DeliveryType
 import com.alos895.simplepos.model.User
 import com.google.gson.Gson
+import kotlin.math.ceil
+import kotlin.math.floor
 
 @Composable
 fun OrderListScreen(
@@ -162,29 +165,26 @@ fun OrderListScreen(
                                             style = MaterialTheme.typography.bodyMedium
                                         )
                                     }
-                                    if (order.isDeliveried) {
-                                        Icon(
+                                    when (order.deliveryType) {
+                                        DeliveryType.DOMICILIO -> Icon(
                                             imageVector = Icons.Filled.Motorcycle,
                                             contentDescription = "Para llevar",
                                             tint = MaterialTheme.colorScheme.secondary,
                                             modifier = Modifier.padding(bottom = 4.dp)
                                         )
-                                    }
-                                    if (order.isWalkingDelivery) {
-                                        Icon(
+                                        DeliveryType.CAMINANDO -> Icon(
                                             imageVector = Icons.Filled.DirectionsWalk,
                                             contentDescription = "Entrega caminando",
                                             tint = MaterialTheme.colorScheme.secondary,
                                             modifier = Modifier.padding(bottom = 4.dp)
                                         )
-                                    }
-                                    if (order.isTOTODO) {
-                                        Icon(
+                                        DeliveryType.TOTODO -> Icon(
                                             imageVector = Icons.Filled.AddBusiness,
                                             contentDescription = "TOTODO",
                                             tint = MaterialTheme.colorScheme.secondary,
                                             modifier = Modifier.padding(bottom = 4.dp)
                                         )
+                                        DeliveryType.PASAN -> {}
                                     }
                                 }
                             }
@@ -433,18 +433,22 @@ fun EditOrderDialog(
     var deliveryMenuExpanded by remember { mutableStateOf(false) }
     val matchedDelivery = remember(order.id) {
         baseDeliveryOptions.firstOrNull { option ->
-            option.price == order.deliveryServicePrice && (
-                if (order.isDeliveried) !option.pickUp else true
-            )
+            option.price == order.deliveryServicePrice && option.type == order.deliveryType
         }
     }
     val customDelivery = remember(order.id) {
-        if (matchedDelivery == null && order.deliveryServicePrice != 0) {
+        if (matchedDelivery == null) {
             DeliveryService(
                 price = order.deliveryServicePrice,
                 description = "",
-                zona = "Personalizado",
-                pickUp = !order.isDeliveried
+                zona = when (order.deliveryType) {
+                    DeliveryType.PASAN -> "Pasan"
+                    DeliveryType.CAMINANDO -> "Caminando"
+                    DeliveryType.TOTODO -> "TOTODO"
+                    DeliveryType.DOMICILIO -> "Personalizado"
+                },
+                pickUp = order.deliveryType == DeliveryType.PASAN,
+                type = order.deliveryType
             )
         } else {
             null
@@ -456,7 +460,7 @@ fun EditOrderDialog(
     var selectedDelivery by remember(order.id) {
         mutableStateOf(matchedDelivery ?: customDelivery ?: baseDeliveryOptions.first())
     }
-    val requiresAddress = selectedDelivery.price > 0
+    val requiresAddress = selectedDelivery.type == DeliveryType.DOMICILIO || selectedDelivery.type == DeliveryType.TOTODO
 
     fun formatDeliveryLabel(delivery: DeliveryService): String {
         return if (delivery.price > 0) "${delivery.zona} - $${delivery.price}" else delivery.zona
@@ -464,15 +468,38 @@ fun EditOrderDialog(
 
     fun buildUpdatedOrder(): OrderEntity {
         val updatedDeliveryPrice = selectedDelivery.price
-        val updatedIsDeliveried = updatedDeliveryPrice > 0
-        val sanitizedAddress = if (updatedIsDeliveried) direccion.trim() else ""
+        val updatedDeliveryType = selectedDelivery.type
+        val updatedIsDeliveried = updatedDeliveryType == DeliveryType.DOMICILIO
+        val updatedIsWalking = updatedDeliveryType == DeliveryType.CAMINANDO
+        val updatedIsTOTODO = updatedDeliveryType == DeliveryType.TOTODO
+        val sanitizedAddress = if (requiresAddress) direccion.trim() else ""
         val updatedUser = initialUser.copy(nombre = nombreCliente)
         val adjustedTotal = order.total - order.deliveryServicePrice + updatedDeliveryPrice
+        val updatedPrecioTOTODO: Double
+        val updatedDescuentoTOTODO: Double
+        if (updatedIsTOTODO) {
+            val discounted = adjustedTotal * 0.9
+            val decimals = discounted - discounted.toInt()
+            updatedPrecioTOTODO = if (decimals < 0.5) {
+                floor(discounted)
+            } else {
+                ceil(discounted)
+            }
+            updatedDescuentoTOTODO = adjustedTotal - updatedPrecioTOTODO
+        } else {
+            updatedPrecioTOTODO = 0.0
+            updatedDescuentoTOTODO = 0.0
+        }
         return order.copy(
             comentarios = comentarios,
             deliveryAddress = sanitizedAddress,
             deliveryServicePrice = updatedDeliveryPrice,
             isDeliveried = updatedIsDeliveried,
+            isWalkingDelivery = updatedIsWalking,
+            deliveryType = updatedDeliveryType,
+            isTOTODO = updatedIsTOTODO,
+            precioTOTODO = updatedPrecioTOTODO,
+            descuentoTOTODO = updatedDescuentoTOTODO,
             userJson = gson.toJson(updatedUser),
             total = adjustedTotal
         )

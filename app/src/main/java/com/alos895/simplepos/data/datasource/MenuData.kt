@@ -1,6 +1,7 @@
 package com.alos895.simplepos.data.datasource
 
 import com.alos895.simplepos.model.DeliveryService
+import com.alos895.simplepos.model.DeliveryType
 import com.alos895.simplepos.model.Pizza
 import com.alos895.simplepos.model.Ingrediente
 import com.alos895.simplepos.model.TamanoPizza
@@ -248,58 +249,68 @@ object MenuData {
             price = 0,
             zona = "Pasan",
             description = "Recoge tu pedido en la pizzería.",
-            pickUp = true
+            pickUp = true,
+            type = DeliveryType.PASAN
         ),
         DeliveryService(
             price = 0,
             zona = "Caminando",
-            description = "La llevamos caminando sin costo."
+            description = "La llevamos caminando sin costo.",
+            type = DeliveryType.CAMINANDO
         ),
         DeliveryService(
             price = 0,
             zona = "TOTODO",
             description = "Envio TOTODO.",
-            isTOTODO = true
+            type = DeliveryType.TOTODO
         ),
         DeliveryService(
             price = 25,
             zona = "Zona 1",
-            description = ""
+            description = "",
+            type = DeliveryType.DOMICILIO
         ),
         DeliveryService(
             price = 30,
             zona = "Zona 2",
-            description = ""
+            description = "",
+            type = DeliveryType.DOMICILIO
         ),
         DeliveryService(
             price = 35,
             zona = "Zona 3",
-            description = ""
+            description = "",
+            type = DeliveryType.DOMICILIO
         ),
         DeliveryService(
             price = 40,
             zona = "Zona 4",
-            description = ""
+            description = "",
+            type = DeliveryType.DOMICILIO
         ),
         DeliveryService(
             price = 45,
             zona = "Zona 5",
-            description = ""
+            description = "",
+            type = DeliveryType.DOMICILIO
         ),
         DeliveryService(
             price = 50,
             zona = "Zona 6",
-            description = ""
+            description = "",
+            type = DeliveryType.DOMICILIO
         ),
         DeliveryService(
             price = 55,
             zona = "Zona 7",
-            description = ""
+            description = "",
+            type = DeliveryType.DOMICILIO
         ),
         DeliveryService(
             price = 60,
             zona = "Zona 8",
-            description = ""
+            description = "",
+            type = DeliveryType.DOMICILIO
         )
     )
 }

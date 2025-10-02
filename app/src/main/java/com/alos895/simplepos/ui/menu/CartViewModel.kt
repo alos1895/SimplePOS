@@ -13,6 +13,7 @@ import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.model.CartItemPortion
 import com.alos895.simplepos.model.CartItemPostre
 import com.alos895.simplepos.model.DeliveryService
+import com.alos895.simplepos.model.DeliveryType
 import com.alos895.simplepos.model.Pizza
 import com.alos895.simplepos.model.PostreOrExtra
 import com.alos895.simplepos.model.TamanoPizza
@@ -307,17 +308,20 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         val itemsJson = gson.toJson(_cartItems.value)
         val dessertsJson = gson.toJson(_dessertItems.value)
         val userJson = gson.toJson(user)
-        val deliveryPrice = _selectedDelivery.value?.price ?: 0
-        val isDeliveried = deliveryPrice > 0
         val currentDeliveryService = _selectedDelivery.value
-        val isWalkingDelivery = currentDeliveryService?.zona.equals("Caminando", ignoreCase = true)
-        var isTOTODO = false
-        var precioTOTODO = 0.0
-        var descuentoTOTODO = 0.0
-        if (currentDeliveryService?.isTOTODO == true) {
-            isTOTODO = true
+        val deliveryType = currentDeliveryService?.type ?: DeliveryType.PASAN
+        val deliveryPrice = currentDeliveryService?.price ?: 0
+        val isDeliveried = deliveryType == DeliveryType.DOMICILIO
+        val isWalkingDelivery = deliveryType == DeliveryType.CAMINANDO
+        val isTOTODO = deliveryType == DeliveryType.TOTODO
+        val precioTOTODO: Double
+        val descuentoTOTODO: Double
+        if (isTOTODO) {
             precioTOTODO = calculateTOTODOPrice(total.value)
             descuentoTOTODO = total.value - precioTOTODO
+        } else {
+            precioTOTODO = 0.0
+            descuentoTOTODO = 0.0
         }
 
         val resolvedDeliveryAddress = when {
@@ -337,6 +341,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             dessertsJson = dessertsJson,
             comentarios = comentarios.value,
             deliveryAddress = resolvedDeliveryAddress,
+            deliveryType = deliveryType,
             isTOTODO = isTOTODO,
             precioTOTODO = precioTOTODO,
             descuentoTOTODO = descuentoTOTODO

@@ -11,6 +11,7 @@ import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.model.CartItemPostre
 import com.alos895.simplepos.model.PaymentMethod
 import com.alos895.simplepos.model.PaymentPart
+import com.alos895.simplepos.model.DeliveryType
 import com.alos895.simplepos.model.User
 import com.google.gson.Gson
 import com.alos895.simplepos.ui.common.CartItemFormatter
@@ -189,11 +190,11 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
             return trimmedAddress
         }
 
-        return when {
-            order.isTOTODO -> "TOTODO"
-            order.isDeliveried -> "Envío a domicilio"
-            order.deliveryServicePrice == 0 -> "Pasan/Caminando"
-            else -> "Recoge en tienda"
+        return when (order.deliveryType) {
+            DeliveryType.PASAN -> "Recoge en pizzería"
+            DeliveryType.CAMINANDO -> "Entrega caminando"
+            DeliveryType.TOTODO -> "TOTODO"
+            DeliveryType.DOMICILIO -> "Envío a domicilio"
         }
     }
 
