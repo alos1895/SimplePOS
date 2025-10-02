@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.model.PostreOrExtra
+import com.alos895.simplepos.model.DeliveryType
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -181,12 +182,13 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
         val hora = formatter.format(Date(timestamp))
         val entrega = deliveryService ?: _selectedDelivery.value
-        val destino = when {
-            entrega?.price ?: 0 > 0 ->
-                if (deliveryAddress.isNotBlank()) deliveryAddress else entrega?.zona ?: "Domicilio"
-            deliveryAddress.isNotBlank() -> deliveryAddress
-            entrega != null -> entrega.zona
-            else -> "Pasan/Caminando"
+        val deliveryType = resolveDeliveryType(entrega, deliveryAddress.isNotBlank())
+        val destino = when (deliveryType) {
+            DeliveryType.PASAN -> entrega?.zona ?: DeliveryType.PASAN.displayName
+            DeliveryType.CAMINANDO ->
+                if (deliveryAddress.isNotBlank()) deliveryAddress else entrega?.zona ?: DeliveryType.CAMINANDO.displayName
+            DeliveryType.TOTODO, DeliveryType.A_DOMICILIO ->
+                if (deliveryAddress.isNotBlank()) deliveryAddress else entrega?.zona ?: DeliveryType.A_DOMICILIO.displayName
         }
         val clienteNombre = user.nombre.ifBlank { "Cliente" }
 
@@ -238,22 +240,19 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         val itemsJson = gson.toJson(_cartItems.value)
         val dessertsJson = gson.toJson(_dessertItems.value)
         val userJson = gson.toJson(user)
-        val deliveryPrice = _selectedDelivery.value?.price ?: 0
-        val isDeliveried = deliveryPrice > 0
         val currentDeliveryService = _selectedDelivery.value
-        var isTOTODO = false
-        var precioTOTODO = 0.0
-        var descuentoTOTODO = 0.0
-        if (currentDeliveryService?.isTOTODO == true) {
-            isTOTODO = true
-            precioTOTODO = calculateTOTODOPrice(total.value)
-            descuentoTOTODO = total.value - precioTOTODO
-        }
+        val deliveryType = resolveDeliveryType(currentDeliveryService, deliveryAddress.isNotBlank())
+        val deliveryPrice = currentDeliveryService?.price ?: 0
+        val isDeliveried = deliveryType == DeliveryType.A_DOMICILIO || deliveryType == DeliveryType.TOTODO
+        val isTOTODO = deliveryType == DeliveryType.TOTODO
+        val precioTOTODO = if (isTOTODO) calculateTOTODOPrice(total.value) else 0.0
+        val descuentoTOTODO = if (isTOTODO) total.value - precioTOTODO else 0.0
 
-        val resolvedDeliveryAddress = when {
-            deliveryAddress.isNotBlank() -> deliveryAddress
-            currentDeliveryService != null -> currentDeliveryService.zona
-            else -> ""
+        val resolvedDeliveryAddress = when (deliveryType) {
+            DeliveryType.PASAN -> ""
+            DeliveryType.CAMINANDO -> if (deliveryAddress.isNotBlank()) deliveryAddress else currentDeliveryService?.zona ?: ""
+            DeliveryType.TOTODO, DeliveryType.A_DOMICILIO ->
+                if (deliveryAddress.isNotBlank()) deliveryAddress else currentDeliveryService?.zona ?: ""
         }
 
         val orderEntity = OrderEntity(
@@ -266,6 +265,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             dessertsJson = dessertsJson,
             comentarios = comentarios.value,
             deliveryAddress = resolvedDeliveryAddress,
+            deliveryType = deliveryType.dbValue,
             isTOTODO = isTOTODO,
             precioTOTODO = precioTOTODO,
             descuentoTOTODO = descuentoTOTODO
@@ -283,6 +283,33 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         } else {
             ceil(discounted)
         }
+    }
+
+    private fun resolveDeliveryType(
+        deliveryService: DeliveryService?,
+        hasCustomAddress: Boolean
+    ): DeliveryType {
+        if (deliveryService == null) {
+            return if (hasCustomAddress) DeliveryType.CAMINANDO else DeliveryType.PASAN
+        }
+
+        if (deliveryService.isTOTODO || deliveryService.zona.equals("TOTODO", ignoreCase = true)) {
+            return DeliveryType.TOTODO
+        }
+
+        if (deliveryService.price > 0) {
+            return DeliveryType.A_DOMICILIO
+        }
+
+        if (deliveryService.pickUp || deliveryService.zona.equals("Pasan", ignoreCase = true)) {
+            return DeliveryType.PASAN
+        }
+
+        if (deliveryService.zona.equals("Caminando", ignoreCase = true) || hasCustomAddress) {
+            return DeliveryType.CAMINANDO
+        }
+
+        return DeliveryType.PASAN
     }
 }
 

@@ -34,6 +34,7 @@ import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.model.DeliveryService
 import com.alos895.simplepos.model.User
 import com.google.gson.Gson
+import com.alos895.simplepos.model.DeliveryType
 
 @Composable
 fun OrderListScreen(
@@ -415,15 +416,36 @@ fun EditOrderDialog(
     var comentarios by remember(order.id) { mutableStateOf(order.comentarios) }
     var direccion by remember(order.id) { mutableStateOf(order.deliveryAddress) }
     var deliveryMenuExpanded by remember { mutableStateOf(false) }
+    fun deliveryTypeFor(service: DeliveryService): DeliveryType {
+        return when {
+            service.isTOTODO || service.zona.equals("TOTODO", ignoreCase = true) -> DeliveryType.TOTODO
+            service.price > 0 -> DeliveryType.A_DOMICILIO
+            service.pickUp || service.zona.equals("Pasan", ignoreCase = true) -> DeliveryType.PASAN
+            service.zona.equals("Caminando", ignoreCase = true) -> DeliveryType.CAMINANDO
+            else -> DeliveryType.PASAN
+        }
+    }
+
+    fun requiresAddressFor(service: DeliveryService): Boolean {
+        return when (deliveryTypeFor(service)) {
+            DeliveryType.A_DOMICILIO, DeliveryType.TOTODO, DeliveryType.CAMINANDO -> true
+            DeliveryType.PASAN -> false
+        }
+    }
+
+    val deliveryType = remember(order.id) { DeliveryType.fromDb(order.deliveryType) }
+
     val matchedDelivery = remember(order.id) {
         baseDeliveryOptions.firstOrNull { option ->
-            option.price == order.deliveryServicePrice && (
-                if (order.isDeliveried) !option.pickUp else true
-            )
+            when (deliveryType) {
+                DeliveryType.A_DOMICILIO ->
+                    deliveryTypeFor(option) == DeliveryType.A_DOMICILIO && option.price == order.deliveryServicePrice
+                else -> deliveryTypeFor(option) == deliveryType
+            }
         }
     }
     val customDelivery = remember(order.id) {
-        if (matchedDelivery == null && order.deliveryServicePrice != 0) {
+        if (deliveryType == DeliveryType.A_DOMICILIO && matchedDelivery == null && order.deliveryServicePrice != 0) {
             DeliveryService(
                 price = order.deliveryServicePrice,
                 description = "",
@@ -438,9 +460,14 @@ fun EditOrderDialog(
         if (customDelivery != null) baseDeliveryOptions + customDelivery else baseDeliveryOptions
     }
     var selectedDelivery by remember(order.id) {
-        mutableStateOf(matchedDelivery ?: customDelivery ?: baseDeliveryOptions.first())
+        mutableStateOf(
+            matchedDelivery
+                ?: customDelivery
+                ?: baseDeliveryOptions.firstOrNull { deliveryTypeFor(it) == DeliveryType.PASAN }
+                ?: baseDeliveryOptions.first()
+        )
     }
-    val requiresAddress = selectedDelivery.price > 0
+    val requiresAddress = requiresAddressFor(selectedDelivery)
 
     fun formatDeliveryLabel(delivery: DeliveryService): String {
         return if (delivery.price > 0) "${delivery.zona} - $${delivery.price}" else delivery.zona
@@ -448,17 +475,27 @@ fun EditOrderDialog(
 
     fun buildUpdatedOrder(): OrderEntity {
         val updatedDeliveryPrice = selectedDelivery.price
-        val updatedIsDeliveried = updatedDeliveryPrice > 0
-        val sanitizedAddress = if (updatedIsDeliveried) direccion.trim() else ""
+        val updatedDeliveryType = deliveryTypeFor(selectedDelivery)
+        val updatedIsDeliveried =
+            updatedDeliveryType == DeliveryType.A_DOMICILIO || updatedDeliveryType == DeliveryType.TOTODO
         val updatedUser = initialUser.copy(nombre = nombreCliente)
         val adjustedTotal = order.total - order.deliveryServicePrice + updatedDeliveryPrice
+        val sanitizedAddress = when (updatedDeliveryType) {
+            DeliveryType.PASAN -> ""
+            DeliveryType.CAMINANDO, DeliveryType.TOTODO, DeliveryType.A_DOMICILIO -> direccion.trim()
+        }
+        val isTOTODO = updatedDeliveryType == DeliveryType.TOTODO
         return order.copy(
             comentarios = comentarios,
             deliveryAddress = sanitizedAddress,
             deliveryServicePrice = updatedDeliveryPrice,
             isDeliveried = updatedIsDeliveried,
             userJson = gson.toJson(updatedUser),
-            total = adjustedTotal
+            total = adjustedTotal,
+            deliveryType = updatedDeliveryType.dbValue,
+            isTOTODO = isTOTODO,
+            precioTOTODO = if (isTOTODO) order.precioTOTODO else 0.0,
+            descuentoTOTODO = if (isTOTODO) order.descuentoTOTODO else 0.0
         )
     }
 
@@ -513,7 +550,7 @@ fun EditOrderDialog(
                                 text = { Text(formatDeliveryLabel(deliveryOption)) },
                                 onClick = {
                                     selectedDelivery = deliveryOption
-                                    if (deliveryOption.price == 0) {
+                                    if (!requiresAddressFor(deliveryOption)) {
                                         direccion = ""
                                     }
                                     deliveryMenuExpanded = false

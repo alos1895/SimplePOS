@@ -14,7 +14,7 @@ class OrderRepository(context: Context) {
         context,
         AppDatabase::class.java,
         "simplepos.db"
-    ).addMigrations(AppDatabase.MIGRATION_4_5)
+    ).addMigrations(AppDatabase.MIGRATION_4_5, AppDatabase.MIGRATION_5_6)
         .fallbackToDestructiveMigration(true)
         .build()
 
@@ -73,9 +73,13 @@ class OrderRepository(context: Context) {
             dessertsJson = order.dessertsJson,
             comentarios = order.comentarios,
             deliveryAddress = order.deliveryAddress,
+            deliveryType = order.deliveryType,
             pizzaStatus = order.pizzaStatus,
             isDeleted = order.isDeleted,
-            paymentBreakdownJson = order.paymentBreakdownJson
+            paymentBreakdownJson = order.paymentBreakdownJson,
+            isTOTODO = order.isTOTODO,
+            precioTOTODO = order.precioTOTODO,
+            descuentoTOTODO = order.descuentoTOTODO
         )
     }
 

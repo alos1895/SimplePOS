@@ -11,6 +11,7 @@ import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.model.CartItemPostre
 import com.alos895.simplepos.model.PaymentMethod
 import com.alos895.simplepos.model.PaymentPart
+import com.alos895.simplepos.model.DeliveryType
 import com.alos895.simplepos.model.User
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -184,15 +185,16 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
 
     fun getDeliverySummary(order: OrderEntity): String {
         val trimmedAddress = order.deliveryAddress.trim()
-        if (trimmedAddress.isNotEmpty()) {
-            return trimmedAddress
-        }
+        val deliveryType = DeliveryType.fromDb(order.deliveryType)
 
-        return when {
-            order.isTOTODO -> "TOTODO"
-            order.isDeliveried -> "Envío a domicilio"
-            order.deliveryServicePrice == 0 -> "Pasan/Caminando"
-            else -> "Recoge en tienda"
+        return when (deliveryType) {
+            DeliveryType.PASAN -> DeliveryType.PASAN.displayName
+            DeliveryType.CAMINANDO ->
+                if (trimmedAddress.isNotEmpty()) trimmedAddress else DeliveryType.CAMINANDO.displayName
+            DeliveryType.TOTODO ->
+                if (trimmedAddress.isNotEmpty()) trimmedAddress else DeliveryType.TOTODO.displayName
+            DeliveryType.A_DOMICILIO ->
+                if (trimmedAddress.isNotEmpty()) trimmedAddress else DeliveryType.A_DOMICILIO.displayName
         }
     }
 

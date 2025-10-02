@@ -19,7 +19,7 @@ interface OrderDao {
     suspend fun getMaxDailyOrderNumberForRange(start: Long, end: Long): Int?
 
 
-    @Query("UPDATE orders SET itemsJson = :itemsJson, total = :total, timestamp = :timestamp, dailyOrderNumber = :dailyOrderNumber, userJson = :userJson, deliveryServicePrice = :deliveryServicePrice, isDeliveried = :isDeliveried, dessertsJson = :dessertsJson, comentarios = :comentarios, deliveryAddress = :deliveryAddress, pizzaStatus = :pizzaStatus, paymentBreakdownJson= :paymentBreakdownJson, isDeleted = :isDeleted WHERE id = :id")
+    @Query("UPDATE orders SET itemsJson = :itemsJson, total = :total, timestamp = :timestamp, dailyOrderNumber = :dailyOrderNumber, userJson = :userJson, deliveryServicePrice = :deliveryServicePrice, isDeliveried = :isDeliveried, dessertsJson = :dessertsJson, comentarios = :comentarios, deliveryAddress = :deliveryAddress, deliveryType = :deliveryType, pizzaStatus = :pizzaStatus, paymentBreakdownJson = :paymentBreakdownJson, isDeleted = :isDeleted, isTOTODO = :isTOTODO, precioTOTODO = :precioTOTODO, descuentoTOTODO = :descuentoTOTODO WHERE id = :id")
     suspend fun updateOrder(
         id: Long,
         itemsJson: String,
@@ -32,9 +32,13 @@ interface OrderDao {
         dessertsJson: String,
         comentarios: String,
         deliveryAddress: String,
+        deliveryType: String,
         pizzaStatus: String,
         isDeleted: Boolean,
-        paymentBreakdownJson : String
+        paymentBreakdownJson : String,
+        isTOTODO: Boolean,
+        precioTOTODO: Double,
+        descuentoTOTODO: Double
     )
 
     @Query("UPDATE orders SET paymentBreakdownJson = :paymentBreakdownJson WHERE id = :id")
