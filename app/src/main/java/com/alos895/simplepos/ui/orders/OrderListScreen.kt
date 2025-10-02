@@ -244,7 +244,10 @@ fun OrderListScreen(
                         item { Spacer(modifier = Modifier.height(16.dp)) }
                         item { HorizontalDivider(thickness = 1.dp, color = Color.Gray) }
                         item { Spacer(modifier = Modifier.height(8.dp)) }
-                        item { Text("Tipo de envío: ${orderViewModel.getDeliverySummary(order)}") }
+                        item { Text("Tipo de envío: ${orderViewModel.getDeliveryTypeLabel(order)}") }
+                        orderViewModel.getDeliveryDetail(order)?.let { detail ->
+                            item { Text("Detalle de envío: $detail") }
+                        }
                         item {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),

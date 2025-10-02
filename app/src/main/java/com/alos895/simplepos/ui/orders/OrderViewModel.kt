@@ -190,12 +190,22 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
             return trimmedAddress
         }
 
+        return getDeliveryTypeLabel(order)
+    }
+
+    fun getDeliveryTypeLabel(order: OrderEntity): String {
         return when (order.deliveryType) {
             DeliveryType.PASAN -> "Recoge en pizzería"
             DeliveryType.CAMINANDO -> "Entrega caminando"
             DeliveryType.TOTODO -> "TOTODO"
             DeliveryType.DOMICILIO -> "Envío a domicilio"
         }
+    }
+
+    fun getDeliveryDetail(order: OrderEntity): String? {
+        val summary = getDeliverySummary(order)
+        val typeLabel = getDeliveryTypeLabel(order)
+        return summary.takeIf { it.isNotBlank() && it != typeLabel }
     }
 
 
@@ -253,7 +263,12 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine(
             "Hora: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(order.timestamp))} - Orden: ${getDailyOrderNumber(order)}"
         )
-        sb.appendLine("Cliente: ${user?.nombre ?: "Cliente"} - ${getDeliverySummary(order)}")
+        sb.appendLine("Cliente: ${user?.nombre ?: "Cliente"}")
+        sb.appendLine("Entrega: ${getDeliveryTypeLabel(order)}")
+        getDeliveryDetail(order)?.let { detail ->
+            val detailLabel = if (order.deliveryAddress.trim().isNotEmpty()) "Dirección" else "Detalle"
+            sb.appendLine("$detailLabel: $detail")
+        }
         sb.appendLine("-------------------------------")
         cartItems.forEach { item ->
             CartItemFormatter.toKitchenLines(item).forEach { line ->
