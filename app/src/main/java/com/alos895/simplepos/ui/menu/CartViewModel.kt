@@ -250,6 +250,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         timestamp: Long,
         dailyOrderNumber: Int
     ): String {
+        // Si la orden no tiene pizzas, no se imprime el ticket
         val cartItems = _cartItems.value
         val desserts = _dessertItems.value
         val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -269,9 +270,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         val sb = StringBuilder()
         sb.appendLine("ORDEN PARA COCINA")
         sb.appendLine("Hora: $hora - Orden: $dailyOrderNumber")
-        sb.appendLine("Cliente: $clienteNombre")
-        sb.appendLine("Entrega: $deliveryTypeLabel")
-        detail?.let { sb.appendLine("$detailLabel: $it") }
+        sb.appendLine("Cliente: $clienteNombre : $deliveryTypeLabel")
         sb.appendLine("-------------------------------")
 
         if (cartItems.isEmpty()) {
@@ -358,10 +357,10 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun getDeliveryTypeLabel(type: DeliveryType): String {
         return when (type) {
-            DeliveryType.PASAN -> "Recoge en pizzería"
-            DeliveryType.CAMINANDO -> "Entrega caminando"
+            DeliveryType.PASAN -> "PASAN"
+            DeliveryType.CAMINANDO -> "CAMINANDO"
             DeliveryType.TOTODO -> "TOTODO"
-            DeliveryType.DOMICILIO -> "Envío a domicilio"
+            DeliveryType.DOMICILIO -> "ENVIO"
         }
     }
 
