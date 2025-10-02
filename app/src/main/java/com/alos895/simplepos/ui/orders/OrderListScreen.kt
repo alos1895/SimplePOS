@@ -460,7 +460,9 @@ fun EditOrderDialog(
     var selectedDelivery by remember(order.id) {
         mutableStateOf(matchedDelivery ?: customDelivery ?: baseDeliveryOptions.first())
     }
-    val requiresAddress = selectedDelivery.type == DeliveryType.DOMICILIO || selectedDelivery.type == DeliveryType.TOTODO
+    val requiresAddress = selectedDelivery.type == DeliveryType.DOMICILIO ||
+        selectedDelivery.type == DeliveryType.TOTODO ||
+        selectedDelivery.type == DeliveryType.CAMINANDO
 
     fun formatDeliveryLabel(delivery: DeliveryService): String {
         return if (delivery.price > 0) "${delivery.zona} - $${delivery.price}" else delivery.zona

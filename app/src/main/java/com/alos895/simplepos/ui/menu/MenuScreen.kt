@@ -511,7 +511,9 @@ fun MenuScreen(
                                     }
                                 }
 
-                                val requiresAddress = selectedDelivery?.type == DeliveryType.DOMICILIO || selectedDelivery?.type == DeliveryType.TOTODO
+                                val requiresAddress = selectedDelivery?.type == DeliveryType.DOMICILIO ||
+                                    selectedDelivery?.type == DeliveryType.TOTODO ||
+                                    selectedDelivery?.type == DeliveryType.CAMINANDO
                                 if (requiresAddress) {
                                     Spacer(modifier = Modifier.height(16.dp))
                                     OutlinedTextField(
