@@ -245,8 +245,8 @@ fun MenuScreen(
                             items(MenuData.postreOrExtras) { postre ->
                                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                                     ListItem(
-                                        headlineText = { Text(postre.nombre) },
-                                        supportingText = {
+                                        headlineContent = { Text(postre.nombre) },
+                                        supportingContent = {
                                             Text("$${"%.2f".format(postre.precio)}")
                                         },
                                         leadingContent = {
@@ -355,7 +355,7 @@ fun MenuScreen(
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                 },
-                                headlineText = { Text("Resumen del carrito") },
+                                headlineContent = { Text("Resumen del carrito") },
                                 trailingContent = {
                                     IconButton(onClick = { cartExpanded = !cartExpanded }) {
                                         Icon(
@@ -459,8 +459,8 @@ fun MenuScreen(
                                         dessertItems.forEach { item ->
                                             ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                                                 ListItem(
-                                                    headlineText = { Text(item.postreOrExtra.nombre) },
-                                                    supportingText = {
+                                                    headlineContent = { Text(item.postreOrExtra.nombre) },
+                                                    supportingContent = {
                                                         Text("$${String.format(Locale.getDefault(), "%.2f", item.postreOrExtra.precio)} c/u")
                                                     },
                                                     trailingContent = {
@@ -499,7 +499,7 @@ fun MenuScreen(
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                 },
-                                headlineText = { Text("Datos del cliente") },
+                                headlineContent = { Text("Datos del cliente") },
                                 trailingContent = {
                                     IconButton(onClick = { customerExpanded = !customerExpanded }) {
                                         Icon(
