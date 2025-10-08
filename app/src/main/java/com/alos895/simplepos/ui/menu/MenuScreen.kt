@@ -801,7 +801,7 @@ fun MenuScreen(
 
 private enum class MenuSection(val label: String, val icon: ImageVector) {
     PIZZAS("Pizzas", Icons.Filled.LocalPizza),
-    PIZZAS_COMBINADAS("Pizzas combinadas", Icons.Filled.PieChart),
+    PIZZAS_COMBINADAS("Combinadas", Icons.Filled.PieChart),
     POSTRES("Postres", Icons.Filled.Icecream),
     EXTRAS("Extras", Icons.Filled.AttachMoney),
     COMENTARIOS("Comentarios", Icons.Filled.Comment)
