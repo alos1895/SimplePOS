@@ -7,7 +7,6 @@ import com.alos895.simplepos.model.unitPriceSingle
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -125,12 +124,11 @@ fun MenuScreen(
                 ) {
                     when (selectedSection) {
                         MenuSection.PIZZAS -> {
-                            items(pizzas) { pizza ->
-                                var selectedTamano by remember { mutableStateOf(pizza.tamanos.first()) }
+                            item {
                                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                                     Column(
                                         modifier = Modifier.padding(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                        verticalArrangement = Arrangement.spacedBy(16.dp)
                                     ) {
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
@@ -141,51 +139,141 @@ fun MenuScreen(
                                                 contentDescription = null,
                                                 tint = MaterialTheme.colorScheme.primary
                                             )
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(pizza.nombre, style = MaterialTheme.typography.titleLarge)
-                                                Text(
-                                                    pizza.ingredientesBaseIds
-                                                        .mapNotNull { id -> MenuData.ingredientes.find { it.id == id }?.nombre }
-                                                        .joinToString(", "),
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
-                                            AssistChip(
-                                                onClick = {},
-                                                enabled = false,
-                                                label = {
-                                                    Text("$${"%.2f".format(selectedTamano.precioBase)}")
-                                                },
-                                                leadingIcon = {
-                                                    Icon(Icons.Filled.AttachMoney, contentDescription = null)
-                                                }
+                                            Text(
+                                                "Selecciona tu pizza",
+                                                style = MaterialTheme.typography.titleLarge,
+                                                modifier = Modifier.weight(1f)
                                             )
                                         }
-                                        LazyRow(
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            items(pizza.tamanos) { tamano ->
-                                                FilterChip(
-                                                    selected = selectedTamano == tamano,
-                                                    onClick = { selectedTamano = tamano },
-                                                    label = { Text(tamano.nombre) },
-                                                    leadingIcon = if (selectedTamano == tamano) {
-                                                        { Icon(Icons.Filled.Check, contentDescription = null) }
-                                                    } else null
+
+                                        if (pizzas.isEmpty()) {
+                                            Text(
+                                                "No hay pizzas disponibles en este momento.",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        } else {
+                                            var pizzaMenuExpanded by remember { mutableStateOf(false) }
+                                            var selectedPizza by remember(pizzas) {
+                                                mutableStateOf(pizzas.firstOrNull())
+                                            }
+                                            var sizeMenuExpanded by remember { mutableStateOf(false) }
+                                            var selectedTamano by remember(selectedPizza) {
+                                                mutableStateOf(selectedPizza?.tamanos?.firstOrNull())
+                                            }
+
+                                            ExposedDropdownMenuBox(
+                                                expanded = pizzaMenuExpanded,
+                                                onExpandedChange = { pizzaMenuExpanded = it }
+                                            ) {
+                                                TextField(
+                                                    value = selectedPizza?.nombre ?: "",
+                                                    onValueChange = {},
+                                                    readOnly = true,
+                                                    label = { Text("Especialidad") },
+                                                    placeholder = { Text("Elige una especialidad") },
+                                                    trailingIcon = {
+                                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = pizzaMenuExpanded)
+                                                    },
+                                                    modifier = Modifier
+                                                        .menuAnchor()
+                                                        .fillMaxWidth()
+                                                )
+                                                ExposedDropdownMenu(
+                                                    expanded = pizzaMenuExpanded,
+                                                    onDismissRequest = { pizzaMenuExpanded = false }
+                                                ) {
+                                                    pizzas.forEach { pizza ->
+                                                        DropdownMenuItem(
+                                                            text = { Text(pizza.nombre) },
+                                                            onClick = {
+                                                                selectedPizza = pizza
+                                                                selectedTamano = pizza.tamanos.firstOrNull()
+                                                                pizzaMenuExpanded = false
+                                                                sizeMenuExpanded = false
+                                                            }
+                                                        )
+                                                    }
+                                                }
+                                            }
+
+                                            val availableSizes = selectedPizza?.tamanos.orEmpty()
+
+                                            ExposedDropdownMenuBox(
+                                                expanded = sizeMenuExpanded,
+                                                onExpandedChange = { sizeMenuExpanded = it && availableSizes.isNotEmpty() }
+                                            ) {
+                                                TextField(
+                                                    value = selectedTamano?.nombre ?: "",
+                                                    onValueChange = {},
+                                                    readOnly = true,
+                                                    label = { Text("Tamaño") },
+                                                    placeholder = { Text("Selecciona el tamaño") },
+                                                    trailingIcon = {
+                                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = sizeMenuExpanded)
+                                                    },
+                                                    enabled = availableSizes.isNotEmpty(),
+                                                    modifier = Modifier
+                                                        .menuAnchor()
+                                                        .fillMaxWidth()
+                                                )
+                                                ExposedDropdownMenu(
+                                                    expanded = sizeMenuExpanded,
+                                                    onDismissRequest = { sizeMenuExpanded = false }
+                                                ) {
+                                                    availableSizes.forEach { tamano ->
+                                                        DropdownMenuItem(
+                                                            text = { Text(tamano.nombre) },
+                                                            onClick = {
+                                                                selectedTamano = tamano
+                                                                sizeMenuExpanded = false
+                                                            }
+                                                        )
+                                                    }
+                                                }
+                                            }
+
+                                            selectedPizza?.let { pizza ->
+                                                val ingredientNames = pizza.ingredientesBaseIds
+                                                    .mapNotNull { id -> MenuData.ingredientes.find { it.id == id }?.nombre }
+
+                                                if (ingredientNames.isNotEmpty()) {
+                                                    Text(
+                                                        "Ingredientes: ${ingredientNames.joinToString(", ")}",
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+
+                                            selectedTamano?.let { tamano ->
+                                                AssistChip(
+                                                    onClick = {},
+                                                    enabled = false,
+                                                    label = {
+                                                        Text("$${"%.2f".format(tamano.precioBase)}")
+                                                    },
+                                                    leadingIcon = {
+                                                        Icon(Icons.Filled.AttachMoney, contentDescription = null)
+                                                    }
                                                 )
                                             }
-                                        }
-                                        Button(
-                                            onClick = {
-                                                cartViewModel.addToCart(
-                                                    pizza,
-                                                    selectedTamano
-                                                )
-                                            },
-                                            modifier = Modifier.align(Alignment.End)
-                                        ) {
-                                            Text("Agregar")
+
+                                            val canAddToCart = selectedPizza != null && selectedTamano != null
+
+                                            Button(
+                                                onClick = {
+                                                    val pizza = selectedPizza
+                                                    val tamano = selectedTamano
+                                                    if (pizza != null && tamano != null) {
+                                                        cartViewModel.addToCart(pizza, tamano)
+                                                    }
+                                                },
+                                                modifier = Modifier.align(Alignment.End),
+                                                enabled = canAddToCart
+                                            ) {
+                                                Text("Agregar")
+                                            }
                                         }
                                     }
                                 }
