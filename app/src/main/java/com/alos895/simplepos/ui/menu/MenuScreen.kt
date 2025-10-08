@@ -71,6 +71,8 @@ fun MenuScreen(
     }
     var comboDialogConfig by remember { mutableStateOf<ComboDialogConfig?>(null) }
     val combinablePizzas = remember(pizzas) { pizzas.filter { it.esCombinable } }
+    val desserts = remember { MenuData.postreOrExtras.filter { it.esPostre } }
+    val extras = remember { MenuData.postreOrExtras.filterNot { it.esPostre } }
 
     val total by remember(cartItems, dessertItems, selectedDelivery) {
         derivedStateOf {
@@ -279,80 +281,6 @@ fun MenuScreen(
                                 }
                             }
                         }
-                        MenuSection.COMENTARIOS -> {
-                            item {
-                                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                                    Column(
-                                        modifier = Modifier.padding(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Filled.Comment,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Text(
-                                                "Comentarios de la orden",
-                                                style = MaterialTheme.typography.titleLarge
-                                            )
-                                        }
-
-                                        OutlinedTextField(
-                                            value = comentarios,
-                                            onValueChange = { cartViewModel.setComentarios(it) },
-                                            label = { Text("Escribe aquí los comentarios de la orden") },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            minLines = 5,
-                                            maxLines = 8,
-                                            colors = OutlinedTextFieldDefaults.colors(
-                                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                                            )
-                                        )
-
-                                        if (comentarios.isNotEmpty()) {
-                                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                Text(
-                                                    "Comentarios actuales:",
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    color = MaterialTheme.colorScheme.primary
-                                                )
-                                                Text(
-                                                    comentarios,
-                                                    style = MaterialTheme.typography.bodyMedium
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        MenuSection.POSTRES_EXTRAS -> {
-                            items(MenuData.postreOrExtras) { postre ->
-                                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                                    ListItem(
-                                        headlineContent = { Text(postre.nombre) },
-                                        supportingContent = {
-                                            Text("$${"%.2f".format(postre.precio)}")
-                                        },
-                                        leadingContent = {
-                                            Icon(
-                                                imageVector = Icons.Filled.Icecream,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
-                                        },
-                                        trailingContent = {
-                                            Button(onClick = { cartViewModel.addDessertToCart(postre) }) {
-                                                Text("Agregar")
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-                        }
                         MenuSection.PIZZAS_COMBINADAS -> {
                             item {
                                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
@@ -405,6 +333,126 @@ fun MenuScreen(
                                                 enabled = combinablePizzas.isNotEmpty()
                                             ) {
                                                 Text("Pizza mediana 1/2 y 1/2")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        MenuSection.POSTRES -> {
+                            if (desserts.isEmpty()) {
+                                item {
+                                    Text(
+                                        "No hay postres disponibles en este momento.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(16.dp)
+                                    )
+                                }
+                            } else {
+                                items(desserts) { dessert ->
+                                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                                        ListItem(
+                                            headlineContent = { Text(dessert.nombre) },
+                                            supportingContent = {
+                                                Text("$${"%.2f".format(dessert.precio)}")
+                                            },
+                                            leadingContent = {
+                                                Icon(
+                                                    imageVector = Icons.Filled.Icecream,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            },
+                                            trailingContent = {
+                                                Button(onClick = { cartViewModel.addDessertToCart(dessert) }) {
+                                                    Text("Agregar")
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        MenuSection.EXTRAS -> {
+                            if (extras.isEmpty()) {
+                                item {
+                                    Text(
+                                        "No hay extras disponibles en este momento.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(16.dp)
+                                    )
+                                }
+                            } else {
+                                items(extras) { extra ->
+                                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                                        ListItem(
+                                            headlineContent = { Text(extra.nombre) },
+                                            supportingContent = {
+                                                Text("$${"%.2f".format(extra.precio)}")
+                                            },
+                                            leadingContent = {
+                                                Icon(
+                                                    imageVector = Icons.Filled.AttachMoney,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            },
+                                            trailingContent = {
+                                                Button(onClick = { cartViewModel.addDessertToCart(extra) }) {
+                                                    Text("Agregar")
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        MenuSection.COMENTARIOS -> {
+                            item {
+                                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Comment,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text(
+                                                "Comentarios de la orden",
+                                                style = MaterialTheme.typography.titleLarge
+                                            )
+                                        }
+
+                                        OutlinedTextField(
+                                            value = comentarios,
+                                            onValueChange = { cartViewModel.setComentarios(it) },
+                                            label = { Text("Escribe aquí los comentarios de la orden") },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            minLines = 5,
+                                            maxLines = 8,
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                                            )
+                                        )
+
+                                        if (comentarios.isNotEmpty()) {
+                                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                Text(
+                                                    "Comentarios actuales:",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                                Text(
+                                                    comentarios,
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
                                             }
                                         }
                                     }
@@ -753,9 +801,10 @@ fun MenuScreen(
 
 private enum class MenuSection(val label: String, val icon: ImageVector) {
     PIZZAS("Pizzas", Icons.Filled.LocalPizza),
-    POSTRES_EXTRAS("Postres & Extras", Icons.Filled.Icecream),
-    COMENTARIOS("Comentarios", Icons.Filled.Comment),
-    PIZZAS_COMBINADAS("Pizzas combinadas", Icons.Filled.PieChart)
+    PIZZAS_COMBINADAS("Combinadas", Icons.Filled.PieChart),
+    POSTRES("Postres", Icons.Filled.Icecream),
+    EXTRAS("Extras", Icons.Filled.AttachMoney),
+    COMENTARIOS("Comentarios", Icons.Filled.Comment)
 }
 
 private data class ComboDialogConfig(
