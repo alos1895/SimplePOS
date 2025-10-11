@@ -658,12 +658,6 @@ fun MenuScreen(
                                         label = { Text("Nombre del cliente") },
                                         modifier = Modifier.fillMaxWidth()
                                     )
-                                    OutlinedTextField(
-                                        value = telefono,
-                                        onValueChange = { telefono = it },
-                                        label = { Text("Teléfono de contacto") },
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
                                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Text(
                                             "Servicio a domicilio",
