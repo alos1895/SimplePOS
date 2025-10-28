@@ -1,1 +1,43 @@
-# SimplePOS
+# SimplePOS – Documentación Esencial
+
+## Resumen general
+SimplePOS es una aplicación de punto de venta construida con Jetpack Compose que organiza sus principales flujos en una barra de navegación inferior con cinco secciones: menú, órdenes, transacciones, caja y utilidades de impresión Bluetooth. Cada destino comparte el mismo `NavHost` y puede reutilizar view models de alcance de actividad, como el controlador de impresoras.【F:app/src/main/java/com/alos895/simplepos/ui/MainActivity.kt†L40-L146】
+
+## Arquitectura
+### Capa de datos
+- **Catálogo estático**. El menú de pizzas, postres, extras y servicios de entrega se define en memoria en `MenuData`, incluyendo especialidades combinables, tamaños y tarifas por zona.【F:app/src/main/java/com/alos895/simplepos/data/datasource/MenuData.kt†L1-L120】
+- **Configuración de la pizzería**. `PizzeriaData` centraliza los datos de marca utilizados en tickets, como logotipo en ASCII, nombre y teléfonos.【F:app/src/main/java/com/alos895/simplepos/data/PizzeriaData.kt†L1-L15】
+- **Persistencia Room**. `AppDatabase` crea una base `Room` con entidades de órdenes y transacciones de caja, incluye migraciones para columnas recientes y expone DAOs especializados.【F:app/src/main/java/com/alos895/simplepos/db/AppDatabase.kt†L13-L74】
+- **Entidades almacenadas**. `OrderEntity` serializa contenido del carrito, información de entrega, estatus TOTODO y desglose de pagos; `TransactionEntity` diferencia ingresos y gastos con marcas de tiempo en milisegundos.【F:app/src/main/java/com/alos895/simplepos/db/entity/OrderEntity.kt†L8-L31】【F:app/src/main/java/com/alos895/simplepos/db/entity/TransactionEntity.kt†L6-L18】
+- **Repositorios**. `OrderRepository` encapsula transacciones Room para asignar consecutivos diarios, actualizar pagos y aplicar migraciones; `TransactionsRepository` opera sobre el DAO de caja para altas, bajas y consultas por fecha.【F:app/src/main/java/com/alos895/simplepos/data/repository/OrderRepository.kt†L13-L96】【F:app/src/main/java/com/alos895/simplepos/data/repository/TransactionsRepository.kt†L1-L26】
+
+### Capa de presentación
+- **View models**. Cada pestaña usa un view model dedicado: `CartViewModel` administra carrito y totales; `OrderViewModel` recupera órdenes filtradas por día y gestiona pagos parciales; `TransactionViewModel` persiste movimientos manuales; `CajaViewModel` fusiona órdenes y transacciones para producir indicadores diarios; `BluetoothPrinterViewModel` delega el estado de conexión al administrador Bluetooth.【F:app/src/main/java/com/alos895/simplepos/ui/menu/CartViewModel.kt†L34-L355】【F:app/src/main/java/com/alos895/simplepos/ui/orders/OrderViewModel.kt†L30-L197】【F:app/src/main/java/com/alos895/simplepos/ui/transaction/TransactionViewModel.kt†L17-L66】【F:app/src/main/java/com/alos895/simplepos/ui/caja/CajaViewModel.kt†L20-L209】【F:app/src/main/java/com/alos895/simplepos/ui/print/BluetoothPrinterViewModel.kt†L10-L24】
+- **Pantallas Compose**. Las pantallas principales ofrecen formularios y listados responsivos: el menú permite armar pedidos por secciones; órdenes y transacciones usan `LazyColumn`; caja muestra estadísticas y herramientas de exportación.【F:app/src/main/java/com/alos895/simplepos/ui/menu/MenuScreen.kt†L29-L200】【F:app/src/main/java/com/alos895/simplepos/ui/orders/OrderViewModel.kt†L64-L118】【F:app/src/main/java/com/alos895/simplepos/ui/transaction/TransactionsScreen.kt†L31-L195】【F:app/src/main/java/com/alos895/simplepos/ui/caja/CajaViewModel.kt†L60-L124】
+
+## Módulos funcionales destacados
+### Menú y construcción del carrito
+`CartViewModel` calcula el total del pedido reaccionando a cambios en pizzas, postres y servicio de entrega. Permite crear combos por fracciones, duplicar combinaciones especiales (marcadas como "golden"), gestionar cantidades y limpiar el carrito.【F:app/src/main/java/com/alos895/simplepos/ui/menu/CartViewModel.kt†L52-L205】 También genera tickets para cliente y cocina incorporando comentarios y encabezados de la pizzería.【F:app/src/main/java/com/alos895/simplepos/ui/menu/CartViewModel.kt†L213-L303】 Al guardar una orden, detecta servicios TOTODO para aplicar un descuento del 10 % ajustado al peso exacto del precio final, persistiendo dirección y notas en `OrderEntity`.【F:app/src/main/java/com/alos895/simplepos/ui/menu/CartViewModel.kt†L305-L355】【F:app/src/main/java/com/alos895/simplepos/ui/menu/CartViewModel.kt†L383-L391】
+
+### Gestión de órdenes
+`OrderViewModel` consulta las órdenes del día desde `OrderRepository`, calcula el número corrido diario, y ofrece utilidades para actualizar estados de pago, borrar lógicamente o reimprimir tickets de cliente, cocina y cancelación.【F:app/src/main/java/com/alos895/simplepos/ui/orders/OrderViewModel.kt†L40-L197】 La persistencia asigna consecutivos dentro de una transacción y conserva el desglose de pagos en formato JSON.【F:app/src/main/java/com/alos895/simplepos/data/repository/OrderRepository.kt†L27-L78】
+
+### Caja y reportes diarios
+`CajaViewModel` combina órdenes y transacciones del día para calcular métricas como pizzas vendidas por tamaño, ingresos por categoría, descuentos TOTODO, efectivo esperado y órdenes no pagadas. También genera reportes CSV detallados y cadenas listas para imprimir o compartir.【F:app/src/main/java/com/alos895/simplepos/ui/caja/CajaViewModel.kt†L24-L209】【F:app/src/main/java/com/alos895/simplepos/ui/caja/CajaViewModel.kt†L110-L209】 La estructura de `DailyStats` facilita consumir estos indicadores en la UI.【F:app/src/main/java/com/alos895/simplepos/model/DailyStats.kt†L3-L24】
+
+### Transacciones de caja manuales
+La pantalla de transacciones permite registrar ingresos y gastos adicionales mediante un formulario validado, listarlos en orden cronológico y eliminarlos con confirmación. `TransactionViewModel` maneja el estado de carga y errores mientras delega al repositorio de transacciones.【F:app/src/main/java/com/alos895/simplepos/ui/transaction/TransactionsScreen.kt†L31-L200】【F:app/src/main/java/com/alos895/simplepos/ui/transaction/TransactionViewModel.kt†L17-L63】 Estas operaciones se almacenan como `TransactionEntity` y se integran al cálculo diario de caja.【F:app/src/main/java/com/alos895/simplepos/db/entity/TransactionEntity.kt†L6-L18】【F:app/src/main/java/com/alos895/simplepos/ui/caja/CajaViewModel.kt†L138-L209】
+
+### Impresión y conectividad Bluetooth
+`BluetoothPrinterManager` persiste el dispositivo emparejado, intenta reconectar automáticamente hasta tres veces y limpia acentos antes de enviar datos en codificación ISO-8859-1. El view model expone flujos de conexión y selección para que la UI controle el proceso de impresión.【F:app/src/main/java/com/alos895/simplepos/bluetooth/BluetoothPrinterManager.kt†L14-L116】【F:app/src/main/java/com/alos895/simplepos/ui/print/BluetoothPrinterViewModel.kt†L10-L24】 La pantalla de impresión comparte el mismo view model que el menú, de modo que un ticket generado en el carrito puede imprimirse sin recrear el estado.【F:app/src/main/java/com/alos895/simplepos/ui/MainActivity.kt†L75-L146】
+
+## Flujo de datos principal
+1. El usuario arma un pedido en la pantalla de menú; `CartViewModel` mantiene los totales y construye representaciones serializadas del carrito.【F:app/src/main/java/com/alos895/simplepos/ui/menu/CartViewModel.kt†L52-L355】
+2. Al confirmar, se guarda un `OrderEntity` vía `OrderRepository`, que asigna el número diario y escribe en SQLite.【F:app/src/main/java/com/alos895/simplepos/data/repository/OrderRepository.kt†L27-L78】
+3. Las órdenes del día alimentan las vistas de Órdenes y Caja, que permiten registrar pagos, imprimir tickets, generar reportes y cruzar la información con transacciones de caja.【F:app/src/main/java/com/alos895/simplepos/ui/orders/OrderViewModel.kt†L40-L197】【F:app/src/main/java/com/alos895/simplepos/ui/caja/CajaViewModel.kt†L24-L209】
+4. Opcionalmente, el ticket o resumen generado puede imprimirse usando la utilidad Bluetooth compartida en todas las pestañas.【F:app/src/main/java/com/alos895/simplepos/ui/MainActivity.kt†L75-L146】【F:app/src/main/java/com/alos895/simplepos/bluetooth/BluetoothPrinterManager.kt†L14-L116】
+
+## Consideraciones adicionales
+- Las columnas TOTODO permiten seguir promociones de conveniencia y se descuentan tanto en la orden como en el cálculo de efectivo final.【F:app/src/main/java/com/alos895/simplepos/db/entity/OrderEntity.kt†L24-L30】【F:app/src/main/java/com/alos895/simplepos/ui/caja/CajaViewModel.kt†L168-L209】
+- El repositorio de órdenes incluye funciones para limpiar desgloses de pago y eliminaciones lógicas, lo que mantiene el historial sin borrar filas físicas.【F:app/src/main/java/com/alos895/simplepos/data/repository/OrderRepository.kt†L58-L96】
+- La impresión Bluetooth usa almacenamiento de preferencias para recordar la impresora y reintentar conexiones, mejorando la disponibilidad en ambientes con energía inestable.【F:app/src/main/java/com/alos895/simplepos/bluetooth/BluetoothPrinterManager.kt†L14-L73】
