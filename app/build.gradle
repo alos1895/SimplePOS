@@ -2,12 +2,36 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.play.publisher)
     id("kotlin-kapt")
 }
+
+def releaseKeystorePath = providers.environmentVariable("RELEASE_KEYSTORE_PATH")
+    .orElse(providers.gradleProperty("RELEASE_KEYSTORE_PATH"))
+def releaseKeystorePassword = providers.environmentVariable("RELEASE_KEYSTORE_PASSWORD")
+    .orElse(providers.gradleProperty("RELEASE_KEYSTORE_PASSWORD"))
+def releaseKeyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS")
+    .orElse(providers.gradleProperty("RELEASE_KEY_ALIAS"))
+def releaseKeyPassword = providers.environmentVariable("RELEASE_KEY_PASSWORD")
+    .orElse(providers.gradleProperty("RELEASE_KEY_PASSWORD"))
+
+def playServiceAccountJson = providers.environmentVariable("PLAY_SERVICE_ACCOUNT_JSON")
+    .orElse(providers.gradleProperty("PLAY_SERVICE_ACCOUNT_JSON"))
 
 android {
     namespace 'com.alos895.simplepos'
     compileSdk 35
+
+    if (releaseKeystorePath.present) {
+        signingConfigs {
+            release {
+                storeFile file(releaseKeystorePath.get())
+                storePassword releaseKeystorePassword.orNull
+                keyAlias releaseKeyAlias.orNull
+                keyPassword releaseKeyPassword.orNull
+            }
+        }
+    }
 
     defaultConfig {
         applicationId "com.alos895.simplepos"
@@ -23,6 +47,9 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (signingConfigs.findByName("release") != null) {
+                signingConfig signingConfigs.release
+            }
         }
     }
     compileOptions {
@@ -34,6 +61,13 @@ android {
     }
     buildFeatures {
         compose true
+    }
+}
+
+if (playServiceAccountJson.present) {
+    play {
+        serviceAccountCredentials.set(file(playServiceAccountJson.get()))
+        track.set("internal")
     }
 }
 
