@@ -21,6 +21,7 @@ data class CartItem(
     val pizza: Pizza? = null,
     val tamano: TamanoPizza? = null,
     val sizeName: String? = null,
+    val manualName: String? = null,
     val unitPrice: Double? = null,
     val portions: List<CartItemPortion> = emptyList(),
     val cantidad: Int = 1,
@@ -39,4 +40,4 @@ val CartItem.unitPriceSingle: Double
     get() = unitPrice ?: tamano?.precioBase ?: 0.0
 
 val CartItem.displayName: String
-    get() = pizza?.nombre ?: if (isCombo) "Pizza combinada" else "Pizza"
+    get() = manualName?.ifBlank { null } ?: pizza?.nombre ?: if (isCombo) "Pizza combinada" else "Pizza"

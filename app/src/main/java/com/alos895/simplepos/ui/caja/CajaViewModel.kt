@@ -110,7 +110,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     "$cantidad x Pizza $size [$portions]"
                 } else {
-                    val nombre = quitarAcentos(item.pizza?.nombre ?: "Desconocida")
+                    val nombre = quitarAcentos(item.manualName ?: item.pizza?.nombre ?: "Desconocida")
                     val tamano = quitarAcentos(item.tamano?.nombre ?: "Sin tamano")
                     "$cantidad x $nombre ($tamano)"
                 }

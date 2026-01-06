@@ -97,6 +97,22 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun addManualItem(name: String, price: Double) {
+        val trimmedName = name.trim()
+        if (trimmedName.isBlank() || price <= 0) {
+            return
+        }
+        updateCartItems { current ->
+            current.add(
+                CartItem(
+                    manualName = trimmedName,
+                    unitPrice = price,
+                    cantidad = 1
+                )
+            )
+        }
+    }
+
     fun removeFromCart(pizza: Pizza, tamano: TamanoPizza) {
         updateCartItems { current ->
             val index = current.indexOfFirst {

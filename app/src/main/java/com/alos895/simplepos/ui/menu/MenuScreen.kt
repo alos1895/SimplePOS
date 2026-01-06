@@ -2,6 +2,7 @@ package com.alos895.simplepos.ui.menu
 
 import java.util.Locale
 import com.alos895.simplepos.model.PizzaFractionType
+import com.alos895.simplepos.model.displayName
 import com.alos895.simplepos.model.sizeLabel
 import com.alos895.simplepos.model.unitPriceSingle
 import androidx.compose.animation.AnimatedVisibility
@@ -30,6 +31,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.input.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.alos895.simplepos.ui.print.BluetoothPrinterViewModel
@@ -84,6 +87,8 @@ fun MenuScreen(
     var nombre by remember { mutableStateOf("") }
     var telefono by remember { mutableStateOf("") }
     var deliveryAddress by remember { mutableStateOf("") }
+    var manualName by remember { mutableStateOf("") }
+    var manualPriceInput by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -339,6 +344,55 @@ fun MenuScreen(
                                 }
                             }
                         }
+                        MenuSection.MANUAL -> {
+                            item {
+                                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Add,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text("Producto manual", style = MaterialTheme.typography.titleLarge)
+                                        }
+                                        OutlinedTextField(
+                                            value = manualName,
+                                            onValueChange = { manualName = it },
+                                            label = { Text("Nombre del producto") },
+                                            placeholder = { Text("Especial manual") },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                        OutlinedTextField(
+                                            value = manualPriceInput,
+                                            onValueChange = { input ->
+                                                manualPriceInput = input.filter { it.isDigit() }
+                                            },
+                                            label = { Text("Precio") },
+                                            placeholder = { Text("Solo dígitos") },
+                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                        val manualPrice = manualPriceInput.toDoubleOrNull() ?: 0.0
+                                        Button(
+                                            onClick = {
+                                                cartViewModel.addManualItem(manualName, manualPrice)
+                                                manualName = ""
+                                                manualPriceInput = ""
+                                            },
+                                            enabled = manualName.isNotBlank() && manualPrice > 0,
+                                            modifier = Modifier.align(Alignment.End)
+                                        ) {
+                                            Text("Agregar")
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         MenuSection.POSTRES -> {
                             if (desserts.isEmpty()) {
                                 item {
@@ -532,7 +586,7 @@ fun MenuScreen(
                                                                     if (item.sizeLabel.isBlank()) "Pizza combinada"
                                                                     else "Pizza ${item.sizeLabel} combinada"
                                                                 } else {
-                                                                    item.pizza?.nombre ?: "Pizza"
+                                                                    item.displayName
                                                                 },
                                                                 style = MaterialTheme.typography.titleMedium
                                                             )
@@ -796,6 +850,7 @@ fun MenuScreen(
 private enum class MenuSection(val label: String, val icon: ImageVector) {
     PIZZAS("Pizzas", Icons.Filled.LocalPizza),
     PIZZAS_COMBINADAS("Combinadas", Icons.Filled.PieChart),
+    MANUAL("Manual", Icons.Filled.Add),
     POSTRES("Postres", Icons.Filled.Icecream),
     EXTRAS("Extras", Icons.Filled.AttachMoney),
     COMENTARIOS("Comentarios", Icons.Filled.Comment)
@@ -806,4 +861,3 @@ private data class ComboDialogConfig(
     val sizeName: String,
     val patterns: List<FractionPattern>
 )
-

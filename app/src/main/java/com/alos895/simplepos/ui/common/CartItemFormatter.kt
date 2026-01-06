@@ -15,7 +15,7 @@ object CartItemFormatter {
         val headerName = if (item.isCombo) {
             if (size.isBlank()) "Pizza combinada" else "Pizza $size combinada"
         } else {
-            val baseName = item.pizza?.nombre ?: "Pizza"
+            val baseName = item.manualName?.ifBlank { null } ?: item.pizza?.nombre ?: "Pizza"
             if (size.isBlank()) baseName else "$baseName $size"
         }
         lines.add("${item.cantidad}x $headerName   $${formatCurrency(item.subtotal)}")
@@ -38,7 +38,7 @@ object CartItemFormatter {
             val descriptor = if (sizeUpper.isBlank()) "PIZZA COMBINADA" else "${sizeUpper} COMBINADA"
             "${item.cantidad}x $descriptor"
         } else {
-            val baseName = item.pizza?.nombre ?: "Pizza"
+            val baseName = item.manualName?.ifBlank { null } ?: item.pizza?.nombre ?: "Pizza"
             if (sizeUpper.isBlank()) "${item.cantidad}x ${baseName}" else "${item.cantidad}x ${baseName} ${sizeUpper}"
         }
         lines.add(header)
