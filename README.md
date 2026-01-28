@@ -1,5 +1,8 @@
 # SimplePOS – Documentación Esencial
 
+## Política de privacidad
+La política de privacidad pública se encuentra en `privacy.html`. Para publicarla con GitHub Pages, habilita **Settings → Pages** usando la rama `main` y la carpeta `/ (root)`. La URL pública quedará con este formato: `https://alos1895.github.io/SimplePOS/privacy.html`.【F:privacy.html†L1-L51】
+
 ## Resumen general
 SimplePOS es una aplicación de punto de venta construida con Jetpack Compose que organiza sus principales flujos en una barra de navegación inferior con cinco secciones: menú, órdenes, transacciones, caja y utilidades de impresión Bluetooth. Cada destino comparte el mismo `NavHost` y puede reutilizar view models de alcance de actividad, como el controlador de impresoras.【F:app/src/main/java/com/alos895/simplepos/ui/MainActivity.kt†L40-L146】
 
