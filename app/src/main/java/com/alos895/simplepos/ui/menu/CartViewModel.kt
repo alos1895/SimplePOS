@@ -179,6 +179,16 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun updateItemPrice(itemId: String, newPrice: Double) {
+        updateCartItems { current ->
+            val index = current.indexOfFirst { it.id == itemId }
+            if (index != -1) {
+                val item = current[index]
+                current[index] = item.copy(unitPrice = newPrice)
+            }
+        }
+    }
+
     fun addDessertToCart(postreOrExtra: PostreOrExtra) {
         val current = _dessertItems.value.toMutableList()
         val index = current.indexOfFirst { it.postreOrExtra.id == postreOrExtra.id }
