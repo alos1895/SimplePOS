@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessAlarm
 import androidx.compose.material.icons.filled.AddBusiness
 import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Motorcycle
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.alos895.simplepos.ui.orders.OrderViewModel
 import com.alos895.simplepos.ui.print.BluetoothPrinterViewModel
@@ -36,6 +39,10 @@ import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.model.DeliveryService
 import com.alos895.simplepos.model.DeliveryType
 import com.alos895.simplepos.model.User
+import com.alos895.simplepos.model.CartItem
+import com.alos895.simplepos.model.displayName
+import com.alos895.simplepos.model.sizeLabel
+import com.alos895.simplepos.model.unitPriceSingle
 import com.google.gson.Gson
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -432,9 +439,14 @@ fun EditOrderDialog(
     val initialUser = remember(order.id) {
         orderViewModel.getUser(order) ?: User(id = order.id, nombre = "", telefono = "")
     }
+    val initialCartItems = remember(order.id) { orderViewModel.getCartItems(order) }
+    val dessertItems = remember(order.id) { orderViewModel.getDessertItems(order) }
     var nombreCliente by remember(order.id) { mutableStateOf(initialUser.nombre) }
     var comentarios by remember(order.id) { mutableStateOf(order.comentarios) }
     var direccion by remember(order.id) { mutableStateOf(order.deliveryAddress) }
+    var editableCartItems by remember(order.id) { mutableStateOf(initialCartItems) }
+    var priceEditorItem by remember { mutableStateOf<CartItem?>(null) }
+    var priceEditorInput by remember { mutableStateOf("") }
     var deliveryMenuExpanded by remember { mutableStateOf(false) }
     val matchedDelivery = remember(order.id) {
         baseDeliveryOptions.firstOrNull { option ->
@@ -480,7 +492,9 @@ fun EditOrderDialog(
         val updatedIsTOTODO = updatedDeliveryType == DeliveryType.TOTODO
         val sanitizedAddress = if (requiresAddress) direccion.trim() else ""
         val updatedUser = initialUser.copy(nombre = nombreCliente)
-        val adjustedTotal = order.total - order.deliveryServicePrice + updatedDeliveryPrice
+        val itemsTotal = editableCartItems.sumOf { it.subtotal }
+        val dessertsTotal = dessertItems.sumOf { it.subtotal }
+        val adjustedTotal = itemsTotal + dessertsTotal + updatedDeliveryPrice
         val updatedPrecioTOTODO: Double
         val updatedDescuentoTOTODO: Double
         if (updatedIsTOTODO) {
@@ -507,11 +521,61 @@ fun EditOrderDialog(
             precioTOTODO = updatedPrecioTOTODO,
             descuentoTOTODO = updatedDescuentoTOTODO,
             userJson = gson.toJson(updatedUser),
-            total = adjustedTotal
+            total = adjustedTotal,
+            itemsJson = gson.toJson(editableCartItems)
         )
     }
 
     val confirmEnabled = !requiresAddress || direccion.isNotBlank()
+
+    if (priceEditorItem != null) {
+        val normalizedInput = priceEditorInput.replace(",", ".")
+        val parsedPrice = normalizedInput.toDoubleOrNull()
+        AlertDialog(
+            onDismissRequest = {
+                priceEditorItem = null
+                priceEditorInput = ""
+            },
+            title = { Text("Editar precio de pizza") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(priceEditorItem?.displayName ?: "Pizza")
+                    OutlinedTextField(
+                        value = priceEditorInput,
+                        onValueChange = { priceEditorInput = it },
+                        label = { Text("Precio unitario") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val item = priceEditorItem
+                        if (item != null && parsedPrice != null && parsedPrice >= 0) {
+                            editableCartItems = editableCartItems.map {
+                                if (it.id == item.id) it.copy(unitPrice = parsedPrice) else it
+                            }
+                        }
+                        priceEditorItem = null
+                        priceEditorInput = ""
+                    },
+                    enabled = parsedPrice != null && parsedPrice >= 0
+                ) {
+                    Text("Guardar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    priceEditorItem = null
+                    priceEditorInput = ""
+                }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -533,6 +597,45 @@ fun EditOrderDialog(
                     onValueChange = { comentarios = it },
                     label = { Text("Comentarios") }
                 )
+
+                Text("Precios de pizzas", style = MaterialTheme.typography.titleSmall)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    editableCartItems.forEach { item ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(item.displayName)
+                                if (item.sizeLabel.isNotBlank()) {
+                                    Text(item.sizeLabel, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    "$${String.format(Locale.getDefault(), "%.2f", item.unitPriceSingle)}",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                IconButton(
+                                    onClick = {
+                                        priceEditorItem = item
+                                        priceEditorInput = String.format(
+                                            Locale.getDefault(),
+                                            "%.2f",
+                                            item.unitPriceSingle
+                                        )
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Edit,
+                                        contentDescription = "Editar precio"
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
 
                 Text("Tipo de entrega", style = MaterialTheme.typography.titleSmall)
 
@@ -602,4 +705,3 @@ fun EditOrderDialog(
         }
     )
 }
-

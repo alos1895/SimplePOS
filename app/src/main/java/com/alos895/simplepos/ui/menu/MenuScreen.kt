@@ -2,8 +2,10 @@ package com.alos895.simplepos.ui.menu
 
 import java.util.Locale
 import com.alos895.simplepos.model.PizzaFractionType
+import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.model.sizeLabel
 import com.alos895.simplepos.model.unitPriceSingle
+import com.alos895.simplepos.model.displayName
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,6 +17,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Comment
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Icecream
@@ -30,6 +33,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.input.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.alos895.simplepos.ui.print.BluetoothPrinterViewModel
@@ -84,8 +89,57 @@ fun MenuScreen(
     var nombre by remember { mutableStateOf("") }
     var telefono by remember { mutableStateOf("") }
     var deliveryAddress by remember { mutableStateOf("") }
+    var priceEditorItem by remember { mutableStateOf<CartItem?>(null) }
+    var priceEditorInput by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+
+    if (priceEditorItem != null) {
+        val normalizedInput = priceEditorInput.replace(",", ".")
+        val parsedPrice = normalizedInput.toDoubleOrNull()
+        AlertDialog(
+            onDismissRequest = {
+                priceEditorItem = null
+                priceEditorInput = ""
+            },
+            title = { Text("Editar precio de pizza") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(priceEditorItem?.displayName ?: "Pizza")
+                    OutlinedTextField(
+                        value = priceEditorInput,
+                        onValueChange = { priceEditorInput = it },
+                        label = { Text("Precio unitario") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val item = priceEditorItem
+                        if (item != null && parsedPrice != null && parsedPrice >= 0) {
+                            cartViewModel.updateItemPrice(item.id, parsedPrice)
+                        }
+                        priceEditorItem = null
+                        priceEditorInput = ""
+                    },
+                    enabled = parsedPrice != null && parsedPrice >= 0
+                ) {
+                    Text("Guardar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    priceEditorItem = null
+                    priceEditorInput = ""
+                }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -557,10 +611,30 @@ fun MenuScreen(
                                                                 )
                                                             }
                                                         }
-                                                        Text(
-                                                            "$${String.format(Locale.getDefault(), "%.2f", item.unitPriceSingle)}",
-                                                            style = MaterialTheme.typography.titleMedium
-                                                        )
+                                                        Row(
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                        ) {
+                                                            Text(
+                                                                "$${String.format(Locale.getDefault(), "%.2f", item.unitPriceSingle)}",
+                                                                style = MaterialTheme.typography.titleMedium
+                                                            )
+                                                            IconButton(
+                                                                onClick = {
+                                                                    priceEditorItem = item
+                                                                    priceEditorInput = String.format(
+                                                                        Locale.getDefault(),
+                                                                        "%.2f",
+                                                                        item.unitPriceSingle
+                                                                    )
+                                                                }
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = Icons.Filled.Edit,
+                                                                    contentDescription = "Editar precio"
+                                                                )
+                                                            }
+                                                        }
                                                     }
                                                     Row(
                                                         modifier = Modifier.fillMaxWidth(),
@@ -806,4 +880,3 @@ private data class ComboDialogConfig(
     val sizeName: String,
     val patterns: List<FractionPattern>
 )
-
