@@ -241,6 +241,9 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
             totalCaja += order.total
             totalSoloOrdenes += order.total
             totalDescuentosTOTODO += order.descuentoTOTODO
+            if (order.isTOTODO) {
+                pizzaRevenue -= order.descuentoTOTODO
+            }
 
             try {
                 val paymentParts: List<PaymentPart>? = gson.fromJson(order.paymentBreakdownJson, paymentPartListType)
