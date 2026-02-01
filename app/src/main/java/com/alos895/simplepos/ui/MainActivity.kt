@@ -34,6 +34,7 @@ import com.alos895.simplepos.ui.orders.OrderViewModel
 import com.alos895.simplepos.ui.caja.CajaScreen
 import com.alos895.simplepos.ui.transaction.TransactionsScreen
 import com.alos895.simplepos.ui.caja.CajaViewModel
+import com.alos895.simplepos.ui.print.BaseInventoryViewModel
 import com.alos895.simplepos.ui.print.PrintTicketViewModel
 import com.alos895.simplepos.ui.transaction.TransactionViewModel
 
@@ -123,12 +124,14 @@ class MainActivity : ComponentActivity() {
                             android.Manifest.permission.BLUETOOTH_CONNECT
                         ) {
                             val printTicketViewModel: PrintTicketViewModel = viewModel()
+                            val baseInventoryViewModel: BaseInventoryViewModel = viewModel()
                             val isConnected by bluetoothPrinterViewModel.isConnected.collectAsState(initial = false)
                             val selectedDevice by bluetoothPrinterViewModel.selectedDevice.collectAsState(initial = null)
                             val pairedDevices = bluetoothPrinterViewModel.pairedDevices
                             val snackbarHostState = remember { SnackbarHostState() }
                             var lastMessage by remember { mutableStateOf("") }
                             val ticket by printTicketViewModel.ticket.collectAsState()
+                            val baseInventoryState by baseInventoryViewModel.uiState.collectAsState()
                             BluetoothPrinterScreen(
                                 isConnected = isConnected,
                                 selectedDevice = selectedDevice,
@@ -141,7 +144,14 @@ class MainActivity : ComponentActivity() {
                                 },
                                 snackbarHostState = snackbarHostState,
                                 lastMessage = lastMessage,
-                                initialTicket = ticket
+                                initialTicket = ticket,
+                                baseInventoryState = baseInventoryState,
+                                onDateInputChange = baseInventoryViewModel::onDateInputChange,
+                                onLoadDate = baseInventoryViewModel::loadForInputDate,
+                                onBaseGrandesChange = baseInventoryViewModel::onBaseGrandesChange,
+                                onBaseMedianasChange = baseInventoryViewModel::onBaseMedianasChange,
+                                onBaseChicasChange = baseInventoryViewModel::onBaseChicasChange,
+                                onSaveBaseCounts = baseInventoryViewModel::saveBaseCounts
                             )
                         }
                     }
