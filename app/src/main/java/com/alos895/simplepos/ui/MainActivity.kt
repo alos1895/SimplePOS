@@ -42,7 +42,7 @@ sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: 
     object Orders : BottomNavItem("orders", Icons.Filled.Home, "Órdenes")
     object Transactions : BottomNavItem("transactions", Icons.Filled.Home, "Transacciones")
     object Caja : BottomNavItem("caja", Icons.Filled.Home, "Caja")
-    object Print : BottomNavItem("print", Icons.Filled.Print, "Impresión")
+    object AdministrationPrint : BottomNavItem("print", Icons.Filled.Print, "Administración e Impresión")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,7 +70,7 @@ class MainActivity : ComponentActivity() {
                     BottomNavItem.Orders,
                     BottomNavItem.Transactions,
                     BottomNavItem.Caja,
-                    BottomNavItem.Print
+                    BottomNavItem.AdministrationPrint
                     )
                 // ViewModel compartido a nivel de actividad
                 val bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel(factory = BluetoothPrinterViewModelFactory(application))
@@ -104,7 +104,7 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         composable(BottomNavItem.Menu.route) {
-                            MenuScreen(onPrintRequested = { navController.navigate(BottomNavItem.Print.route) }, bluetoothPrinterViewModel = bluetoothPrinterViewModel)
+                            MenuScreen(onPrintRequested = { navController.navigate(BottomNavItem.AdministrationPrint.route) }, bluetoothPrinterViewModel = bluetoothPrinterViewModel)
                         }
                         composable(BottomNavItem.Orders.route) {
                             val orderViewModel: OrderViewModel = viewModel()
@@ -119,7 +119,7 @@ class MainActivity : ComponentActivity() {
                             val bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel()
                             CajaScreen(cajaViewModel, bluetoothPrinterViewModel)
                         }
-                        composable(BottomNavItem.Print.route) @androidx.annotation.RequiresPermission(
+                        composable(BottomNavItem.AdministrationPrint.route) @androidx.annotation.RequiresPermission(
                             android.Manifest.permission.BLUETOOTH_CONNECT
                         ) {
                             val printTicketViewModel: PrintTicketViewModel = viewModel()
