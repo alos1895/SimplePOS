@@ -148,6 +148,8 @@ class MainActivity : ComponentActivity() {
                                 baseInventoryState = baseInventoryState,
                                 onDateInputChange = baseInventoryViewModel::onDateInputChange,
                                 onLoadDate = baseInventoryViewModel::loadForInputDate,
+                                onPreviousDay = baseInventoryViewModel::goToPreviousDay,
+                                onNextDay = baseInventoryViewModel::goToNextDay,
                                 onBaseGrandesChange = baseInventoryViewModel::onBaseGrandesChange,
                                 onBaseMedianasChange = baseInventoryViewModel::onBaseMedianasChange,
                                 onBaseChicasChange = baseInventoryViewModel::onBaseChicasChange,

@@ -29,9 +29,12 @@ data class BaseInventoryUiState(
     val soldGrandes: Int = 0,
     val soldMedianas: Int = 0,
     val soldChicas: Int = 0,
+    val soldTotal: Int = 0,
     val remainingGrandes: Int = 0,
     val remainingMedianas: Int = 0,
     val remainingChicas: Int = 0,
+    val remainingTotal: Int = 0,
+    val totalBases: Int = 0,
     val errorMessage: String? = null
 )
 
@@ -75,6 +78,14 @@ class BaseInventoryViewModel(application: Application) : AndroidViewModel(applic
             return
         }
         setDate(parsedDate)
+    }
+
+    fun goToPreviousDay() {
+        shiftDateBy(-1)
+    }
+
+    fun goToNextDay() {
+        shiftDateBy(1)
     }
 
     fun saveBaseCounts() {
@@ -121,6 +132,8 @@ class BaseInventoryViewModel(application: Application) : AndroidViewModel(applic
             val baseGrandes = base?.baseGrandes ?: 0
             val baseMedianas = base?.baseMedianas ?: 0
             val baseChicas = base?.baseChicas ?: 0
+            val totalBases = baseGrandes + baseMedianas + baseChicas
+            val soldTotal = sold.first + sold.second + sold.third
             _uiState.update {
                 it.copy(
                     baseGrandesInput = baseGrandes.toString(),
@@ -129,9 +142,12 @@ class BaseInventoryViewModel(application: Application) : AndroidViewModel(applic
                     soldGrandes = sold.first,
                     soldMedianas = sold.second,
                     soldChicas = sold.third,
+                    soldTotal = soldTotal,
                     remainingGrandes = baseGrandes - sold.first,
                     remainingMedianas = baseMedianas - sold.second,
-                    remainingChicas = baseChicas - sold.third
+                    remainingChicas = baseChicas - sold.third,
+                    remainingTotal = totalBases - soldTotal,
+                    totalBases = totalBases
                 )
             }
         }
@@ -159,6 +175,15 @@ class BaseInventoryViewModel(application: Application) : AndroidViewModel(applic
         } catch (_: Exception) {
             null
         }
+    }
+
+    private fun shiftDateBy(days: Int) {
+        val currentKey = _uiState.value.dateKey
+        val parsed = dateKeyFormat.parse(currentKey) ?: return
+        val calendar = Calendar.getInstance()
+        calendar.time = parsed
+        calendar.add(Calendar.DAY_OF_YEAR, days)
+        setDate(calendar.time)
     }
 
     private fun calculateSoldBases(orders: List<OrderEntity>): Triple<Int, Int, Int> {

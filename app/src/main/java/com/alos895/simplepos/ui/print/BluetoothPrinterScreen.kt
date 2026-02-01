@@ -35,6 +35,8 @@ fun BluetoothPrinterScreen(
     baseInventoryState: BaseInventoryUiState,
     onDateInputChange: (String) -> Unit,
     onLoadDate: () -> Unit,
+    onPreviousDay: () -> Unit,
+    onNextDay: () -> Unit,
     onBaseGrandesChange: (String) -> Unit,
     onBaseMedianasChange: (String) -> Unit,
     onBaseChicasChange: (String) -> Unit,
@@ -68,6 +70,15 @@ fun BluetoothPrinterScreen(
                 Text("Bases por día", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(baseInventoryState.dateLabel, style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(onClick = onPreviousDay, modifier = Modifier.weight(1f)) {
+                        Text("Día anterior")
+                    }
+                    Button(onClick = onNextDay, modifier = Modifier.weight(1f)) {
+                        Text("Día siguiente")
+                    }
+                }
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
@@ -111,7 +122,15 @@ fun BluetoothPrinterScreen(
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
+                    "Total bases: ${baseInventoryState.totalBases} | Total vendidas: ${baseInventoryState.soldTotal}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
                     "Disponibles: Grandes ${baseInventoryState.remainingGrandes}, Medianas ${baseInventoryState.remainingMedianas}, Chicas ${baseInventoryState.remainingChicas}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    "Total disponibles: ${baseInventoryState.remainingTotal}",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 baseInventoryState.errorMessage?.let { message ->
