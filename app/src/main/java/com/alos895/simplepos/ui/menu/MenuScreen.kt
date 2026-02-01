@@ -817,7 +817,12 @@ fun MenuScreen(
                                         telefono = telefono
                                     )
                                     val deliveryForTicket = selectedDelivery
-                                    val savedOrder = cartViewModel.saveOrder(user, deliveryAddress, orderTimestamp)
+                                    val savedOrder = try {
+                                        cartViewModel.saveOrder(user, deliveryAddress, orderTimestamp)
+                                    } catch (e: IllegalStateException) {
+                                        snackbarHostState.showSnackbar(e.message ?: "No hay bases disponibles")
+                                        return@launch
+                                    }
                                     val cocinaTicket = cartViewModel.buildCocinaTicket(
                                         user = user,
                                         deliveryAddress = deliveryAddress,

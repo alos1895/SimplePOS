@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.PizzeriaData
 import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.data.repository.OrderRepository
+import com.alos895.simplepos.db.AppDatabase
 import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.model.CartItemPortion
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
@@ -39,6 +41,9 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     val dessertItems: StateFlow<List<CartItemPostre>> = _dessertItems
 
     private val orderRepository = OrderRepository(application)
+    private val database = AppDatabase.getDatabase(application)
+    private val baseInventoryDao = database.baseInventoryDao()
+    private val orderDao = database.orderDao()
 
     private val _selectedDelivery = MutableStateFlow<DeliveryService?>(null)
     val selectedDelivery: StateFlow<DeliveryService?> = _selectedDelivery
@@ -317,6 +322,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         deliveryAddress: String = "",
         timestamp: Long = System.currentTimeMillis()
     ): OrderEntity {
+        validateBaseInventory(timestamp)
         val gson = Gson()
         val itemsJson = gson.toJson(_cartItems.value)
         val dessertsJson = gson.toJson(_dessertItems.value)
@@ -363,6 +369,83 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         )
 
         return orderRepository.addOrder(orderEntity)
+    }
+
+    private suspend fun validateBaseInventory(timestamp: Long) {
+        val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(timestamp))
+        val baseInventory = baseInventoryDao.getByDateKey(dateKey)
+        val dayStart = getDayStartMillis(timestamp)
+        val orders = orderDao.getOrdersByDate(dayStart)
+        val soldCounts = calculateSoldBases(orders)
+        val requiredCounts = calculateRequiredBases(_cartItems.value)
+        val remainingGrandes = (baseInventory?.baseGrandes ?: 0) - soldCounts.first
+        val remainingMedianas = (baseInventory?.baseMedianas ?: 0) - soldCounts.second
+        val remainingChicas = (baseInventory?.baseChicas ?: 0) - soldCounts.third
+
+        val missing = mutableListOf<String>()
+        if (requiredCounts.first > remainingGrandes) {
+            missing.add("Grandes")
+        }
+        if (requiredCounts.second > remainingMedianas) {
+            missing.add("Medianas")
+        }
+        if (requiredCounts.third > remainingChicas) {
+            missing.add("Chicas")
+        }
+        if (missing.isNotEmpty()) {
+            val detail = missing.joinToString(", ")
+            throw IllegalStateException("Sin stock suficiente de bases: $detail")
+        }
+    }
+
+    private fun calculateRequiredBases(items: List<CartItem>): Triple<Int, Int, Int> {
+        var requiredGrandes = 0
+        var requiredMedianas = 0
+        var requiredChicas = 0
+        items.forEach { item ->
+            when (item.sizeLabel.trim().lowercase(Locale.getDefault())) {
+                "chica" -> requiredChicas += item.cantidad
+                "mediana" -> requiredMedianas += item.cantidad
+                "grande", "extra grande" -> requiredGrandes += item.cantidad
+            }
+        }
+        return Triple(requiredGrandes, requiredMedianas, requiredChicas)
+    }
+
+    private fun calculateSoldBases(orders: List<OrderEntity>): Triple<Int, Int, Int> {
+        var soldGrandes = 0
+        var soldMedianas = 0
+        var soldChicas = 0
+        orders.forEach { order ->
+            getCartItems(order).forEach { item ->
+                when (item.sizeLabel.trim().lowercase(Locale.getDefault())) {
+                    "chica" -> soldChicas += item.cantidad
+                    "mediana" -> soldMedianas += item.cantidad
+                    "grande", "extra grande" -> soldGrandes += item.cantidad
+                }
+            }
+        }
+        return Triple(soldGrandes, soldMedianas, soldChicas)
+    }
+
+    private fun getCartItems(order: OrderEntity): List<CartItem> {
+        return try {
+            val gson = Gson()
+            val type = object : com.google.gson.reflect.TypeToken<List<CartItem>>() {}.type
+            gson.fromJson(order.itemsJson, type) ?: emptyList()
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun getDayStartMillis(timestamp: Long): Long {
+        val calendar = Calendar.getInstance()
+        calendar.timeInMillis = timestamp
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        return calendar.timeInMillis
     }
 
     private fun getDeliveryTypeLabel(type: DeliveryType): String {
