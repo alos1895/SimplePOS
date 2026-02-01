@@ -206,14 +206,24 @@ class BaseInventoryViewModel(application: Application) : AndroidViewModel(applic
         var soldChicas = 0
         orders.forEach { order ->
             getCartItems(order).forEach { item ->
-                when (item.sizeLabel.trim().lowercase(Locale.getDefault())) {
+                when (normalizeSizeLabel(item.sizeLabel)) {
                     "chica" -> soldChicas += item.cantidad
                     "mediana" -> soldMedianas += item.cantidad
-                    "grande", "extra grande" -> soldGrandes += item.cantidad
+                    "grande" -> soldGrandes += item.cantidad
                 }
             }
         }
         return Triple(soldGrandes, soldMedianas, soldChicas)
+    }
+
+    private fun normalizeSizeLabel(label: String): String {
+        val normalized = label.trim().lowercase(Locale.getDefault())
+        return when (normalized) {
+            "chica", "chida" -> "chica"
+            "mediana" -> "mediana"
+            "grande", "extra grande" -> "grande"
+            else -> normalized
+        }
     }
 
     private fun getCartItems(order: OrderEntity): List<CartItem> {

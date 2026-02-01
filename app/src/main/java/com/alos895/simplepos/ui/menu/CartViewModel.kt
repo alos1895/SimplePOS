@@ -403,10 +403,10 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         var requiredMedianas = 0
         var requiredChicas = 0
         items.forEach { item ->
-            when (item.sizeLabel.trim().lowercase(Locale.getDefault())) {
+            when (normalizeSizeLabel(item.sizeLabel)) {
                 "chica" -> requiredChicas += item.cantidad
                 "mediana" -> requiredMedianas += item.cantidad
-                "grande", "extra grande" -> requiredGrandes += item.cantidad
+                "grande" -> requiredGrandes += item.cantidad
             }
         }
         return Triple(requiredGrandes, requiredMedianas, requiredChicas)
@@ -418,10 +418,10 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         var soldChicas = 0
         orders.forEach { order ->
             getCartItems(order).forEach { item ->
-                when (item.sizeLabel.trim().lowercase(Locale.getDefault())) {
+                when (normalizeSizeLabel(item.sizeLabel)) {
                     "chica" -> soldChicas += item.cantidad
                     "mediana" -> soldMedianas += item.cantidad
-                    "grande", "extra grande" -> soldGrandes += item.cantidad
+                    "grande" -> soldGrandes += item.cantidad
                 }
             }
         }
@@ -446,6 +446,16 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         calendar.set(Calendar.SECOND, 0)
         calendar.set(Calendar.MILLISECOND, 0)
         return calendar.timeInMillis
+    }
+
+    private fun normalizeSizeLabel(label: String): String {
+        val normalized = label.trim().lowercase(Locale.getDefault())
+        return when (normalized) {
+            "chica", "chida" -> "chica"
+            "mediana" -> "mediana"
+            "grande", "extra grande" -> "grande"
+            else -> normalized
+        }
     }
 
     private fun getDeliveryTypeLabel(type: DeliveryType): String {
