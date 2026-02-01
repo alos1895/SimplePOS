@@ -18,6 +18,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 data class BaseInventoryUiState(
     val dateKey: String = "",
@@ -71,7 +72,23 @@ class BaseInventoryViewModel(application: Application) : AndroidViewModel(applic
     }
 
     fun onDateSelected(selectedMillis: Long) {
-        setDate(Date(selectedMillis))
+        val utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        utcCalendar.timeInMillis = selectedMillis
+        val localCalendar = Calendar.getInstance()
+        localCalendar.set(
+            utcCalendar.get(Calendar.YEAR),
+            utcCalendar.get(Calendar.MONTH),
+            utcCalendar.get(Calendar.DAY_OF_MONTH),
+            0,
+            0,
+            0
+        )
+        localCalendar.set(Calendar.MILLISECOND, 0)
+        setDate(localCalendar.time)
+    }
+
+    fun goToToday() {
+        setDate(Date())
     }
 
     fun saveBaseCounts() {

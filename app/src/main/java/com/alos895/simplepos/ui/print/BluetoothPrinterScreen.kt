@@ -34,6 +34,7 @@ fun BluetoothPrinterScreen(
     initialTicket: String,
     baseInventoryState: BaseInventoryUiState,
     onDateSelected: (Long) -> Unit,
+    onTodaySelected: () -> Unit,
     onBaseGrandesChange: (String) -> Unit,
     onBaseMedianasChange: (String) -> Unit,
     onBaseChicasChange: (String) -> Unit,
@@ -75,8 +76,13 @@ fun BluetoothPrinterScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(baseInventoryState.dateLabel, style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.height(12.dp))
-                Button(onClick = { isDatePickerOpen = true }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Seleccionar fecha")
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(onClick = { isDatePickerOpen = true }, modifier = Modifier.weight(1f)) {
+                        Text("Seleccionar fecha")
+                    }
+                    OutlinedButton(onClick = onTodaySelected, modifier = Modifier.weight(1f)) {
+                        Text("Hoy")
+                    }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

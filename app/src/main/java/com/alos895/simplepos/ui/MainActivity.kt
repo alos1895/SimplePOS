@@ -147,6 +147,7 @@ class MainActivity : ComponentActivity() {
                                 initialTicket = ticket,
                                 baseInventoryState = baseInventoryState,
                                 onDateSelected = baseInventoryViewModel::onDateSelected,
+                                onTodaySelected = baseInventoryViewModel::goToToday,
                                 onBaseGrandesChange = baseInventoryViewModel::onBaseGrandesChange,
                                 onBaseMedianasChange = baseInventoryViewModel::onBaseMedianasChange,
                                 onBaseChicasChange = baseInventoryViewModel::onBaseChicasChange,
