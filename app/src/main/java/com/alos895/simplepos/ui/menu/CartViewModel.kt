@@ -376,20 +376,34 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         val baseInventory = baseInventoryDao.getByDateKey(dateKey)
         val dayStart = getDayStartMillis(timestamp)
         val orders = orderDao.getOrdersByDate(dayStart)
+        val allOrders = orderDao.getAllOrders()
         val soldCounts = calculateSoldBases(orders)
+        val soldAllCounts = calculateSoldBases(allOrders)
+        val absoluteTotals = baseInventoryDao.getTotals()
         val requiredCounts = calculateRequiredBases(_cartItems.value)
         val remainingGrandes = (baseInventory?.baseGrandes ?: 0) - soldCounts.first
         val remainingMedianas = (baseInventory?.baseMedianas ?: 0) - soldCounts.second
         val remainingChicas = (baseInventory?.baseChicas ?: 0) - soldCounts.third
+        val absoluteRemainingGrandes = absoluteTotals.totalGrandes - soldAllCounts.first
+        val absoluteRemainingMedianas = absoluteTotals.totalMedianas - soldAllCounts.second
+        val absoluteRemainingChicas = absoluteTotals.totalChicas - soldAllCounts.third
 
         val missing = mutableListOf<String>()
-        if (requiredCounts.first > remainingGrandes) {
+        val useAbsoluteFallback = baseInventory == null ||
+            requiredCounts.first > remainingGrandes ||
+            requiredCounts.second > remainingMedianas ||
+            requiredCounts.third > remainingChicas
+        val availableGrandes = if (useAbsoluteFallback) absoluteRemainingGrandes else remainingGrandes
+        val availableMedianas = if (useAbsoluteFallback) absoluteRemainingMedianas else remainingMedianas
+        val availableChicas = if (useAbsoluteFallback) absoluteRemainingChicas else remainingChicas
+
+        if (requiredCounts.first > availableGrandes) {
             missing.add("Grandes")
         }
-        if (requiredCounts.second > remainingMedianas) {
+        if (requiredCounts.second > availableMedianas) {
             missing.add("Medianas")
         }
-        if (requiredCounts.third > remainingChicas) {
+        if (requiredCounts.third > availableChicas) {
             missing.add("Chicas")
         }
         if (missing.isNotEmpty()) {
