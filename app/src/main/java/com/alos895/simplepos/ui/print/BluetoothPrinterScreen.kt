@@ -33,10 +33,7 @@ fun BluetoothPrinterScreen(
     lastMessage: String,
     initialTicket: String,
     baseInventoryState: BaseInventoryUiState,
-    onDateInputChange: (String) -> Unit,
-    onLoadDate: () -> Unit,
-    onPreviousDay: () -> Unit,
-    onNextDay: () -> Unit,
+    onDateSelected: (Long) -> Unit,
     onBaseGrandesChange: (String) -> Unit,
     onBaseMedianasChange: (String) -> Unit,
     onBaseChicasChange: (String) -> Unit,
@@ -65,32 +62,21 @@ fun BluetoothPrinterScreen(
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
             ) {
+                var isDatePickerOpen by remember { mutableStateOf(false) }
+                val datePickerState = rememberDatePickerState(
+                    initialSelectedDateMillis = baseInventoryState.selectedDateMillis
+                )
+                LaunchedEffect(baseInventoryState.selectedDateMillis) {
+                    datePickerState.selectedDateMillis = baseInventoryState.selectedDateMillis
+                }
                 Text("Administración", style = MaterialTheme.typography.titleLarge)
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Bases por día", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(baseInventoryState.dateLabel, style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(onClick = onPreviousDay, modifier = Modifier.weight(1f)) {
-                        Text("Día anterior")
-                    }
-                    Button(onClick = onNextDay, modifier = Modifier.weight(1f)) {
-                        Text("Día siguiente")
-                    }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(
-                        value = baseInventoryState.dateInput,
-                        onValueChange = onDateInputChange,
-                        label = { Text("Fecha (dd/MM/yyyy)") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Button(onClick = onLoadDate) {
-                        Text("Cargar")
-                    }
+                Button(onClick = { isDatePickerOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Seleccionar fecha")
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -133,6 +119,14 @@ fun BluetoothPrinterScreen(
                     "Total disponibles: ${baseInventoryState.remainingTotal}",
                     style = MaterialTheme.typography.bodyMedium
                 )
+                Text(
+                    "Total absoluto: Grandes ${baseInventoryState.absoluteGrandes}, Medianas ${baseInventoryState.absoluteMedianas}, Chicas ${baseInventoryState.absoluteChicas}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    "Total absoluto de bases: ${baseInventoryState.absoluteTotal}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
                 baseInventoryState.errorMessage?.let { message ->
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(message, color = MaterialTheme.colorScheme.error)
@@ -143,6 +137,30 @@ fun BluetoothPrinterScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Guardar bases")
+                }
+
+                if (isDatePickerOpen) {
+                    DatePickerDialog(
+                        onDismissRequest = { isDatePickerOpen = false },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                val selectedDate = datePickerState.selectedDateMillis
+                                if (selectedDate != null) {
+                                    onDateSelected(selectedDate)
+                                }
+                                isDatePickerOpen = false
+                            }) {
+                                Text("Aceptar")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { isDatePickerOpen = false }) {
+                                Text("Cancelar")
+                            }
+                        }
+                    ) {
+                        DatePicker(state = datePickerState)
+                    }
                 }
             }
 

@@ -21,8 +21,8 @@ import java.util.Locale
 
 data class BaseInventoryUiState(
     val dateKey: String = "",
-    val dateInput: String = "",
     val dateLabel: String = "",
+    val selectedDateMillis: Long = 0L,
     val baseGrandesInput: String = "0",
     val baseMedianasInput: String = "0",
     val baseChicasInput: String = "0",
@@ -35,6 +35,10 @@ data class BaseInventoryUiState(
     val remainingChicas: Int = 0,
     val remainingTotal: Int = 0,
     val totalBases: Int = 0,
+    val absoluteGrandes: Int = 0,
+    val absoluteMedianas: Int = 0,
+    val absoluteChicas: Int = 0,
+    val absoluteTotal: Int = 0,
     val errorMessage: String? = null
 )
 
@@ -45,7 +49,6 @@ class BaseInventoryViewModel(application: Application) : AndroidViewModel(applic
     private val gson = Gson()
 
     private val dateKeyFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-    private val dateInputFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
     private val dateLabelFormat = SimpleDateFormat("EEEE d 'de' MMMM", Locale("es", "ES"))
 
     private val _uiState = MutableStateFlow(BaseInventoryUiState())
@@ -53,10 +56,6 @@ class BaseInventoryViewModel(application: Application) : AndroidViewModel(applic
 
     init {
         setDate(Date())
-    }
-
-    fun onDateInputChange(value: String) {
-        _uiState.update { it.copy(dateInput = value, errorMessage = null) }
     }
 
     fun onBaseGrandesChange(value: String) {
@@ -71,21 +70,8 @@ class BaseInventoryViewModel(application: Application) : AndroidViewModel(applic
         _uiState.update { it.copy(baseChicasInput = value.filter { char -> char.isDigit() }) }
     }
 
-    fun loadForInputDate() {
-        val parsedDate = parseInputDate(_uiState.value.dateInput)
-        if (parsedDate == null) {
-            _uiState.update { it.copy(errorMessage = "Fecha inválida. Usa el formato dd/MM/yyyy.") }
-            return
-        }
-        setDate(parsedDate)
-    }
-
-    fun goToPreviousDay() {
-        shiftDateBy(-1)
-    }
-
-    fun goToNextDay() {
-        shiftDateBy(1)
+    fun onDateSelected(selectedMillis: Long) {
+        setDate(Date(selectedMillis))
     }
 
     fun saveBaseCounts() {
@@ -115,8 +101,8 @@ class BaseInventoryViewModel(application: Application) : AndroidViewModel(applic
         _uiState.update {
             it.copy(
                 dateKey = dateKey,
-                dateInput = dateInputFormat.format(date),
                 dateLabel = dateLabelFormat.format(date).replaceFirstChar { char -> char.uppercase() },
+                selectedDateMillis = date.time,
                 errorMessage = null
             )
         }
@@ -132,8 +118,10 @@ class BaseInventoryViewModel(application: Application) : AndroidViewModel(applic
             val baseGrandes = base?.baseGrandes ?: 0
             val baseMedianas = base?.baseMedianas ?: 0
             val baseChicas = base?.baseChicas ?: 0
+            val totals = baseInventoryDao.getTotals()
             val totalBases = baseGrandes + baseMedianas + baseChicas
             val soldTotal = sold.first + sold.second + sold.third
+            val absoluteTotal = totals.totalGrandes + totals.totalMedianas + totals.totalChicas
             _uiState.update {
                 it.copy(
                     baseGrandesInput = baseGrandes.toString(),
@@ -147,18 +135,13 @@ class BaseInventoryViewModel(application: Application) : AndroidViewModel(applic
                     remainingMedianas = baseMedianas - sold.second,
                     remainingChicas = baseChicas - sold.third,
                     remainingTotal = totalBases - soldTotal,
-                    totalBases = totalBases
+                    totalBases = totalBases,
+                    absoluteGrandes = totals.totalGrandes,
+                    absoluteMedianas = totals.totalMedianas,
+                    absoluteChicas = totals.totalChicas,
+                    absoluteTotal = absoluteTotal
                 )
             }
-        }
-    }
-
-    private fun parseInputDate(input: String): Date? {
-        return try {
-            dateInputFormat.isLenient = false
-            dateInputFormat.parse(input.trim())
-        } catch (_: Exception) {
-            null
         }
     }
 
@@ -175,15 +158,6 @@ class BaseInventoryViewModel(application: Application) : AndroidViewModel(applic
         } catch (_: Exception) {
             null
         }
-    }
-
-    private fun shiftDateBy(days: Int) {
-        val currentKey = _uiState.value.dateKey
-        val parsed = dateKeyFormat.parse(currentKey) ?: return
-        val calendar = Calendar.getInstance()
-        calendar.time = parsed
-        calendar.add(Calendar.DAY_OF_YEAR, days)
-        setDate(calendar.time)
     }
 
     private fun calculateSoldBases(orders: List<OrderEntity>): Triple<Int, Int, Int> {
