@@ -40,6 +40,14 @@ data class BaseInventoryUiState(
     val absoluteMedianas: Int = 0,
     val absoluteChicas: Int = 0,
     val absoluteTotal: Int = 0,
+    val absoluteSoldGrandes: Int = 0,
+    val absoluteSoldMedianas: Int = 0,
+    val absoluteSoldChicas: Int = 0,
+    val absoluteSoldTotal: Int = 0,
+    val absoluteRemainingGrandes: Int = 0,
+    val absoluteRemainingMedianas: Int = 0,
+    val absoluteRemainingChicas: Int = 0,
+    val absoluteRemainingTotal: Int = 0,
     val errorMessage: String? = null
 )
 
@@ -91,6 +99,10 @@ class BaseInventoryViewModel(application: Application) : AndroidViewModel(applic
         setDate(Date())
     }
 
+    fun refreshCurrentDate() {
+        refreshForDateKey(_uiState.value.dateKey)
+    }
+
     fun saveBaseCounts() {
         val baseGrandes = _uiState.value.baseGrandesInput.toIntOrNull()
         val baseMedianas = _uiState.value.baseMedianasInput.toIntOrNull()
@@ -131,7 +143,9 @@ class BaseInventoryViewModel(application: Application) : AndroidViewModel(applic
             val base = baseInventoryDao.getByDateKey(dateKey)
             val dayStart = getDayStartMillis(dateKey)
             val orders = if (dayStart != null) orderDao.getOrdersByDate(dayStart) else emptyList()
+            val allOrders = orderDao.getAllOrders()
             val sold = calculateSoldBases(orders)
+            val soldAll = calculateSoldBases(allOrders)
             val baseGrandes = base?.baseGrandes ?: 0
             val baseMedianas = base?.baseMedianas ?: 0
             val baseChicas = base?.baseChicas ?: 0
@@ -139,6 +153,7 @@ class BaseInventoryViewModel(application: Application) : AndroidViewModel(applic
             val totalBases = baseGrandes + baseMedianas + baseChicas
             val soldTotal = sold.first + sold.second + sold.third
             val absoluteTotal = totals.totalGrandes + totals.totalMedianas + totals.totalChicas
+            val absoluteSoldTotal = soldAll.first + soldAll.second + soldAll.third
             _uiState.update {
                 it.copy(
                     baseGrandesInput = baseGrandes.toString(),
@@ -156,7 +171,15 @@ class BaseInventoryViewModel(application: Application) : AndroidViewModel(applic
                     absoluteGrandes = totals.totalGrandes,
                     absoluteMedianas = totals.totalMedianas,
                     absoluteChicas = totals.totalChicas,
-                    absoluteTotal = absoluteTotal
+                    absoluteTotal = absoluteTotal,
+                    absoluteSoldGrandes = soldAll.first,
+                    absoluteSoldMedianas = soldAll.second,
+                    absoluteSoldChicas = soldAll.third,
+                    absoluteSoldTotal = absoluteSoldTotal,
+                    absoluteRemainingGrandes = totals.totalGrandes - soldAll.first,
+                    absoluteRemainingMedianas = totals.totalMedianas - soldAll.second,
+                    absoluteRemainingChicas = totals.totalChicas - soldAll.third,
+                    absoluteRemainingTotal = absoluteTotal - absoluteSoldTotal
                 )
             }
         }

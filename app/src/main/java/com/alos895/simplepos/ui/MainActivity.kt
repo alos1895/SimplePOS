@@ -148,6 +148,7 @@ class MainActivity : ComponentActivity() {
                                 baseInventoryState = baseInventoryState,
                                 onDateSelected = baseInventoryViewModel::onDateSelected,
                                 onTodaySelected = baseInventoryViewModel::goToToday,
+                                onRefreshInventory = baseInventoryViewModel::refreshCurrentDate,
                                 onBaseGrandesChange = baseInventoryViewModel::onBaseGrandesChange,
                                 onBaseMedianasChange = baseInventoryViewModel::onBaseMedianasChange,
                                 onBaseChicasChange = baseInventoryViewModel::onBaseChicasChange,
