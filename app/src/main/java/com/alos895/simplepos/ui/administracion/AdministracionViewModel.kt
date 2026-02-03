@@ -17,13 +17,17 @@ class AdministracionViewModel(application: Application) : AndroidViewModel(appli
     private val _totals = MutableStateFlow(BaseProductionTotals())
     val totals: StateFlow<BaseProductionTotals> = _totals.asStateFlow()
 
+    private val _entries = MutableStateFlow<List<BaseProductionEntity>>(emptyList())
+    val entries: StateFlow<List<BaseProductionEntity>> = _entries.asStateFlow()
+
     init {
-        loadTotals()
+        refreshData()
     }
 
-    fun loadTotals() {
+    private fun refreshData() {
         viewModelScope.launch {
             _totals.value = repository.getTotals()
+            _entries.value = repository.getAll()
         }
     }
 
@@ -36,7 +40,14 @@ class AdministracionViewModel(application: Application) : AndroidViewModel(appli
                 timestamp = System.currentTimeMillis()
             )
             repository.insertBaseProduction(newEntry)
-            _totals.value = repository.getTotals()
+            refreshData()
+        }
+    }
+
+    fun deleteEntry(id: Long) {
+        viewModelScope.launch {
+            repository.deleteById(id)
+            refreshData()
         }
     }
 }

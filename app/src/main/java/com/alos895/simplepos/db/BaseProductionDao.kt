@@ -16,6 +16,9 @@ interface BaseProductionDao {
     @Insert
     suspend fun insertBaseProduction(baseProduction: BaseProductionEntity)
 
+    @Query("SELECT * FROM base_production ORDER BY timestamp DESC")
+    suspend fun getAll(): List<BaseProductionEntity>
+
     @Query(
         "SELECT " +
             "COALESCE(SUM(chicas), 0) as totalChicas, " +
@@ -24,4 +27,7 @@ interface BaseProductionDao {
             "FROM base_production"
     )
     suspend fun getTotals(): BaseProductionTotals
+
+    @Query("DELETE FROM base_production WHERE id = :id")
+    suspend fun deleteById(id: Long)
 }

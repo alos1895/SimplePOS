@@ -12,7 +12,15 @@ class BaseProductionRepository(context: Context) {
         baseProductionDao.insertBaseProduction(baseProduction)
     }
 
+    suspend fun getAll(): List<BaseProductionEntity> {
+        return baseProductionDao.getAll()
+    }
+
     suspend fun getTotals(): BaseProductionTotals {
         return baseProductionDao.getTotals()
+    }
+
+    suspend fun deleteById(id: Long) {
+        baseProductionDao.deleteById(id)
     }
 }
