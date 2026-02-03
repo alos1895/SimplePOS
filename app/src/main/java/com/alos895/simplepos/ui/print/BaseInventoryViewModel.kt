@@ -163,10 +163,10 @@ class BaseInventoryViewModel(application: Application) : AndroidViewModel(applic
                     soldMedianas = sold.second,
                     soldChicas = sold.third,
                     soldTotal = soldTotal,
-                    remainingGrandes = baseGrandes - sold.first,
-                    remainingMedianas = baseMedianas - sold.second,
-                    remainingChicas = baseChicas - sold.third,
-                    remainingTotal = totalBases - soldTotal,
+                    remainingGrandes = baseGrandes,
+                    remainingMedianas = baseMedianas,
+                    remainingChicas = baseChicas,
+                    remainingTotal = totalBases,
                     totalBases = totalBases,
                     absoluteGrandes = totals.totalGrandes,
                     absoluteMedianas = totals.totalMedianas,
@@ -176,10 +176,10 @@ class BaseInventoryViewModel(application: Application) : AndroidViewModel(applic
                     absoluteSoldMedianas = soldAll.second,
                     absoluteSoldChicas = soldAll.third,
                     absoluteSoldTotal = absoluteSoldTotal,
-                    absoluteRemainingGrandes = totals.totalGrandes - soldAll.first,
-                    absoluteRemainingMedianas = totals.totalMedianas - soldAll.second,
-                    absoluteRemainingChicas = totals.totalChicas - soldAll.third,
-                    absoluteRemainingTotal = absoluteTotal - absoluteSoldTotal
+                    absoluteRemainingGrandes = totals.totalGrandes,
+                    absoluteRemainingMedianas = totals.totalMedianas,
+                    absoluteRemainingChicas = totals.totalChicas,
+                    absoluteRemainingTotal = absoluteTotal
                 )
             }
         }

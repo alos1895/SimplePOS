@@ -9,7 +9,6 @@ import com.alos895.simplepos.data.PizzeriaData
 import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.data.repository.OrderRepository
 import com.alos895.simplepos.db.AppDatabase
-import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.model.CartItemPortion
 import com.alos895.simplepos.model.CartItemPostre
@@ -26,9 +25,9 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
@@ -43,7 +42,6 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     private val orderRepository = OrderRepository(application)
     private val database = AppDatabase.getDatabase(application)
     private val baseInventoryDao = database.baseInventoryDao()
-    private val orderDao = database.orderDao()
 
     private val _selectedDelivery = MutableStateFlow<DeliveryService?>(null)
     val selectedDelivery: StateFlow<DeliveryService?> = _selectedDelivery
@@ -53,6 +51,9 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _comentarios = MutableStateFlow("")
     val comentarios: StateFlow<String> = _comentarios
+
+    private val _stockError = MutableStateFlow<String?>(null)
+    val stockError: StateFlow<String?> = _stockError.asStateFlow()
 
     init {
         _selectedDelivery.value = MenuData.deliveryOptions.first()
@@ -89,88 +90,115 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addToCart(pizza: Pizza, tamano: TamanoPizza) {
-        updateCartItems { current ->
-            current.add(
-                CartItem(
-                    pizza = pizza,
-                    tamano = tamano,
-                    sizeName = tamano.nombre,
-                    unitPrice = tamano.precioBase,
-                    cantidad = 1
-                )
-            )
+        viewModelScope.launch {
+            val sizeLabel = tamano.nombre
+            if (reserveBaseStock(sizeLabel, 1)) {
+                updateCartItems { current ->
+                    current.add(
+                        CartItem(
+                            pizza = pizza,
+                            tamano = tamano,
+                            sizeName = tamano.nombre,
+                            unitPrice = tamano.precioBase,
+                            cantidad = 1
+                        )
+                    )
+                }
+            }
         }
     }
 
     fun removeFromCart(pizza: Pizza, tamano: TamanoPizza) {
-        updateCartItems { current ->
-            val index = current.indexOfFirst {
-                !it.isCombo && it.pizza?.nombre == pizza.nombre && it.tamano?.nombre == tamano.nombre
+        viewModelScope.launch {
+            var itemToRelease: CartItem? = null
+            updateCartItems { current ->
+                val index = current.indexOfFirst {
+                    !it.isCombo && it.pizza?.nombre == pizza.nombre && it.tamano?.nombre == tamano.nombre
+                }
+                if (index >= 0) {
+                    itemToRelease = current[index]
+                    current.removeAt(index)
+                }
             }
-            if (index >= 0) {
-                current.removeAt(index)
-            }
+            itemToRelease?.let { releaseBaseStock(it.sizeLabel, it.cantidad) }
         }
     }
 
     fun addComboToCart(sizeName: String, portions: List<CartItemPortion>) {
         val normalizedSize = sizeName.trim()
-        updateCartItems { current ->
-            val price = calculateComboPrice(normalizedSize, portions)
-            current.add(
-                CartItem(
-                    sizeName = normalizedSize,
-                    unitPrice = price,
-                    portions = portions,
-                    cantidad = 1 // Combos are always added as new items with quantity 1
-                )
-            )
+        viewModelScope.launch {
+            if (reserveBaseStock(normalizedSize, 1)) {
+                updateCartItems { current ->
+                    val price = calculateComboPrice(normalizedSize, portions)
+                    current.add(
+                        CartItem(
+                            sizeName = normalizedSize,
+                            unitPrice = price,
+                            portions = portions,
+                            cantidad = 1 // Combos are always added as new items with quantity 1
+                        )
+                    )
+                }
+            }
         }
     }
 
     fun incrementItem(itemId: String) {
-        updateCartItems { current ->
-            val index = current.indexOfFirst { it.id == itemId }
+        viewModelScope.launch {
+            val index = _cartItems.value.indexOfFirst { it.id == itemId }
             if (index != -1) {
-                val item = current[index]
-                if (item.isCombo) {
-                    // For combos, add a new instance with the same configuration
-                    val price = calculateComboPrice(item.sizeLabel, item.portions)
-                    current.add(
-                        CartItem(
-                            id = UUID.randomUUID().toString(), // Ensure new ID for distinct combo
-                            sizeName = item.sizeLabel,
-                            unitPrice = price,
-                            portions = item.portions,
-                            cantidad = 1,
-                            isGolden = item.isGolden
-                        )
-                    )
-                } else {
-                    // For regular pizzas, increment quantity
-                    current[index] = item.copy(cantidad = item.cantidad + 1)
+                val item = _cartItems.value[index]
+                if (reserveBaseStock(item.sizeLabel, 1)) {
+                    updateCartItems { current ->
+                        if (item.isCombo) {
+                            val price = calculateComboPrice(item.sizeLabel, item.portions)
+                            current.add(
+                                CartItem(
+                                    id = UUID.randomUUID().toString(),
+                                    sizeName = item.sizeLabel,
+                                    unitPrice = price,
+                                    portions = item.portions,
+                                    cantidad = 1,
+                                    isGolden = item.isGolden
+                                )
+                            )
+                        } else {
+                            current[index] = item.copy(cantidad = item.cantidad + 1)
+                        }
+                    }
                 }
             }
         }
     }
 
     fun decrementItem(itemId: String) {
-        updateCartItems { current ->
-            val index = current.indexOfFirst { it.id == itemId }
-            if (index != -1) {
-                val item = current[index]
-                if (item.cantidad > 1) {
-                    current[index] = item.copy(cantidad = item.cantidad - 1)
-                } else {
-                    current.removeAt(index)
+        viewModelScope.launch {
+            var itemToRelease: CartItem? = null
+            updateCartItems { current ->
+                val index = current.indexOfFirst { it.id == itemId }
+                if (index != -1) {
+                    val item = current[index]
+                    itemToRelease = item
+                    if (item.cantidad > 1) {
+                        current[index] = item.copy(cantidad = item.cantidad - 1)
+                    } else {
+                        current.removeAt(index)
+                    }
                 }
             }
+            itemToRelease?.let { releaseBaseStock(it.sizeLabel, 1) }
         }
     }
 
     fun removeItem(itemId: String) {
-        updateCartItems { current ->
-            current.removeAll { it.id == itemId }
+        viewModelScope.launch {
+            val removed = _cartItems.value.filter { it.id == itemId }
+            updateCartItems { current ->
+                current.removeAll { it.id == itemId }
+            }
+            removed.forEach { item ->
+                releaseBaseStock(item.sizeLabel, item.cantidad)
+            }
         }
     }
 
@@ -221,7 +249,11 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun clearCart() {
-        _cartItems.value = emptyList()
+        viewModelScope.launch {
+            val itemsToRelease = _cartItems.value
+            _cartItems.value = emptyList()
+            releaseBaseStockBulk(itemsToRelease)
+        }
         _dessertItems.value = emptyList()
     }
 
@@ -322,7 +354,6 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         deliveryAddress: String = "",
         timestamp: Long = System.currentTimeMillis()
     ): OrderEntity {
-        validateBaseInventory(timestamp)
         val gson = Gson()
         val itemsJson = gson.toJson(_cartItems.value)
         val dessertsJson = gson.toJson(_dessertItems.value)
@@ -371,47 +402,6 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         return orderRepository.addOrder(orderEntity)
     }
 
-    private suspend fun validateBaseInventory(timestamp: Long) {
-        val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(timestamp))
-        val baseInventory = baseInventoryDao.getByDateKey(dateKey)
-        val dayStart = getDayStartMillis(timestamp)
-        val orders = orderDao.getOrdersByDate(dayStart)
-        val allOrders = orderDao.getAllOrders()
-        val soldCounts = calculateSoldBases(orders)
-        val soldAllCounts = calculateSoldBases(allOrders)
-        val absoluteTotals = baseInventoryDao.getTotals()
-        val requiredCounts = calculateRequiredBases(_cartItems.value)
-        val remainingGrandes = (baseInventory?.baseGrandes ?: 0) - soldCounts.first
-        val remainingMedianas = (baseInventory?.baseMedianas ?: 0) - soldCounts.second
-        val remainingChicas = (baseInventory?.baseChicas ?: 0) - soldCounts.third
-        val absoluteRemainingGrandes = absoluteTotals.totalGrandes - soldAllCounts.first
-        val absoluteRemainingMedianas = absoluteTotals.totalMedianas - soldAllCounts.second
-        val absoluteRemainingChicas = absoluteTotals.totalChicas - soldAllCounts.third
-
-        val missing = mutableListOf<String>()
-        val useAbsoluteFallback = baseInventory == null ||
-            requiredCounts.first > remainingGrandes ||
-            requiredCounts.second > remainingMedianas ||
-            requiredCounts.third > remainingChicas
-        val availableGrandes = if (useAbsoluteFallback) absoluteRemainingGrandes else remainingGrandes
-        val availableMedianas = if (useAbsoluteFallback) absoluteRemainingMedianas else remainingMedianas
-        val availableChicas = if (useAbsoluteFallback) absoluteRemainingChicas else remainingChicas
-
-        if (requiredCounts.first > availableGrandes) {
-            missing.add("Grandes")
-        }
-        if (requiredCounts.second > availableMedianas) {
-            missing.add("Medianas")
-        }
-        if (requiredCounts.third > availableChicas) {
-            missing.add("Chicas")
-        }
-        if (missing.isNotEmpty()) {
-            val detail = missing.joinToString(", ")
-            throw IllegalStateException("Sin stock suficiente de bases: $detail")
-        }
-    }
-
     private fun calculateRequiredBases(items: List<CartItem>): Triple<Int, Int, Int> {
         var requiredGrandes = 0
         var requiredMedianas = 0
@@ -426,42 +416,6 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         return Triple(requiredGrandes, requiredMedianas, requiredChicas)
     }
 
-    private fun calculateSoldBases(orders: List<OrderEntity>): Triple<Int, Int, Int> {
-        var soldGrandes = 0
-        var soldMedianas = 0
-        var soldChicas = 0
-        orders.forEach { order ->
-            getCartItems(order).forEach { item ->
-                when (normalizeSizeLabel(item.sizeLabel)) {
-                    "chica" -> soldChicas += item.cantidad
-                    "mediana" -> soldMedianas += item.cantidad
-                    "grande" -> soldGrandes += item.cantidad
-                }
-            }
-        }
-        return Triple(soldGrandes, soldMedianas, soldChicas)
-    }
-
-    private fun getCartItems(order: OrderEntity): List<CartItem> {
-        return try {
-            val gson = Gson()
-            val type = object : com.google.gson.reflect.TypeToken<List<CartItem>>() {}.type
-            gson.fromJson(order.itemsJson, type) ?: emptyList()
-        } catch (_: Exception) {
-            emptyList()
-        }
-    }
-
-    private fun getDayStartMillis(timestamp: Long): Long {
-        val calendar = Calendar.getInstance()
-        calendar.timeInMillis = timestamp
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        return calendar.timeInMillis
-    }
-
     private fun normalizeSizeLabel(label: String): String {
         val normalized = label.trim().lowercase(Locale.getDefault())
         return when (normalized) {
@@ -470,6 +424,57 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             "grande", "extra grande" -> "grande"
             else -> normalized
         }
+    }
+
+    private suspend fun reserveBaseStock(sizeLabel: String, quantity: Int): Boolean {
+        val normalized = normalizeSizeLabel(sizeLabel)
+        if (normalized.isBlank()) return true
+        val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val baseInventory = baseInventoryDao.getByDateKey(dateKey)
+        if (baseInventory == null) {
+            _stockError.value = "No hay bases cargadas para hoy."
+            return false
+        }
+        val updated = when (normalized) {
+            "chica" -> baseInventory.copy(baseChicas = baseInventory.baseChicas - quantity)
+            "mediana" -> baseInventory.copy(baseMedianas = baseInventory.baseMedianas - quantity)
+            "grande" -> baseInventory.copy(baseGrandes = baseInventory.baseGrandes - quantity)
+            else -> baseInventory
+        }
+        if (updated.baseChicas < 0 || updated.baseMedianas < 0 || updated.baseGrandes < 0) {
+            _stockError.value = "Sin stock suficiente de bases: ${normalized.replaceFirstChar { it.uppercase() }}"
+            return false
+        }
+        baseInventoryDao.upsert(updated)
+        _stockError.value = null
+        return true
+    }
+
+    private suspend fun releaseBaseStock(sizeLabel: String, quantity: Int) {
+        val normalized = normalizeSizeLabel(sizeLabel)
+        if (normalized.isBlank()) return
+        val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val baseInventory = baseInventoryDao.getByDateKey(dateKey) ?: return
+        val updated = when (normalized) {
+            "chica" -> baseInventory.copy(baseChicas = baseInventory.baseChicas + quantity)
+            "mediana" -> baseInventory.copy(baseMedianas = baseInventory.baseMedianas + quantity)
+            "grande" -> baseInventory.copy(baseGrandes = baseInventory.baseGrandes + quantity)
+            else -> baseInventory
+        }
+        baseInventoryDao.upsert(updated)
+    }
+
+    private suspend fun releaseBaseStockBulk(items: List<CartItem>) {
+        val counts = calculateRequiredBases(items)
+        if (counts.first == 0 && counts.second == 0 && counts.third == 0) return
+        val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val baseInventory = baseInventoryDao.getByDateKey(dateKey) ?: return
+        val updated = baseInventory.copy(
+            baseGrandes = baseInventory.baseGrandes + counts.first,
+            baseMedianas = baseInventory.baseMedianas + counts.second,
+            baseChicas = baseInventory.baseChicas + counts.third
+        )
+        baseInventoryDao.upsert(updated)
     }
 
     private fun getDeliveryTypeLabel(type: DeliveryType): String {

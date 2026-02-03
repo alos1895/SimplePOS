@@ -55,6 +55,7 @@ fun MenuScreen(
     val pizzas by menuViewModel.pizzas.collectAsState()
     val cartItems by cartViewModel.cartItems.collectAsState()
     val dessertItems by cartViewModel.dessertItems.collectAsState()
+    val stockError by cartViewModel.stockError.collectAsState()
     val comentarios by cartViewModel.comentarios.collectAsState()
     val selectedDelivery by cartViewModel.selectedDelivery.collectAsState(initial = MenuData.deliveryOptions.first())
 
@@ -152,6 +153,12 @@ fun MenuScreen(
                 .weight(1f)
                 .padding(8.dp)) {
                 Text("Menú", style = MaterialTheme.typography.titleLarge)
+                LaunchedEffect(stockError) {
+                    stockError?.let { message ->
+                        snackbarHostState.showSnackbar(message)
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
                 val sections = remember { MenuSection.values().toList() }
                 SingleChoiceSegmentedButtonRow(
