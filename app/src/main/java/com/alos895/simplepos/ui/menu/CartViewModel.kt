@@ -27,6 +27,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -54,6 +56,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _stockError = MutableStateFlow<String?>(null)
     val stockError: StateFlow<String?> = _stockError.asStateFlow()
+    private val stockMutex = Mutex()
 
     init {
         _selectedDelivery.value = MenuData.deliveryOptions.first()
@@ -429,52 +432,58 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     private suspend fun reserveBaseStock(sizeLabel: String, quantity: Int): Boolean {
         val normalized = normalizeSizeLabel(sizeLabel)
         if (normalized.isBlank()) return true
-        val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        val baseInventory = baseInventoryDao.getByDateKey(dateKey)
-        if (baseInventory == null) {
-            _stockError.value = "No hay bases cargadas para hoy."
-            return false
+        return stockMutex.withLock {
+            val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            val baseInventory = baseInventoryDao.getByDateKey(dateKey)
+            if (baseInventory == null) {
+                _stockError.value = "No hay bases cargadas para hoy."
+                return@withLock false
+            }
+            val updated = when (normalized) {
+                "chica" -> baseInventory.copy(baseChicas = baseInventory.baseChicas - quantity)
+                "mediana" -> baseInventory.copy(baseMedianas = baseInventory.baseMedianas - quantity)
+                "grande" -> baseInventory.copy(baseGrandes = baseInventory.baseGrandes - quantity)
+                else -> baseInventory
+            }
+            if (updated.baseChicas < 0 || updated.baseMedianas < 0 || updated.baseGrandes < 0) {
+                _stockError.value = "Sin stock suficiente de bases: ${normalized.replaceFirstChar { it.uppercase() }}"
+                return@withLock false
+            }
+            baseInventoryDao.upsert(updated)
+            _stockError.value = null
+            true
         }
-        val updated = when (normalized) {
-            "chica" -> baseInventory.copy(baseChicas = baseInventory.baseChicas - quantity)
-            "mediana" -> baseInventory.copy(baseMedianas = baseInventory.baseMedianas - quantity)
-            "grande" -> baseInventory.copy(baseGrandes = baseInventory.baseGrandes - quantity)
-            else -> baseInventory
-        }
-        if (updated.baseChicas < 0 || updated.baseMedianas < 0 || updated.baseGrandes < 0) {
-            _stockError.value = "Sin stock suficiente de bases: ${normalized.replaceFirstChar { it.uppercase() }}"
-            return false
-        }
-        baseInventoryDao.upsert(updated)
-        _stockError.value = null
-        return true
     }
 
     private suspend fun releaseBaseStock(sizeLabel: String, quantity: Int) {
         val normalized = normalizeSizeLabel(sizeLabel)
         if (normalized.isBlank()) return
-        val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        val baseInventory = baseInventoryDao.getByDateKey(dateKey) ?: return
-        val updated = when (normalized) {
-            "chica" -> baseInventory.copy(baseChicas = baseInventory.baseChicas + quantity)
-            "mediana" -> baseInventory.copy(baseMedianas = baseInventory.baseMedianas + quantity)
-            "grande" -> baseInventory.copy(baseGrandes = baseInventory.baseGrandes + quantity)
-            else -> baseInventory
+        stockMutex.withLock {
+            val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            val baseInventory = baseInventoryDao.getByDateKey(dateKey) ?: return@withLock
+            val updated = when (normalized) {
+                "chica" -> baseInventory.copy(baseChicas = baseInventory.baseChicas + quantity)
+                "mediana" -> baseInventory.copy(baseMedianas = baseInventory.baseMedianas + quantity)
+                "grande" -> baseInventory.copy(baseGrandes = baseInventory.baseGrandes + quantity)
+                else -> baseInventory
+            }
+            baseInventoryDao.upsert(updated)
         }
-        baseInventoryDao.upsert(updated)
     }
 
     private suspend fun releaseBaseStockBulk(items: List<CartItem>) {
         val counts = calculateRequiredBases(items)
         if (counts.first == 0 && counts.second == 0 && counts.third == 0) return
-        val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        val baseInventory = baseInventoryDao.getByDateKey(dateKey) ?: return
-        val updated = baseInventory.copy(
-            baseGrandes = baseInventory.baseGrandes + counts.first,
-            baseMedianas = baseInventory.baseMedianas + counts.second,
-            baseChicas = baseInventory.baseChicas + counts.third
-        )
-        baseInventoryDao.upsert(updated)
+        stockMutex.withLock {
+            val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            val baseInventory = baseInventoryDao.getByDateKey(dateKey) ?: return@withLock
+            val updated = baseInventory.copy(
+                baseGrandes = baseInventory.baseGrandes + counts.first,
+                baseMedianas = baseInventory.baseMedianas + counts.second,
+                baseChicas = baseInventory.baseChicas + counts.third
+            )
+            baseInventoryDao.upsert(updated)
+        }
     }
 
     private fun getDeliveryTypeLabel(type: DeliveryType): String {
