@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Icecream
+import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material.icons.filled.LocalPizza
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PieChart
@@ -78,6 +79,7 @@ fun MenuScreen(
     val combinablePizzas = remember(pizzas) { pizzas.filter { it.esCombinable } }
     val desserts = remember { MenuData.postreOrExtras.filter { it.esPostre } }
     val extras = remember { MenuData.postreOrExtras.filterNot { it.esPostre } }
+    val combos = remember { MenuData.comboOptions }
 
     val total by remember(cartItems, dessertItems, selectedDelivery) {
         derivedStateOf {
@@ -420,6 +422,33 @@ fun MenuScreen(
                                             },
                                             trailingContent = {
                                                 Button(onClick = { cartViewModel.addDessertToCart(dessert) }) {
+                                                    Text("Agregar")
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        MenuSection.COMBOS -> {
+                            if (combos.isEmpty()) {
+                                item {
+                                    Text(
+                                        "No hay combos disponibles en este momento.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            } else {
+                                items(combos) { combo ->
+                                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                                        ListItem(
+                                            headlineContent = { Text(combo.nombre) },
+                                            supportingContent = {
+                                                Text("$${"%.2f".format(combo.precio)}")
+                                            },
+                                            trailingContent = {
+                                                Button(onClick = { cartViewModel.addDessertToCart(combo) }) {
                                                     Text("Agregar")
                                                 }
                                             }
@@ -870,6 +899,7 @@ fun MenuScreen(
 private enum class MenuSection(val label: String, val icon: ImageVector) {
     PIZZAS("Pizzas", Icons.Filled.LocalPizza),
     PIZZAS_COMBINADAS("Combinadas", Icons.Filled.PieChart),
+    COMBOS("Combos", Icons.Filled.LocalDrink),
     POSTRES("Postres", Icons.Filled.Icecream),
     EXTRAS("Extras", Icons.Filled.AttachMoney),
     COMENTARIOS("Comentarios", Icons.Filled.Comment)
