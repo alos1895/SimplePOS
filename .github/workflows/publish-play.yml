@@ -2,12 +2,15 @@ name: Publish to Google Play
 
 on:
   workflow_dispatch:
-  push:
+  pull_request:
     branches:
       - main
+    types:
+      - closed
 
 jobs:
   publish:
+    if: ${{ github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
