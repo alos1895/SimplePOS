@@ -17,8 +17,6 @@ interface OrderDao {
     @Query("SELECT * FROM orders WHERE timestamp >= :day AND timestamp < :day + 86400000 AND isDeleted = 0 ORDER BY timestamp DESC")
     suspend fun getOrdersByDate(day: Long): List<OrderEntity>
 
-    @Query("SELECT * FROM orders WHERE isDeleted = 0")
-    suspend fun getAllOrders(): List<OrderEntity>
     @Query("SELECT MAX(dailyOrderNumber) FROM orders WHERE timestamp >= :start AND timestamp < :end AND isDeleted = 0")
     suspend fun getMaxDailyOrderNumberForRange(start: Long, end: Long): Int?
 

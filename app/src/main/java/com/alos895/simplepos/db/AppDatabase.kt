@@ -5,24 +5,21 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.alos895.simplepos.db.entity.BaseInventoryEntity
 import com.alos895.simplepos.db.entity.TransactionEntity
 import com.alos895.simplepos.db.entity.OrderEntity
 
 @Database(
     entities = [
         OrderEntity::class,
-        TransactionEntity::class,
-        BaseInventoryEntity::class
+        TransactionEntity::class
     ],
-    version = 2,
+    version = 1,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun orderDao(): OrderDao
     abstract fun cashTransactionDao(): CashTransactionDao
-    abstract fun baseInventoryDao(): BaseInventoryDao
 
     companion object {
         @Volatile

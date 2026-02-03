@@ -20,6 +20,9 @@ import androidx.compose.ui.text.input.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.alos895.simplepos.bluetooth.BluetoothPrinterForegroundService
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,21 +34,18 @@ fun BluetoothPrinterScreen(
     onPrint: (String) -> Unit,
     snackbarHostState: SnackbarHostState,
     lastMessage: String,
-    initialTicket: String,
-    baseInventoryState: BaseInventoryUiState,
-    onDateSelected: (Long) -> Unit,
-    onTodaySelected: () -> Unit,
-    onRefreshInventory: () -> Unit,
-    onBaseGrandesChange: (String) -> Unit,
-    onBaseMedianasChange: (String) -> Unit,
-    onBaseChicasChange: (String) -> Unit,
-    onSaveBaseCounts: () -> Unit
+    initialTicket: String
 ) {
     var ticketText by remember { mutableStateOf(initialTicket) }
     var expanded by remember { mutableStateOf(false) }
     var serviceActive by remember { mutableStateOf(false) }
     var isPrinting by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val dateLabelFormat = remember { SimpleDateFormat("EEEE d 'de' MMMM", Locale("es", "ES")) }
+    val dateLabel = remember { dateLabelFormat.format(Date()).replaceFirstChar { it.uppercase() } }
+    var baseGrandesInput by remember { mutableStateOf("0") }
+    var baseMedianasInput by remember { mutableStateOf("0") }
+    var baseChicasInput by remember { mutableStateOf("0") }
 
     LaunchedEffect(lastMessage) {
         if (lastMessage.isNotEmpty()) {
@@ -64,130 +64,41 @@ fun BluetoothPrinterScreen(
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
             ) {
-                var isDatePickerOpen by remember { mutableStateOf(false) }
-                val datePickerState = rememberDatePickerState(
-                    initialSelectedDateMillis = baseInventoryState.selectedDateMillis
-                )
-                LaunchedEffect(baseInventoryState.selectedDateMillis) {
-                    datePickerState.selectedDateMillis = baseInventoryState.selectedDateMillis
-                }
                 Text("Administración", style = MaterialTheme.typography.titleLarge)
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Bases por día", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(baseInventoryState.dateLabel, style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(onClick = { isDatePickerOpen = true }, modifier = Modifier.weight(1f)) {
-                        Text("Seleccionar fecha")
-                    }
-                    OutlinedButton(onClick = onTodaySelected, modifier = Modifier.weight(1f)) {
-                        Text("Hoy")
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(onClick = onRefreshInventory, modifier = Modifier.fillMaxWidth()) {
-                    Text("Actualizar stock")
-                }
+                Text(dateLabel, style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
-                        value = baseInventoryState.baseGrandesInput,
-                        onValueChange = onBaseGrandesChange,
+                        value = baseGrandesInput,
+                        onValueChange = { baseGrandesInput = it.filter(Char::isDigit) },
                         label = { Text("Grandes") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
-                        value = baseInventoryState.baseMedianasInput,
-                        onValueChange = onBaseMedianasChange,
+                        value = baseMedianasInput,
+                        onValueChange = { baseMedianasInput = it.filter(Char::isDigit) },
                         label = { Text("Medianas") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
-                        value = baseInventoryState.baseChicasInput,
-                        onValueChange = onBaseChicasChange,
+                        value = baseChicasInput,
+                        onValueChange = { baseChicasInput = it.filter(Char::isDigit) },
                         label = { Text("Chicas") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    "Vendidas: Grandes ${baseInventoryState.soldGrandes}, Medianas ${baseInventoryState.soldMedianas}, Chicas ${baseInventoryState.soldChicas}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    "Total bases: ${baseInventoryState.totalBases} | Total vendidas: ${baseInventoryState.soldTotal}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    "Disponibles: Grandes ${baseInventoryState.remainingGrandes}, Medianas ${baseInventoryState.remainingMedianas}, Chicas ${baseInventoryState.remainingChicas}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    "Total disponibles: ${baseInventoryState.remainingTotal}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    "Total absoluto: Grandes ${baseInventoryState.absoluteGrandes}, Medianas ${baseInventoryState.absoluteMedianas}, Chicas ${baseInventoryState.absoluteChicas}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    "Total absoluto de bases: ${baseInventoryState.absoluteTotal}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    "Vendidas absoluto: Grandes ${baseInventoryState.absoluteSoldGrandes}, Medianas ${baseInventoryState.absoluteSoldMedianas}, Chicas ${baseInventoryState.absoluteSoldChicas}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    "Total vendido absoluto: ${baseInventoryState.absoluteSoldTotal}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    "Stock general: Grandes ${baseInventoryState.absoluteRemainingGrandes}, Medianas ${baseInventoryState.absoluteRemainingMedianas}, Chicas ${baseInventoryState.absoluteRemainingChicas}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    "Stock general total: ${baseInventoryState.absoluteRemainingTotal}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                baseInventoryState.errorMessage?.let { message ->
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(message, color = MaterialTheme.colorScheme.error)
-                }
-                Spacer(modifier = Modifier.height(12.dp))
                 Button(
-                    onClick = onSaveBaseCounts,
+                    onClick = {},
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Guardar bases")
-                }
-
-                if (isDatePickerOpen) {
-                    DatePickerDialog(
-                        onDismissRequest = { isDatePickerOpen = false },
-                        confirmButton = {
-                            TextButton(onClick = {
-                                val selectedDate = datePickerState.selectedDateMillis
-                                if (selectedDate != null) {
-                                    onDateSelected(selectedDate)
-                                }
-                                isDatePickerOpen = false
-                            }) {
-                                Text("Aceptar")
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { isDatePickerOpen = false }) {
-                                Text("Cancelar")
-                            }
-                        }
-                    ) {
-                        DatePicker(state = datePickerState)
-                    }
                 }
             }
 
