@@ -233,12 +233,23 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         if (dessertItems.isNotEmpty()) {
+            val postres = dessertItems.filter { it.postreOrExtra.esPostre }
+            val combos = dessertItems.filter { it.postreOrExtra.esCombo }
+            val extras = dessertItems.filter { !it.postreOrExtra.esPostre && !it.postreOrExtra.esCombo }
             sb.appendLine("-------------------------------")
-            dessertItems.forEach { item ->
-                sb.appendLine(
-                    "${item.cantidad}x ${item.postreOrExtra.nombre}   $${"%.2f".format(item.subtotal)}"
-                )
+            fun appendItems(title: String, items: List<CartItemPostre>) {
+                if (items.isNotEmpty()) {
+                    sb.appendLine(title)
+                    items.forEach { item ->
+                        sb.appendLine(
+                            "${item.cantidad}x ${item.postreOrExtra.nombre}   $${"%.2f".format(item.subtotal)}"
+                        )
+                    }
+                }
             }
+            appendItems("Postres:", postres)
+            appendItems("Combos:", combos)
+            appendItems("Extras:", extras)
         }
         sb.appendLine("-------------------------------")
         if (order.isDeliveried) {
@@ -300,10 +311,28 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
                 sb.appendLine("  ${detail}")
             }
         }
-        if (getDessertItems(order).isNotEmpty()) {
-            sb.appendLine("Postres:")
-            getDessertItems(order).forEach { item ->
-                sb.appendLine("- ${item.cantidad}x ${item.postreOrExtra.nombre}")
+        val desserts = getDessertItems(order)
+        if (desserts.isNotEmpty()) {
+            val postres = desserts.filter { it.postreOrExtra.esPostre }
+            val combos = desserts.filter { it.postreOrExtra.esCombo }
+            val extras = desserts.filter { !it.postreOrExtra.esPostre && !it.postreOrExtra.esCombo }
+            if (postres.isNotEmpty()) {
+                sb.appendLine("Postres:")
+                postres.forEach { item ->
+                    sb.appendLine("- ${item.cantidad}x ${item.postreOrExtra.nombre}")
+                }
+            }
+            if (combos.isNotEmpty()) {
+                sb.appendLine("Combos:")
+                combos.forEach { item ->
+                    sb.appendLine("- ${item.cantidad}x ${item.postreOrExtra.nombre}")
+                }
+            }
+            if (extras.isNotEmpty()) {
+                sb.appendLine("Extras:")
+                extras.forEach { item ->
+                    sb.appendLine("- ${item.cantidad}x ${item.postreOrExtra.nombre}")
+                }
             }
         }
         if (order.comentarios.isNotEmpty()) {

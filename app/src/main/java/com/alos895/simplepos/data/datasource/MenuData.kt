@@ -245,9 +245,9 @@ object MenuData {
     )
 
     val comboOptions = listOf(
-        PostreOrExtra(101, "Pizza Chica + refresco", 40.0, esPostre = false),
-        PostreOrExtra(102, "Pizza Mediana + refresco", 50.0, esPostre = false),
-        PostreOrExtra(103, "Pizza Grande + refresco", 60.0, esPostre = false)
+        PostreOrExtra(101, "Pizza Chica + refresco", 40.0, esPostre = false, esCombo = true),
+        PostreOrExtra(102, "Pizza Mediana + refresco", 50.0, esPostre = false, esCombo = true),
+        PostreOrExtra(103, "Pizza Grande + refresco", 60.0, esPostre = false, esCombo = true)
     )
 
     val deliveryOptions = listOf(

@@ -80,7 +80,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         val gson = Gson()
 
         // Cabeceras
-        sb.appendLine("Orden,Lista Pizzas,Lista Extras,Lista Postres, Envio Total,Postres Total,Total")
+        sb.appendLine("Orden,Lista Pizzas,Lista Combos,Lista Extras,Lista Postres, Envio Total,Postres Total,Total")
 
         orders.forEach { order ->
             // Deserializar pizzas
@@ -123,7 +123,14 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
                     "$cantidad x $nombre"
                 }
 
-            val extrasList = desserts.filter { it.postreOrExtra?.esPostre == false }
+            val combosList = desserts.filter { it.postreOrExtra?.esCombo == true }
+                .joinToString("; ") { d ->
+                    val cantidad = d.cantidad ?: 0
+                    val nombre = quitarAcentos(d.postreOrExtra?.nombre ?: "Desconocido")
+                    "$cantidad x $nombre"
+                }
+
+            val extrasList = desserts.filter { it.postreOrExtra?.esPostre == false && it.postreOrExtra?.esCombo != true }
                 .joinToString("; ") { d ->
                     val cantidad = d.cantidad ?: 0
                     val nombre = quitarAcentos(d.postreOrExtra?.nombre ?: "Desconocido")
@@ -141,6 +148,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
                 listOf(
                     order.id?.toString() ?: "Sin ID",
                     pizzasList,
+                    combosList,
                     extrasList,
                     postresList,
                     envioTotal,
@@ -186,12 +194,14 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         var totalMedianas = 0
         var totalGrandes = 0
         var totalPostres = 0
+        var totalCombos = 0
         var totalExtras = 0
         var totalDelivery = 0
         var deliverysTOTODO = 0
         var totalCaja = 0.0
         var pizzaRevenue = 0.0
         var postreRevenue = 0.0
+        var comboRevenue = 0.0
         var extraRevenue = 0.0
         var deliveryRevenue = 0.0
         var totalIngresosCapturados = 0.0
@@ -218,12 +228,19 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             dessertItems.forEach { item ->
-                if (item.postreOrExtra.esPostre) {
-                    totalPostres += item.cantidad
-                    postreRevenue += item.subtotal
-                } else {
-                    totalExtras += item.cantidad
-                    extraRevenue += item.subtotal
+                when {
+                    item.postreOrExtra.esPostre -> {
+                        totalPostres += item.cantidad
+                        postreRevenue += item.subtotal
+                    }
+                    item.postreOrExtra.esCombo -> {
+                        totalCombos += item.cantidad
+                        comboRevenue += item.subtotal
+                    }
+                    else -> {
+                        totalExtras += item.cantidad
+                        extraRevenue += item.subtotal
+                    }
                 }
             }
 
@@ -275,6 +292,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
             pizzasMedianas = totalMedianas,
             pizzasGrandes = totalGrandes,
             postres = totalPostres,
+            combos = totalCombos,
             extras = totalExtras,
             ordenes = orders.size,
             envios = totalDelivery,
@@ -282,6 +300,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
             totalCaja = totalCaja - totalDescuentosTOTODO,
             ingresosPizzas = pizzaRevenue,
             ingresosPostres = postreRevenue,
+            ingresosCombos = comboRevenue,
             ingresosExtras = extraRevenue,
             ingresosEnvios = deliveryRevenue,
             ingresosCapturados = totalIngresosCapturados,
@@ -332,8 +351,9 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine("Grandes: ${dailyStats.pizzasGrandes}")
         // Postres y Extras
         sb.appendLine("--------------------------------------------------")
-        sb.appendLine("POSTRES Y EXTRAS")
+        sb.appendLine("POSTRES, COMBOS Y EXTRAS")
         sb.appendLine("Postres: ${dailyStats.postres}")
+        sb.appendLine("Combos: ${dailyStats.combos}")
         sb.appendLine("Extras: ${dailyStats.extras}")
         // Transacciones
         sb.appendLine("--------------------------------------------------")
@@ -346,6 +366,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine("INGRESOS POR VENTAS")
         sb.appendLine("Pizzas: ${dailyStats.ingresosPizzas}")
         sb.appendLine("Postres: ${dailyStats.ingresosPostres}")
+        sb.appendLine("Combos: ${dailyStats.ingresosCombos}")
         sb.appendLine("Extras: ${dailyStats.ingresosExtras}")
         sb.appendLine("Envios: ${dailyStats.ingresosEnvios}")
         // Totales

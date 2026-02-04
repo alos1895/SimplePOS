@@ -241,11 +241,22 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             result += item.subtotal
         }
         if (dessertItems.isNotEmpty()) {
+            val postres = dessertItems.filter { it.postreOrExtra.esPostre }
+            val combos = dessertItems.filter { it.postreOrExtra.esCombo }
+            val extras = dessertItems.filter { !it.postreOrExtra.esPostre && !it.postreOrExtra.esCombo }
             sb.appendLine("-------------------------------")
-            dessertItems.forEach { item ->
-                sb.appendLine("${item.cantidad}x ${item.postreOrExtra.nombre}   $${String.format(Locale.getDefault(), "%.2f", item.subtotal)}")
-                result += item.subtotal
+            fun appendItems(title: String, items: List<CartItemPostre>) {
+                if (items.isNotEmpty()) {
+                    sb.appendLine(title)
+                    items.forEach { item ->
+                        sb.appendLine("${item.cantidad}x ${item.postreOrExtra.nombre}   $${String.format(Locale.getDefault(), "%.2f", item.subtotal)}")
+                        result += item.subtotal
+                    }
+                }
             }
+            appendItems("Postres:", postres)
+            appendItems("Combos:", combos)
+            appendItems("Extras:", extras)
         }
         sb.appendLine("-------------------------------")
         sb.appendLine("TOTAL: $${String.format(Locale.getDefault(), "%.2f", result)}")
@@ -295,10 +306,27 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         if (desserts.isNotEmpty()) {
+            val postres = desserts.filter { it.postreOrExtra.esPostre }
+            val combos = desserts.filter { it.postreOrExtra.esCombo }
+            val extras = desserts.filter { !it.postreOrExtra.esPostre && !it.postreOrExtra.esCombo }
             sb.appendLine("-------------------------------")
-            sb.appendLine("Extras:")
-            desserts.forEach { item ->
-                sb.appendLine("${item.cantidad}x ${item.postreOrExtra.nombre}")
+            if (postres.isNotEmpty()) {
+                sb.appendLine("Postres:")
+                postres.forEach { item ->
+                    sb.appendLine("${item.cantidad}x ${item.postreOrExtra.nombre}")
+                }
+            }
+            if (combos.isNotEmpty()) {
+                sb.appendLine("Combos:")
+                combos.forEach { item ->
+                    sb.appendLine("${item.cantidad}x ${item.postreOrExtra.nombre}")
+                }
+            }
+            if (extras.isNotEmpty()) {
+                sb.appendLine("Extras:")
+                extras.forEach { item ->
+                    sb.appendLine("${item.cantidad}x ${item.postreOrExtra.nombre}")
+                }
             }
         }
 
