@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Print
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -36,12 +37,15 @@ import com.alos895.simplepos.ui.transaction.TransactionsScreen
 import com.alos895.simplepos.ui.caja.CajaViewModel
 import com.alos895.simplepos.ui.print.PrintTicketViewModel
 import com.alos895.simplepos.ui.transaction.TransactionViewModel
+import com.alos895.simplepos.ui.administracion.AdministracionScreen
+import com.alos895.simplepos.ui.administracion.AdministracionViewModel
 
 sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
     object Menu : BottomNavItem("menu", Icons.Filled.Home, "Menú")
     object Orders : BottomNavItem("orders", Icons.Filled.Home, "Órdenes")
     object Transactions : BottomNavItem("transactions", Icons.Filled.Home, "Transacciones")
     object Caja : BottomNavItem("caja", Icons.Filled.Home, "Caja")
+    object Administracion : BottomNavItem("administracion", Icons.Filled.Settings, "Administración")
     object Print : BottomNavItem("print", Icons.Filled.Print, "Impresión")
 }
 
@@ -70,6 +74,7 @@ class MainActivity : ComponentActivity() {
                     BottomNavItem.Orders,
                     BottomNavItem.Transactions,
                     BottomNavItem.Caja,
+                    BottomNavItem.Administracion,
                     BottomNavItem.Print
                     )
                 // ViewModel compartido a nivel de actividad
@@ -118,6 +123,10 @@ class MainActivity : ComponentActivity() {
                             val cajaViewModel: CajaViewModel = viewModel()
                             val bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel()
                             CajaScreen(cajaViewModel, bluetoothPrinterViewModel)
+                        }
+                        composable(BottomNavItem.Administracion.route) {
+                            val administracionViewModel: AdministracionViewModel = viewModel()
+                            AdministracionScreen(administracionViewModel)
                         }
                         composable(BottomNavItem.Print.route) @androidx.annotation.RequiresPermission(
                             android.Manifest.permission.BLUETOOTH_CONNECT
