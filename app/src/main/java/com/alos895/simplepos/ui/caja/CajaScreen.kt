@@ -93,8 +93,9 @@ fun CajaScreen(
                     Text("Total: ${dailyStats.pizzas}")
                 }
                 Column {
-                    Text("Postres y Extras", style = MaterialTheme.typography.titleMedium)
+                    Text("Postres, Combos y Extras", style = MaterialTheme.typography.titleMedium)
                     Text("Postres: ${dailyStats.postres}")
+                    Text("Combos: ${dailyStats.combos}")
                     Text("Extras: ${dailyStats.extras}")
                 }
                 Column {
@@ -128,6 +129,7 @@ fun CajaScreen(
                     Spacer(Modifier.height(4.dp))
                     Text("Pizzas: $${"%.2f".format(dailyStats.ingresosPizzas)}")
                     Text("Postres: $${"%.2f".format(dailyStats.ingresosPostres)}")
+                    Text("Combos: $${"%.2f".format(dailyStats.ingresosCombos)}")
                     Text("Extras: $${"%.2f".format(dailyStats.ingresosExtras)}")
                     Text("Envíos: $${"%.2f".format(dailyStats.ingresosEnvios)}")
                 }
