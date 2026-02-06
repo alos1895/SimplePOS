@@ -54,6 +54,9 @@ fun MenuScreen(
     val cartViewModel: CartViewModel = viewModel()
 
     val pizzas by menuViewModel.pizzas.collectAsState()
+    val desserts by menuViewModel.postres.collectAsState()
+    val extras by menuViewModel.extras.collectAsState()
+    val combos by menuViewModel.combos.collectAsState()
     val cartItems by cartViewModel.cartItems.collectAsState()
     val dessertItems by cartViewModel.dessertItems.collectAsState()
     val comentarios by cartViewModel.comentarios.collectAsState()
@@ -77,9 +80,6 @@ fun MenuScreen(
     }
     var comboDialogConfig by remember { mutableStateOf<ComboDialogConfig?>(null) }
     val combinablePizzas = remember(pizzas) { pizzas.filter { it.esCombinable } }
-    val desserts = remember { MenuData.postreOrExtras.filter { it.esPostre } }
-    val extras = remember { MenuData.postreOrExtras.filterNot { it.esPostre } }
-    val combos = remember { MenuData.comboOptions }
 
     val total by remember(cartItems, dessertItems, selectedDelivery) {
         derivedStateOf {
