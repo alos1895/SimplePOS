@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Print
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -36,6 +37,7 @@ import com.alos895.simplepos.ui.transaction.TransactionsScreen
 import com.alos895.simplepos.ui.caja.CajaViewModel
 import com.alos895.simplepos.ui.print.PrintTicketViewModel
 import com.alos895.simplepos.ui.transaction.TransactionViewModel
+import com.alos895.simplepos.ui.admin.AdminMenuScreen
 
 sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
     object Menu : BottomNavItem("menu", Icons.Filled.Home, "Menú")
@@ -43,6 +45,7 @@ sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: 
     object Transactions : BottomNavItem("transactions", Icons.Filled.Home, "Transacciones")
     object Caja : BottomNavItem("caja", Icons.Filled.Home, "Caja")
     object Print : BottomNavItem("print", Icons.Filled.Print, "Impresión")
+    object Admin : BottomNavItem("admin", Icons.Filled.Settings, "Admin")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,7 +73,8 @@ class MainActivity : ComponentActivity() {
                     BottomNavItem.Orders,
                     BottomNavItem.Transactions,
                     BottomNavItem.Caja,
-                    BottomNavItem.Print
+                    BottomNavItem.Print,
+                    BottomNavItem.Admin
                     )
                 // ViewModel compartido a nivel de actividad
                 val bluetoothPrinterViewModel: BluetoothPrinterViewModel = viewModel(factory = BluetoothPrinterViewModelFactory(application))
@@ -143,6 +147,9 @@ class MainActivity : ComponentActivity() {
                                 lastMessage = lastMessage,
                                 initialTicket = ticket
                             )
+                        }
+                        composable(BottomNavItem.Admin.route) {
+                            AdminMenuScreen()
                         }
                     }
                 }
