@@ -17,6 +17,9 @@ interface ExtraDao {
     @Query("SELECT COUNT(*) FROM extras")
     suspend fun countExtras(): Long
 
+    @Query("SELECT COUNT(*) FROM extras WHERE type = :type")
+    suspend fun countExtrasByType(type: String): Long
+
     @Query("SELECT MAX(id) FROM extras WHERE type = :type")
     suspend fun maxExtraId(type: String): Int?
 
