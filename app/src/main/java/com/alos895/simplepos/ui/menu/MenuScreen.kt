@@ -54,6 +54,11 @@ fun MenuScreen(
     val cartViewModel: CartViewModel = viewModel()
 
     val pizzas by menuViewModel.pizzas.collectAsState()
+    val ingredientes by menuViewModel.ingredientes.collectAsState()
+    val desserts by menuViewModel.postres.collectAsState()
+    val extras by menuViewModel.extras.collectAsState()
+    val combos by menuViewModel.combos.collectAsState()
+    val bebidas by menuViewModel.bebidas.collectAsState()
     val cartItems by cartViewModel.cartItems.collectAsState()
     val dessertItems by cartViewModel.dessertItems.collectAsState()
     val comentarios by cartViewModel.comentarios.collectAsState()
@@ -77,9 +82,6 @@ fun MenuScreen(
     }
     var comboDialogConfig by remember { mutableStateOf<ComboDialogConfig?>(null) }
     val combinablePizzas = remember(pizzas) { pizzas.filter { it.esCombinable } }
-    val desserts = remember { MenuData.postreOrExtras.filter { it.esPostre } }
-    val extras = remember { MenuData.postreOrExtras.filterNot { it.esPostre } }
-    val combos = remember { MenuData.comboOptions }
 
     val total by remember(cartItems, dessertItems, selectedDelivery) {
         derivedStateOf {
@@ -261,8 +263,11 @@ fun MenuScreen(
                                                 expanded = sizeMenuExpanded,
                                                 onExpandedChange = { sizeMenuExpanded = it && availableSizes.isNotEmpty() }
                                             ) {
+                                                val selectedSizeLabel = selectedTamano?.let { tamano ->
+                                                    "${tamano.nombre} - $${"%.2f".format(tamano.precioBase)}"
+                                                } ?: ""
                                                 TextField(
-                                                    value = selectedTamano?.nombre ?: "",
+                                                    value = selectedSizeLabel,
                                                     onValueChange = {},
                                                     readOnly = true,
                                                     label = { Text("Tamaño") },
@@ -281,7 +286,7 @@ fun MenuScreen(
                                                 ) {
                                                     availableSizes.forEach { tamano ->
                                                         DropdownMenuItem(
-                                                            text = { Text(tamano.nombre) },
+                                                            text = { Text("${tamano.nombre} - $${"%.2f".format(tamano.precioBase)}") },
                                                             onClick = {
                                                                 selectedTamano = tamano
                                                                 sizeMenuExpanded = false
@@ -293,7 +298,7 @@ fun MenuScreen(
 
                                             selectedPizza?.let { pizza ->
                                                 val ingredientNames = pizza.ingredientesBaseIds
-                                                    .mapNotNull { id -> MenuData.ingredientes.find { it.id == id }?.nombre }
+                                                    .mapNotNull { id -> ingredientes.find { it.id == id }?.nombre }
 
                                                 if (ingredientNames.isNotEmpty()) {
                                                     Text(
@@ -449,6 +454,41 @@ fun MenuScreen(
                                             },
                                             trailingContent = {
                                                 Button(onClick = { cartViewModel.addDessertToCart(combo) }) {
+                                                    Text("Agregar")
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        MenuSection.BEBIDAS -> {
+                            if (bebidas.isEmpty()) {
+                                item {
+                                    Text(
+                                        "No hay bebidas disponibles en este momento.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(16.dp)
+                                    )
+                                }
+                            } else {
+                                items(bebidas) { bebida ->
+                                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                                        ListItem(
+                                            headlineContent = { Text(bebida.nombre) },
+                                            supportingContent = {
+                                                Text("$${"%.2f".format(bebida.precio)}")
+                                            },
+                                            leadingContent = {
+                                                Icon(
+                                                    imageVector = Icons.Filled.LocalDrink,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            },
+                                            trailingContent = {
+                                                Button(onClick = { cartViewModel.addDessertToCart(bebida) }) {
                                                     Text("Agregar")
                                                 }
                                             }
@@ -634,7 +674,7 @@ fun MenuScreen(
                                                             } else {
                                                                 Text(
                                                                     item.pizza?.ingredientesBaseIds
-                                                                        ?.mapNotNull { id -> MenuData.ingredientes.find { it.id == id }?.nombre }
+                                                                        ?.mapNotNull { id -> ingredientes.find { it.id == id }?.nombre }
                                                                         ?.joinToString(", ") ?: "",
                                                                     style = MaterialTheme.typography.bodySmall
                                                                 )
@@ -900,6 +940,7 @@ private enum class MenuSection(val label: String, val icon: ImageVector) {
     PIZZAS("Pizzas", Icons.Filled.LocalPizza),
     PIZZAS_COMBINADAS("Combinadas", Icons.Filled.PieChart),
     COMBOS("Combos", Icons.Filled.LocalDrink),
+    BEBIDAS("Bebidas", Icons.Filled.LocalDrink),
     POSTRES("Postres", Icons.Filled.Icecream),
     EXTRAS("Extras", Icons.Filled.AttachMoney),
     COMENTARIOS("Notas", Icons.Filled.Comment)

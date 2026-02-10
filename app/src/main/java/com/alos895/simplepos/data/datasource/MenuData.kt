@@ -250,6 +250,11 @@ object MenuData {
         PostreOrExtra(103, "Pizza Grande + refresco", 60.0, esPostre = false, esCombo = true)
     )
 
+    val bebidaOptions = listOf(
+        PostreOrExtra(201, "Refresco 600 ml", 25.0, esPostre = false, esBebida = true),
+        PostreOrExtra(202, "Refresco 2 litros", 45.0, esPostre = false, esBebida = true)
+    )
+
     val deliveryOptions = listOf(
         DeliveryService(
             price = 0,
