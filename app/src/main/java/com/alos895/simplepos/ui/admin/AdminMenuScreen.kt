@@ -120,7 +120,7 @@ fun AdminMenuScreen(viewModel: AdminMenuViewModel = viewModel()) {
                         }
                         AdminSection.BEBIDAS -> {
                             extraTypeEditor = ExtraType.BEBIDA
-                            extraEditor = PostreOrExtra(0, "", 0.0, esPostre = false)
+                            extraEditor = PostreOrExtra(0, "", 0.0, esPostre = false, esBebida = true)
                         }
                         AdminSection.EXTRAS -> {
                             extraTypeEditor = ExtraType.EXTRA

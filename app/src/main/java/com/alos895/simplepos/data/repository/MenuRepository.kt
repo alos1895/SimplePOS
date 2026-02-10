@@ -201,7 +201,8 @@ class MenuRepository(private val database: AppDatabase) {
         nombre = name,
         precio = price,
         esPostre = type == ExtraType.POSTRE,
-        esCombo = type == ExtraType.COMBO
+        esCombo = type == ExtraType.COMBO,
+        esBebida = type == ExtraType.BEBIDA
     )
 
     private fun PostreOrExtra.toEntity(type: ExtraType): ExtraEntity = ExtraEntity(

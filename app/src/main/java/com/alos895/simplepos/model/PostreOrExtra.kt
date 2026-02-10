@@ -5,5 +5,6 @@ data class PostreOrExtra(
     val nombre: String,
     val precio: Double,
     val esPostre: Boolean = true,
-    val esCombo: Boolean = false
+    val esCombo: Boolean = false,
+    val esBebida: Boolean = false
 )
