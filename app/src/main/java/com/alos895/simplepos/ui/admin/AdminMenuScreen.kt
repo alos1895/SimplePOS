@@ -43,12 +43,12 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,7 +61,7 @@ import com.alos895.simplepos.model.ExtraType
 import com.alos895.simplepos.model.Ingrediente
 import com.alos895.simplepos.model.PostreOrExtra
 import com.alos895.simplepos.model.TamanoPizza
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collectLatest
 
 private enum class AdminSection(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     PIZZAS("Pizzas", Icons.Filled.LocalPizza),
@@ -91,7 +91,15 @@ fun AdminMenuScreen(viewModel: AdminMenuViewModel = viewModel()) {
     var pizzaEditor by remember { mutableStateOf<AdminPizza?>(null) }
     var extraTypeEditor by remember { mutableStateOf(ExtraType.POSTRE) }
     val snackbarHostState = remember { SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        viewModel.events.collectLatest { event ->
+            when (event) {
+                is AdminActionEvent.Success -> snackbarHostState.showSnackbar(event.message)
+                is AdminActionEvent.Error -> snackbarHostState.showSnackbar(event.message)
+            }
+        }
+    }
 
     val sections = remember { AdminSection.values().toList() }
 
@@ -146,22 +154,12 @@ fun AdminMenuScreen(viewModel: AdminMenuViewModel = viewModel()) {
                 AdminSection.PIZZAS -> PizzaList(
                     pizzas = pizzas,
                     onEdit = { pizzaEditor = it },
-                    onDelete = {
-                        viewModel.deletePizza(it)
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar("Pizza eliminada: ${it.nombre}")
-                        }
-                    }
+                    onDelete = { viewModel.deletePizza(it) }
                 )
                 AdminSection.INGREDIENTES -> IngredientList(
                     ingredientes = ingredientes,
                     onEdit = { ingredientEditor = it },
-                    onDelete = {
-                        viewModel.deleteIngredient(it)
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar("Ingrediente eliminado: ${it.nombre}")
-                        }
-                    }
+                    onDelete = { viewModel.deleteIngredient(it) }
                 )
                 AdminSection.POSTRES -> ExtraList(
                     title = "Postres",
@@ -170,12 +168,7 @@ fun AdminMenuScreen(viewModel: AdminMenuViewModel = viewModel()) {
                         extraTypeEditor = ExtraType.POSTRE
                         extraEditor = it
                     },
-                    onDelete = {
-                        viewModel.deleteExtra(it, ExtraType.POSTRE)
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar("Postre eliminado: ${it.nombre}")
-                        }
-                    }
+                    onDelete = { viewModel.deleteExtra(it, ExtraType.POSTRE) }
                 )
                 AdminSection.EXTRAS -> ExtraList(
                     title = "Extras",
@@ -184,12 +177,7 @@ fun AdminMenuScreen(viewModel: AdminMenuViewModel = viewModel()) {
                         extraTypeEditor = ExtraType.EXTRA
                         extraEditor = it
                     },
-                    onDelete = {
-                        viewModel.deleteExtra(it, ExtraType.EXTRA)
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar("Extra eliminado: ${it.nombre}")
-                        }
-                    }
+                    onDelete = { viewModel.deleteExtra(it, ExtraType.EXTRA) }
                 )
                 AdminSection.COMBOS -> ExtraList(
                     title = "Combos",
@@ -198,65 +186,34 @@ fun AdminMenuScreen(viewModel: AdminMenuViewModel = viewModel()) {
                         extraTypeEditor = ExtraType.COMBO
                         extraEditor = it
                     },
-                    onDelete = {
-                        viewModel.deleteExtra(it, ExtraType.COMBO)
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar("Combo eliminado: ${it.nombre}")
-                        }
-                    }
+                    onDelete = { viewModel.deleteExtra(it, ExtraType.COMBO) }
                 )
             }
         }
     }
 
     ingredientEditor?.let { ingrediente ->
-        val isNew = ingrediente.id == 0
         IngredientDialog(
             ingrediente = ingrediente,
-            onSave = {
-                viewModel.saveIngredient(it)
-                coroutineScope.launch {
-                    val action = if (isNew) "creado" else "actualizado"
-                    snackbarHostState.showSnackbar("Ingrediente $action: ${it.nombre}")
-                }
-            },
+            onSave = { viewModel.saveIngredient(it) },
             onDismiss = { ingredientEditor = null }
         )
     }
 
     extraEditor?.let { extra ->
-        val isNew = extra.id == 0
         ExtraDialog(
             extra = extra,
             type = extraTypeEditor,
-            onSave = {
-                viewModel.saveExtra(it, extraTypeEditor)
-                coroutineScope.launch {
-                    val entity = when (extraTypeEditor) {
-                        ExtraType.POSTRE -> "Postre"
-                        ExtraType.EXTRA -> "Extra"
-                        ExtraType.COMBO -> "Combo"
-                    }
-                    val action = if (isNew) "creado" else "actualizado"
-                    snackbarHostState.showSnackbar("$entity $action: ${it.nombre}")
-                }
-            },
+            onSave = { viewModel.saveExtra(it, extraTypeEditor) },
             onDismiss = { extraEditor = null }
         )
     }
 
     pizzaEditor?.let { pizza ->
-        val isNew = pizza.id == 0L
         PizzaDialog(
             pizza = pizza,
             ingredientes = ingredientes,
-            onSave = {
-                viewModel.savePizza(it)
-                coroutineScope.launch {
-                    val action = if (isNew) "creada" else "actualizada"
-                    snackbarHostState.showSnackbar("Pizza $action: ${it.nombre}")
-                }
-            },
+            onSave = { viewModel.savePizza(it) },
             onDismiss = { pizzaEditor = null }
         )
     }

@@ -10,13 +10,22 @@ import com.alos895.simplepos.db.AppDatabase
 import com.alos895.simplepos.model.ExtraType
 import com.alos895.simplepos.model.Ingrediente
 import com.alos895.simplepos.model.PostreOrExtra
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+sealed class AdminActionEvent {
+    data class Success(val message: String) : AdminActionEvent()
+    data class Error(val message: String) : AdminActionEvent()
+}
+
 class AdminMenuViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = MenuRepository(AppDatabase.getDatabase(application))
+    private val _events = MutableSharedFlow<AdminActionEvent>()
+    val events = _events.asSharedFlow()
 
     val ingredientes: StateFlow<List<Ingrediente>> = repository.getIngredientes()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -36,38 +45,65 @@ class AdminMenuViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun saveIngredient(ingrediente: Ingrediente) {
-        viewModelScope.launch {
+        val action = if (ingrediente.id == 0) "creado" else "actualizado"
+        launchAdminAction("Ingrediente $action: ${ingrediente.nombre}") {
             repository.upsertIngredient(ingrediente)
         }
     }
 
     fun deleteIngredient(ingrediente: Ingrediente) {
-        viewModelScope.launch {
+        launchAdminAction("Ingrediente eliminado: ${ingrediente.nombre}") {
             repository.deleteIngredient(ingrediente)
         }
     }
 
     fun savePizza(pizza: PizzaUpsert) {
-        viewModelScope.launch {
+        val action = if (pizza.id == null) "creada" else "actualizada"
+        launchAdminAction("Pizza $action: ${pizza.nombre}") {
             repository.upsertPizza(pizza)
         }
     }
 
     fun deletePizza(pizza: AdminPizza) {
-        viewModelScope.launch {
+        launchAdminAction("Pizza eliminada: ${pizza.nombre}") {
             repository.deletePizza(pizza)
         }
     }
 
     fun saveExtra(extra: PostreOrExtra, type: ExtraType) {
-        viewModelScope.launch {
+        val entityName = when (type) {
+            ExtraType.POSTRE -> "Postre"
+            ExtraType.EXTRA -> "Extra"
+            ExtraType.COMBO -> "Combo"
+        }
+        val action = if (extra.id == 0) "creado" else "actualizado"
+        launchAdminAction("$entityName $action: ${extra.nombre}") {
             repository.upsertExtra(extra, type)
         }
     }
 
     fun deleteExtra(extra: PostreOrExtra, type: ExtraType) {
-        viewModelScope.launch {
+        val entityName = when (type) {
+            ExtraType.POSTRE -> "Postre"
+            ExtraType.EXTRA -> "Extra"
+            ExtraType.COMBO -> "Combo"
+        }
+        launchAdminAction("$entityName eliminado: ${extra.nombre}") {
             repository.deleteExtra(extra, type)
+        }
+    }
+
+    private fun launchAdminAction(successMessage: String, block: suspend () -> Unit) {
+        viewModelScope.launch {
+            runCatching { block() }
+                .onSuccess {
+                    _events.emit(AdminActionEvent.Success(successMessage))
+                }
+                .onFailure { error ->
+                    val message = error.message?.takeIf { it.isNotBlank() }
+                        ?: "Error inesperado al guardar cambios"
+                    _events.emit(AdminActionEvent.Error(message))
+                }
         }
     }
 }

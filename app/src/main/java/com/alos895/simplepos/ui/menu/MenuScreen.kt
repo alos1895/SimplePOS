@@ -54,6 +54,7 @@ fun MenuScreen(
     val cartViewModel: CartViewModel = viewModel()
 
     val pizzas by menuViewModel.pizzas.collectAsState()
+    val ingredientes by menuViewModel.ingredientes.collectAsState()
     val desserts by menuViewModel.postres.collectAsState()
     val extras by menuViewModel.extras.collectAsState()
     val combos by menuViewModel.combos.collectAsState()
@@ -296,7 +297,7 @@ fun MenuScreen(
 
                                             selectedPizza?.let { pizza ->
                                                 val ingredientNames = pizza.ingredientesBaseIds
-                                                    .mapNotNull { id -> MenuData.ingredientes.find { it.id == id }?.nombre }
+                                                    .mapNotNull { id -> ingredientes.find { it.id == id }?.nombre }
 
                                                 if (ingredientNames.isNotEmpty()) {
                                                     Text(
@@ -637,7 +638,7 @@ fun MenuScreen(
                                                             } else {
                                                                 Text(
                                                                     item.pizza?.ingredientesBaseIds
-                                                                        ?.mapNotNull { id -> MenuData.ingredientes.find { it.id == id }?.nombre }
+                                                                        ?.mapNotNull { id -> ingredientes.find { it.id == id }?.nombre }
                                                                         ?.joinToString(", ") ?: "",
                                                                     style = MaterialTheme.typography.bodySmall
                                                                 )
