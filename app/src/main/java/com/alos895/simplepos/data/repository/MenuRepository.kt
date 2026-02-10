@@ -93,7 +93,7 @@ class MenuRepository(private val database: AppDatabase) {
 
     suspend fun upsertExtra(extra: PostreOrExtra, type: ExtraType) {
         val extraId = if (extra.id == 0) {
-            (extraDao.maxExtraId() ?: 0) + 1
+            (extraDao.maxExtraId(type.name) ?: 0) + 1
         } else {
             extra.id
         }

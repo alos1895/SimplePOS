@@ -3,6 +3,7 @@ package com.alos895.simplepos.db
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.alos895.simplepos.db.entity.ExtraEntity
@@ -16,10 +17,10 @@ interface ExtraDao {
     @Query("SELECT COUNT(*) FROM extras")
     suspend fun countExtras(): Long
 
-    @Query("SELECT MAX(id) FROM extras")
-    suspend fun maxExtraId(): Int?
+    @Query("SELECT MAX(id) FROM extras WHERE type = :type")
+    suspend fun maxExtraId(type: String): Int?
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertExtra(extra: ExtraEntity)
 
     @Update

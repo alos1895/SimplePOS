@@ -21,7 +21,7 @@ import com.alos895.simplepos.db.entity.PizzaSizeEntity
         PizzaSizeEntity::class,
         ExtraEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
