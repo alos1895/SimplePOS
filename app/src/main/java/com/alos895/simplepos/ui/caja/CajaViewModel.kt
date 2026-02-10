@@ -6,6 +6,7 @@ import android.content.Intent
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.data.repository.OrderRepository
 import com.alos895.simplepos.data.repository.TransactionsRepository
 import com.alos895.simplepos.db.entity.OrderEntity
@@ -27,6 +28,9 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
     private val orderRepository = OrderRepository(application)
     private val transactionsRepository = TransactionsRepository(application)
     private val gson = Gson()
+    private val bebidaNames = MenuData.bebidaOptions
+        .map { it.nombre.trim().lowercase(Locale.getDefault()) }
+        .toSet()
 
     private val _selectedDate = MutableStateFlow(getToday())
     val selectedDate: StateFlow<Date> = _selectedDate.asStateFlow()
@@ -130,7 +134,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
                     "$cantidad x $nombre"
                 }
 
-            val bebidasList = desserts.filter { it.postreOrExtra?.esBebida == true }
+            val bebidasList = desserts.filter { isBebidaItem(it) }
                 .joinToString("; ") { d ->
                     val cantidad = d.cantidad ?: 0
                     val nombre = quitarAcentos(d.postreOrExtra?.nombre ?: "Desconocido")
@@ -140,7 +144,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
             val extrasList = desserts.filter {
                 it.postreOrExtra?.esPostre == false &&
                     it.postreOrExtra?.esCombo != true &&
-                    it.postreOrExtra?.esBebida != true
+                    !isBebidaItem(it)
             }
                 .joinToString("; ") { d ->
                     val cantidad = d.cantidad ?: 0
@@ -251,7 +255,7 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
                         totalCombos += item.cantidad
                         comboRevenue += item.subtotal
                     }
-                    item.postreOrExtra.esBebida -> {
+                    isBebidaItem(item) -> {
                         totalBebidas += item.cantidad
                         bebidaRevenue += item.subtotal
                     }
@@ -347,6 +351,12 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         } catch (_: Exception) {
             emptyList()
         }
+    }
+
+    private fun isBebidaItem(item: CartItemPostre): Boolean {
+        if (item.postreOrExtra.esBebida) return true
+        val name = item.postreOrExtra.nombre.trim().lowercase(Locale.getDefault())
+        return name in bebidaNames
     }
 
     fun buildCajaReport(dailyStats: DailyStats): String {
