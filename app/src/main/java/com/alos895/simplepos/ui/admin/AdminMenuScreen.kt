@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Fastfood
+import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material.icons.filled.LocalPizza
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.SoupKitchen
@@ -66,6 +67,7 @@ import kotlinx.coroutines.flow.collectLatest
 private enum class AdminSection(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     PIZZAS("Pizzas", Icons.Filled.LocalPizza),
     INGREDIENTES("Ingredientes", Icons.Filled.MenuBook),
+    BEBIDAS("Bebidas", Icons.Filled.LocalDrink),
     POSTRES("Postres", Icons.Filled.SoupKitchen),
     EXTRAS("Extras", Icons.Filled.Tapas),
     COMBOS("Combos", Icons.Filled.Fastfood)
@@ -84,6 +86,7 @@ fun AdminMenuScreen(viewModel: AdminMenuViewModel = viewModel()) {
     val postres by viewModel.postres.collectAsState()
     val extras by viewModel.extras.collectAsState()
     val combos by viewModel.combos.collectAsState()
+    val bebidas by viewModel.bebidas.collectAsState()
 
     var selectedSection by remember { mutableStateOf(AdminSection.PIZZAS) }
     var ingredientEditor by remember { mutableStateOf<Ingrediente?>(null) }
@@ -114,6 +117,10 @@ fun AdminMenuScreen(viewModel: AdminMenuViewModel = viewModel()) {
                         AdminSection.POSTRES -> {
                             extraTypeEditor = ExtraType.POSTRE
                             extraEditor = PostreOrExtra(0, "", 0.0, esPostre = true)
+                        }
+                        AdminSection.BEBIDAS -> {
+                            extraTypeEditor = ExtraType.BEBIDA
+                            extraEditor = PostreOrExtra(0, "", 0.0, esPostre = false)
                         }
                         AdminSection.EXTRAS -> {
                             extraTypeEditor = ExtraType.EXTRA
@@ -169,6 +176,15 @@ fun AdminMenuScreen(viewModel: AdminMenuViewModel = viewModel()) {
                         extraEditor = it
                     },
                     onDelete = { viewModel.deleteExtra(it, ExtraType.POSTRE) }
+                )
+                AdminSection.BEBIDAS -> ExtraList(
+                    title = "Bebidas",
+                    extras = bebidas,
+                    onEdit = {
+                        extraTypeEditor = ExtraType.BEBIDA
+                        extraEditor = it
+                    },
+                    onDelete = { viewModel.deleteExtra(it, ExtraType.BEBIDA) }
                 )
                 AdminSection.EXTRAS -> ExtraList(
                     title = "Extras",
@@ -446,6 +462,7 @@ private fun ExtraDialog(
             Text(
                 when (type) {
                     ExtraType.POSTRE -> if (extra.id == 0) "Nuevo postre" else "Editar postre"
+                    ExtraType.BEBIDA -> if (extra.id == 0) "Nueva bebida" else "Editar bebida"
                     ExtraType.EXTRA -> if (extra.id == 0) "Nuevo extra" else "Editar extra"
                     ExtraType.COMBO -> if (extra.id == 0) "Nuevo combo" else "Editar combo"
                 }

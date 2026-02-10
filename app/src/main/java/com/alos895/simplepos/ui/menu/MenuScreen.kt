@@ -58,6 +58,7 @@ fun MenuScreen(
     val desserts by menuViewModel.postres.collectAsState()
     val extras by menuViewModel.extras.collectAsState()
     val combos by menuViewModel.combos.collectAsState()
+    val bebidas by menuViewModel.bebidas.collectAsState()
     val cartItems by cartViewModel.cartItems.collectAsState()
     val dessertItems by cartViewModel.dessertItems.collectAsState()
     val comentarios by cartViewModel.comentarios.collectAsState()
@@ -453,6 +454,41 @@ fun MenuScreen(
                                             },
                                             trailingContent = {
                                                 Button(onClick = { cartViewModel.addDessertToCart(combo) }) {
+                                                    Text("Agregar")
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        MenuSection.BEBIDAS -> {
+                            if (bebidas.isEmpty()) {
+                                item {
+                                    Text(
+                                        "No hay bebidas disponibles en este momento.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(16.dp)
+                                    )
+                                }
+                            } else {
+                                items(bebidas) { bebida ->
+                                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                                        ListItem(
+                                            headlineContent = { Text(bebida.nombre) },
+                                            supportingContent = {
+                                                Text("$${"%.2f".format(bebida.precio)}")
+                                            },
+                                            leadingContent = {
+                                                Icon(
+                                                    imageVector = Icons.Filled.LocalDrink,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            },
+                                            trailingContent = {
+                                                Button(onClick = { cartViewModel.addDessertToCart(bebida) }) {
                                                     Text("Agregar")
                                                 }
                                             }
@@ -904,6 +940,7 @@ private enum class MenuSection(val label: String, val icon: ImageVector) {
     PIZZAS("Pizzas", Icons.Filled.LocalPizza),
     PIZZAS_COMBINADAS("Combinadas", Icons.Filled.PieChart),
     COMBOS("Combos", Icons.Filled.LocalDrink),
+    BEBIDAS("Bebidas", Icons.Filled.LocalDrink),
     POSTRES("Postres", Icons.Filled.Icecream),
     EXTRAS("Extras", Icons.Filled.AttachMoney),
     COMENTARIOS("Notas", Icons.Filled.Comment)

@@ -27,6 +27,8 @@ class MenuViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val combos: StateFlow<List<PostreOrExtra>> = repository.getExtras(ExtraType.COMBO)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val bebidas: StateFlow<List<PostreOrExtra>> = repository.getExtras(ExtraType.BEBIDA)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init {
         viewModelScope.launch {

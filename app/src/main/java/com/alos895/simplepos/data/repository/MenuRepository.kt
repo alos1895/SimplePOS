@@ -75,6 +75,9 @@ class MenuRepository(private val database: AppDatabase) {
             MenuData.comboOptions.forEach { combo ->
                 extraDao.insertExtra(combo.toEntity(ExtraType.COMBO))
             }
+            MenuData.bebidaOptions.forEach { bebida ->
+                extraDao.insertExtra(bebida.toEntity(ExtraType.BEBIDA))
+            }
         }
     }
 

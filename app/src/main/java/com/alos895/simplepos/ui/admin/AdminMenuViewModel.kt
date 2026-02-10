@@ -37,6 +37,8 @@ class AdminMenuViewModel(application: Application) : AndroidViewModel(applicatio
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val combos: StateFlow<List<PostreOrExtra>> = repository.getExtras(ExtraType.COMBO)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val bebidas: StateFlow<List<PostreOrExtra>> = repository.getExtras(ExtraType.BEBIDA)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init {
         viewModelScope.launch {
@@ -75,6 +77,7 @@ class AdminMenuViewModel(application: Application) : AndroidViewModel(applicatio
             ExtraType.POSTRE -> "Postre"
             ExtraType.EXTRA -> "Extra"
             ExtraType.COMBO -> "Combo"
+            ExtraType.BEBIDA -> "Bebida"
         }
         val action = if (extra.id == 0) "creado" else "actualizado"
         launchAdminAction("$entityName $action: ${extra.nombre}") {
@@ -87,6 +90,7 @@ class AdminMenuViewModel(application: Application) : AndroidViewModel(applicatio
             ExtraType.POSTRE -> "Postre"
             ExtraType.EXTRA -> "Extra"
             ExtraType.COMBO -> "Combo"
+            ExtraType.BEBIDA -> "Bebida"
         }
         launchAdminAction("$entityName eliminado: ${extra.nombre}") {
             repository.deleteExtra(extra, type)
