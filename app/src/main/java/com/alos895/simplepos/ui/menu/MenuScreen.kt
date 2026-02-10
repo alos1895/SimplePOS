@@ -261,8 +261,11 @@ fun MenuScreen(
                                                 expanded = sizeMenuExpanded,
                                                 onExpandedChange = { sizeMenuExpanded = it && availableSizes.isNotEmpty() }
                                             ) {
+                                                val selectedSizeLabel = selectedTamano?.let { tamano ->
+                                                    "${tamano.nombre} - $${"%.2f".format(tamano.precioBase)}"
+                                                } ?: ""
                                                 TextField(
-                                                    value = selectedTamano?.nombre ?: "",
+                                                    value = selectedSizeLabel,
                                                     onValueChange = {},
                                                     readOnly = true,
                                                     label = { Text("Tamaño") },
@@ -281,7 +284,7 @@ fun MenuScreen(
                                                 ) {
                                                     availableSizes.forEach { tamano ->
                                                         DropdownMenuItem(
-                                                            text = { Text(tamano.nombre) },
+                                                            text = { Text("${tamano.nombre} - $${"%.2f".format(tamano.precioBase)}") },
                                                             onClick = {
                                                                 selectedTamano = tamano
                                                                 sizeMenuExpanded = false
