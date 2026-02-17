@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -309,20 +310,54 @@ private fun InventorySection(
             Text("Guardar bases")
         }
 
-        Text("Historial", style = MaterialTheme.typography.titleMedium)
-        if (dailyInventory.isEmpty()) {
-            Text("No hay movimientos de inventario registrados.")
-        } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(dailyInventory, key = { it.dateKey }) { day ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        val totalChica = dailyInventory.sumOf { it.chica }
+        val totalMediana = dailyInventory.sumOf { it.mediana }
+        val totalGrande = dailyInventory.sumOf { it.grande }
+        val totalBases = totalChica + totalMediana + totalGrande
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Historial", style = MaterialTheme.typography.titleMedium)
+                if (dailyInventory.isEmpty()) {
+                    Text("No hay movimientos de inventario registrados.")
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 280.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(day.displayDate, style = MaterialTheme.typography.titleSmall)
-                            Text("Chica: ${day.chica} | Mediana: ${day.mediana} | Grande: ${day.grande}")
+                        items(dailyInventory, key = { it.dateKey }) { day ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(day.displayDate, style = MaterialTheme.typography.titleSmall)
+                                    Text("Chica: ${day.chica} | Mediana: ${day.mediana} | Grande: ${day.grande}")
+                                }
+                            }
                         }
+                    }
+                }
+            }
+
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Totales", style = MaterialTheme.typography.titleMedium)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text("Total de bases: $totalBases", style = MaterialTheme.typography.titleSmall)
+                        Text("Chica: $totalChica")
+                        Text("Mediana: $totalMediana")
+                        Text("Grande: $totalGrande")
                     }
                 }
             }
