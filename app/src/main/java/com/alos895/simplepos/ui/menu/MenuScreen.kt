@@ -330,8 +330,15 @@ fun MenuScreen(
                                                 )
                                             }
 
+                                            val reservedChica = cartItems.filter { it.sizeLabel.lowercase().contains("chica") }.sumOf { it.cantidad }
+                                            val reservedMediana = cartItems.filter { it.sizeLabel.lowercase().contains("mediana") }.sumOf { it.cantidad }
+                                            val reservedGrande = cartItems.filter { it.sizeLabel.lowercase().contains("grande") }.sumOf { it.cantidad }
+                                            val availableChica = (baseStock.chica - reservedChica).coerceAtLeast(0)
+                                            val availableMediana = (baseStock.mediana - reservedMediana).coerceAtLeast(0)
+                                            val availableGrande = (baseStock.grande - reservedGrande).coerceAtLeast(0)
+
                                             Text(
-                                                "Bases hoy -> Chica: ${baseStock.chica} | Mediana: ${baseStock.mediana} | Grande: ${baseStock.grande}",
+                                                "Bases disponibles -> Chica: $availableChica | Mediana: $availableMediana | Grande: $availableGrande",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )

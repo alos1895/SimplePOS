@@ -93,6 +93,24 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+
+    private fun reservedBasesFor(size: PizzaBaseSize, items: List<CartItem> = _cartItems.value): Int {
+        return items.sumOf { item ->
+            val itemSize = PizzaBaseSize.fromSizeLabel(item.sizeLabel)
+            if (itemSize == size) item.cantidad else 0
+        }
+    }
+
+    private fun hasAvailableBase(
+        size: PizzaBaseSize,
+        extraNeeded: Int = 1,
+        items: List<CartItem> = _cartItems.value
+    ): Boolean {
+        val reserved = reservedBasesFor(size, items)
+        val available = _baseStock.value.availableFor(size)
+        return reserved + extraNeeded <= available
+    }
+
     fun setDeliveryService(delivery: DeliveryService) {
         _selectedDelivery.value = delivery
     }
@@ -107,7 +125,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope.launch { _uiEvents.emit("No se pudo identificar el tamaño de la pizza") }
             return
         }
-        if (!_baseStock.value.hasStock(size)) {
+        if (!hasAvailableBase(size, extraNeeded = 1)) {
             viewModelScope.launch { _uiEvents.emit("No hay bases ${size.displayName.lowercase()} disponibles") }
             return
         }
@@ -142,7 +160,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope.launch { _uiEvents.emit("No se pudo identificar el tamaño de la pizza combinada") }
             return
         }
-        if (!_baseStock.value.hasStock(size)) {
+        if (!hasAvailableBase(size, extraNeeded = 1)) {
             viewModelScope.launch { _uiEvents.emit("No hay bases ${size.displayName.lowercase()} disponibles") }
             return
         }
@@ -165,7 +183,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             if (index != -1) {
                 val item = current[index]
                 val size = PizzaBaseSize.fromSizeLabel(item.sizeLabel)
-                if (size != null && !_baseStock.value.hasStock(size, quantity = item.cantidad + 1)) {
+                if (size != null && !hasAvailableBase(size, extraNeeded = 1, items = current)) {
                     viewModelScope.launch { _uiEvents.emit("No puedes agregar más, no hay suficientes bases ${size.displayName.lowercase()}") }
                     return@updateCartItems
                 }
@@ -395,12 +413,10 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun hasStockForCurrentCart(): Boolean {
-        val required = mutableMapOf<PizzaBaseSize, Int>()
-        _cartItems.value.forEach { item ->
-            val size = PizzaBaseSize.fromSizeLabel(item.sizeLabel) ?: return@forEach
-            required[size] = (required[size] ?: 0) + item.cantidad
+        return PizzaBaseSize.entries.all { size ->
+            val reserved = reservedBasesFor(size)
+            reserved <= _baseStock.value.availableFor(size)
         }
-        return required.all { (size, qty) -> _baseStock.value.hasStock(size, qty) }
     }
 
     suspend fun saveOrder(
