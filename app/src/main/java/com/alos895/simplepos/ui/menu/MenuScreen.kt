@@ -42,7 +42,6 @@ import com.alos895.simplepos.ui.print.BluetoothPrinterViewModel
 import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.model.User
 import com.alos895.simplepos.model.DeliveryType
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,7 +63,6 @@ fun MenuScreen(
     val dessertItems by cartViewModel.dessertItems.collectAsState()
     val comentarios by cartViewModel.comentarios.collectAsState()
     val selectedDelivery by cartViewModel.selectedDelivery.collectAsState(initial = MenuData.deliveryOptions.first())
-    val baseStock by cartViewModel.baseStock.collectAsState()
 
     val deliveryOptions = MenuData.deliveryOptions
 
@@ -99,12 +97,6 @@ fun MenuScreen(
     var priceEditorInput by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
-
-    LaunchedEffect(Unit) {
-        cartViewModel.uiEvents.collectLatest { message ->
-            snackbarHostState.showSnackbar(message)
-        }
-    }
 
     if (priceEditorItem != null) {
         val normalizedInput = priceEditorInput.replace(",", ".")
@@ -329,19 +321,6 @@ fun MenuScreen(
                                                     }
                                                 )
                                             }
-
-                                            val reservedChica = cartItems.filter { it.sizeLabel.lowercase().contains("chica") }.sumOf { it.cantidad }
-                                            val reservedMediana = cartItems.filter { it.sizeLabel.lowercase().contains("mediana") }.sumOf { it.cantidad }
-                                            val reservedGrande = cartItems.filter { it.sizeLabel.lowercase().contains("grande") }.sumOf { it.cantidad }
-                                            val availableChica = (baseStock.chica - reservedChica).coerceAtLeast(0)
-                                            val availableMediana = (baseStock.mediana - reservedMediana).coerceAtLeast(0)
-                                            val availableGrande = (baseStock.grande - reservedGrande).coerceAtLeast(0)
-
-                                            Text(
-                                                "Bases disponibles -> Chica: $availableChica | Mediana: $availableMediana | Grande: $availableGrande",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
 
                                             val canAddToCart = selectedPizza != null && selectedTamano != null
 
@@ -907,33 +886,28 @@ fun MenuScreen(
                                         telefono = telefono
                                     )
                                     val deliveryForTicket = selectedDelivery
-                                    runCatching {
-                                        cartViewModel.saveOrder(user, deliveryAddress, orderTimestamp)
-                                    }.onSuccess { savedOrder ->
-                                        val cocinaTicket = cartViewModel.buildCocinaTicket(
-                                            user = user,
-                                            deliveryAddress = deliveryAddress,
-                                            deliveryService = deliveryForTicket,
-                                            timestamp = orderTimestamp,
-                                            dailyOrderNumber = savedOrder.dailyOrderNumber
-                                        )
+                                    val savedOrder = cartViewModel.saveOrder(user, deliveryAddress, orderTimestamp)
+                                    val cocinaTicket = cartViewModel.buildCocinaTicket(
+                                        user = user,
+                                        deliveryAddress = deliveryAddress,
+                                        deliveryService = deliveryForTicket,
+                                        timestamp = orderTimestamp,
+                                        dailyOrderNumber = savedOrder.dailyOrderNumber
+                                    )
 
-                                        bluetoothPrinterViewModel.print(cocinaTicket) { _, message ->
-                                            coroutineScope.launch {
-                                                snackbarHostState.showSnackbar(message)
-                                            }
+                                    bluetoothPrinterViewModel.print(cocinaTicket) { _, message ->
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar(message)
                                         }
-
-                                        cartViewModel.clearCart()
-                                        nombre = ""
-                                        telefono = ""
-                                        deliveryAddress = ""
-                                        cartViewModel.setComentarios("")
-                                        cartViewModel.setDeliveryService(MenuData.deliveryOptions.first())
-                                        snackbarHostState.showSnackbar("Orden guardada exitosamente")
-                                    }.onFailure {
-                                        snackbarHostState.showSnackbar(it.message ?: "No se pudo guardar la orden")
                                     }
+
+                                    cartViewModel.clearCart()
+                                    nombre = ""
+                                    telefono = ""
+                                    deliveryAddress = ""
+                                    cartViewModel.setComentarios("")
+                                    cartViewModel.setDeliveryService(MenuData.deliveryOptions.first())
+                                    snackbarHostState.showSnackbar("Orden guardada exitosamente")
                                 }
                             },
                             enabled = cartItems.isNotEmpty() || dessertItems.isNotEmpty()
@@ -953,12 +927,9 @@ fun MenuScreen(
             pizzas = combinablePizzas,
             onDismiss = { comboDialogConfig = null },
             onConfirm = { portions ->
-                val beforeCount = cartItems.size
                 cartViewModel.addComboToCart(config.sizeName, portions)
                 coroutineScope.launch {
-                    if (cartViewModel.cartItems.value.size > beforeCount) {
-                        snackbarHostState.showSnackbar("Pizza combinada agregada al carrito")
-                    }
+                    snackbarHostState.showSnackbar("Pizza combinada agregada al carrito")
                 }
             }
         )
