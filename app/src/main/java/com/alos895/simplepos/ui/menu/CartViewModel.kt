@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.PizzeriaData
 import com.alos895.simplepos.data.datasource.MenuData
+import com.alos895.simplepos.data.repository.BaseInventoryRepository
+import com.alos895.simplepos.data.repository.BaseInventoryStock
 import com.alos895.simplepos.data.repository.OrderRepository
 import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.model.CartItem
@@ -15,6 +17,7 @@ import com.alos895.simplepos.model.CartItemPostre
 import com.alos895.simplepos.model.DeliveryService
 import com.alos895.simplepos.model.DeliveryType
 import com.alos895.simplepos.model.Pizza
+import com.alos895.simplepos.model.PizzaBaseSize
 import com.alos895.simplepos.model.PostreOrExtra
 import com.alos895.simplepos.model.TamanoPizza
 import com.alos895.simplepos.model.User
@@ -23,8 +26,10 @@ import com.alos895.simplepos.ui.common.CartItemFormatter
 import com.google.gson.Gson
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -39,6 +44,14 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     val dessertItems: StateFlow<List<CartItemPostre>> = _dessertItems
 
     private val orderRepository = OrderRepository(application)
+    private val baseInventoryRepository = BaseInventoryRepository(com.alos895.simplepos.db.AppDatabase.getDatabase(application))
+    private val todayDateKey = BaseInventoryRepository.toDateKey(System.currentTimeMillis())
+
+    private val _baseStock = MutableStateFlow(BaseInventoryStock())
+    val baseStock: StateFlow<BaseInventoryStock> = _baseStock
+
+    private val _uiEvents = MutableSharedFlow<String>()
+    val uiEvents = _uiEvents.asSharedFlow()
 
     private val _selectedDelivery = MutableStateFlow<DeliveryService?>(null)
     val selectedDelivery: StateFlow<DeliveryService?> = _selectedDelivery
@@ -73,6 +86,11 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
                 _total.value = pizzasTotal + desserts.sumOf { it.subtotal } + deliveryPrice
             }
         }
+        viewModelScope.launch {
+            baseInventoryRepository.observeStockForDate(todayDateKey).collect { stock ->
+                _baseStock.value = stock
+            }
+        }
     }
 
     fun setDeliveryService(delivery: DeliveryService) {
@@ -84,6 +102,15 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addToCart(pizza: Pizza, tamano: TamanoPizza) {
+        val size = PizzaBaseSize.fromSizeLabel(tamano.nombre)
+        if (size == null) {
+            viewModelScope.launch { _uiEvents.emit("No se pudo identificar el tamaño de la pizza") }
+            return
+        }
+        if (!_baseStock.value.hasStock(size)) {
+            viewModelScope.launch { _uiEvents.emit("No hay bases ${size.displayName.lowercase()} disponibles") }
+            return
+        }
         updateCartItems { current ->
             current.add(
                 CartItem(
@@ -110,6 +137,15 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
 
     fun addComboToCart(sizeName: String, portions: List<CartItemPortion>) {
         val normalizedSize = sizeName.trim()
+        val size = PizzaBaseSize.fromSizeLabel(normalizedSize)
+        if (size == null) {
+            viewModelScope.launch { _uiEvents.emit("No se pudo identificar el tamaño de la pizza combinada") }
+            return
+        }
+        if (!_baseStock.value.hasStock(size)) {
+            viewModelScope.launch { _uiEvents.emit("No hay bases ${size.displayName.lowercase()} disponibles") }
+            return
+        }
         updateCartItems { current ->
             val price = calculateComboPrice(normalizedSize, portions)
             current.add(
@@ -128,6 +164,11 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             val index = current.indexOfFirst { it.id == itemId }
             if (index != -1) {
                 val item = current[index]
+                val size = PizzaBaseSize.fromSizeLabel(item.sizeLabel)
+                if (size != null && !_baseStock.value.hasStock(size, quantity = item.cantidad + 1)) {
+                    viewModelScope.launch { _uiEvents.emit("No puedes agregar más, no hay suficientes bases ${size.displayName.lowercase()}") }
+                    return@updateCartItems
+                }
                 if (item.isCombo) {
                     // For combos, add a new instance with the same configuration
                     val price = calculateComboPrice(item.sizeLabel, item.portions)
@@ -353,11 +394,23 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         return sb.toString()
     }
 
+    private fun hasStockForCurrentCart(): Boolean {
+        val required = mutableMapOf<PizzaBaseSize, Int>()
+        _cartItems.value.forEach { item ->
+            val size = PizzaBaseSize.fromSizeLabel(item.sizeLabel) ?: return@forEach
+            required[size] = (required[size] ?: 0) + item.cantidad
+        }
+        return required.all { (size, qty) -> _baseStock.value.hasStock(size, qty) }
+    }
+
     suspend fun saveOrder(
         user: User,
         deliveryAddress: String = "",
         timestamp: Long = System.currentTimeMillis()
     ): OrderEntity {
+        if (!hasStockForCurrentCart()) {
+            throw IllegalStateException("No hay bases suficientes para completar la orden")
+        }
         val gson = Gson()
         val itemsJson = gson.toJson(_cartItems.value)
         val dessertsJson = gson.toJson(_dessertItems.value)

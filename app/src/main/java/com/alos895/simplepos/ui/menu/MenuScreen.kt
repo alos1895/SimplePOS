@@ -42,6 +42,7 @@ import com.alos895.simplepos.ui.print.BluetoothPrinterViewModel
 import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.model.User
 import com.alos895.simplepos.model.DeliveryType
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,6 +64,7 @@ fun MenuScreen(
     val dessertItems by cartViewModel.dessertItems.collectAsState()
     val comentarios by cartViewModel.comentarios.collectAsState()
     val selectedDelivery by cartViewModel.selectedDelivery.collectAsState(initial = MenuData.deliveryOptions.first())
+    val baseStock by cartViewModel.baseStock.collectAsState()
 
     val deliveryOptions = MenuData.deliveryOptions
 
@@ -97,6 +99,12 @@ fun MenuScreen(
     var priceEditorInput by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        cartViewModel.uiEvents.collectLatest { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
 
     if (priceEditorItem != null) {
         val normalizedInput = priceEditorInput.replace(",", ".")
@@ -321,6 +329,12 @@ fun MenuScreen(
                                                     }
                                                 )
                                             }
+
+                                            Text(
+                                                "Bases hoy -> Chica: ${baseStock.chica} | Mediana: ${baseStock.mediana} | Grande: ${baseStock.grande}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
 
                                             val canAddToCart = selectedPizza != null && selectedTamano != null
 
@@ -886,28 +900,33 @@ fun MenuScreen(
                                         telefono = telefono
                                     )
                                     val deliveryForTicket = selectedDelivery
-                                    val savedOrder = cartViewModel.saveOrder(user, deliveryAddress, orderTimestamp)
-                                    val cocinaTicket = cartViewModel.buildCocinaTicket(
-                                        user = user,
-                                        deliveryAddress = deliveryAddress,
-                                        deliveryService = deliveryForTicket,
-                                        timestamp = orderTimestamp,
-                                        dailyOrderNumber = savedOrder.dailyOrderNumber
-                                    )
+                                    runCatching {
+                                        cartViewModel.saveOrder(user, deliveryAddress, orderTimestamp)
+                                    }.onSuccess { savedOrder ->
+                                        val cocinaTicket = cartViewModel.buildCocinaTicket(
+                                            user = user,
+                                            deliveryAddress = deliveryAddress,
+                                            deliveryService = deliveryForTicket,
+                                            timestamp = orderTimestamp,
+                                            dailyOrderNumber = savedOrder.dailyOrderNumber
+                                        )
 
-                                    bluetoothPrinterViewModel.print(cocinaTicket) { _, message ->
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar(message)
+                                        bluetoothPrinterViewModel.print(cocinaTicket) { _, message ->
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar(message)
+                                            }
                                         }
-                                    }
 
-                                    cartViewModel.clearCart()
-                                    nombre = ""
-                                    telefono = ""
-                                    deliveryAddress = ""
-                                    cartViewModel.setComentarios("")
-                                    cartViewModel.setDeliveryService(MenuData.deliveryOptions.first())
-                                    snackbarHostState.showSnackbar("Orden guardada exitosamente")
+                                        cartViewModel.clearCart()
+                                        nombre = ""
+                                        telefono = ""
+                                        deliveryAddress = ""
+                                        cartViewModel.setComentarios("")
+                                        cartViewModel.setDeliveryService(MenuData.deliveryOptions.first())
+                                        snackbarHostState.showSnackbar("Orden guardada exitosamente")
+                                    }.onFailure {
+                                        snackbarHostState.showSnackbar(it.message ?: "No se pudo guardar la orden")
+                                    }
                                 }
                             },
                             enabled = cartItems.isNotEmpty() || dessertItems.isNotEmpty()
@@ -927,9 +946,12 @@ fun MenuScreen(
             pizzas = combinablePizzas,
             onDismiss = { comboDialogConfig = null },
             onConfirm = { portions ->
+                val beforeCount = cartItems.size
                 cartViewModel.addComboToCart(config.sizeName, portions)
                 coroutineScope.launch {
-                    snackbarHostState.showSnackbar("Pizza combinada agregada al carrito")
+                    if (cartViewModel.cartItems.value.size > beforeCount) {
+                        snackbarHostState.showSnackbar("Pizza combinada agregada al carrito")
+                    }
                 }
             }
         )

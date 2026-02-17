@@ -62,6 +62,9 @@ import com.alos895.simplepos.model.ExtraType
 import com.alos895.simplepos.model.Ingrediente
 import com.alos895.simplepos.model.PostreOrExtra
 import com.alos895.simplepos.model.TamanoPizza
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.flow.collectLatest
 
 private enum class AdminSection(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
@@ -70,7 +73,8 @@ private enum class AdminSection(val label: String, val icon: androidx.compose.ui
     BEBIDAS("Bebidas", Icons.Filled.LocalDrink),
     POSTRES("Postres", Icons.Filled.SoupKitchen),
     EXTRAS("Extras", Icons.Filled.Tapas),
-    COMBOS("Combos", Icons.Filled.Fastfood)
+    COMBOS("Combos", Icons.Filled.Fastfood),
+    INVENTARIO("Inventario", Icons.Filled.Check)
 }
 
 private data class SizeEditorState(
@@ -87,6 +91,7 @@ fun AdminMenuScreen(viewModel: AdminMenuViewModel = viewModel()) {
     val extras by viewModel.extras.collectAsState()
     val combos by viewModel.combos.collectAsState()
     val bebidas by viewModel.bebidas.collectAsState()
+    val dailyInventory by viewModel.dailyInventory.collectAsState()
 
     var selectedSection by remember { mutableStateOf(AdminSection.PIZZAS) }
     var ingredientEditor by remember { mutableStateOf<Ingrediente?>(null) }
@@ -130,6 +135,7 @@ fun AdminMenuScreen(viewModel: AdminMenuViewModel = viewModel()) {
                             extraTypeEditor = ExtraType.COMBO
                             extraEditor = PostreOrExtra(0, "", 0.0, esPostre = false, esCombo = true)
                         }
+                        AdminSection.INVENTARIO -> Unit
                     }
                 }
             ) {
@@ -204,6 +210,12 @@ fun AdminMenuScreen(viewModel: AdminMenuViewModel = viewModel()) {
                     },
                     onDelete = { viewModel.deleteExtra(it, ExtraType.COMBO) }
                 )
+                AdminSection.INVENTARIO -> InventorySection(
+                    dailyInventory = dailyInventory,
+                    onAddInventory = { dateKey, chica, mediana, grande ->
+                        viewModel.addInventory(dateKey, chica, mediana, grande)
+                    }
+                )
             }
         }
     }
@@ -232,6 +244,89 @@ fun AdminMenuScreen(viewModel: AdminMenuViewModel = viewModel()) {
             onSave = { viewModel.savePizza(it) },
             onDismiss = { pizzaEditor = null }
         )
+    }
+}
+
+@Composable
+private fun InventorySection(
+    dailyInventory: List<com.alos895.simplepos.data.repository.DailyBaseInventory>,
+    onAddInventory: (String, Int, Int, Int) -> Unit
+) {
+    val todayKey = remember {
+        SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+    }
+    var dateKey by remember { mutableStateOf(todayKey) }
+    var chicaInput by remember { mutableStateOf("") }
+    var medianaInput by remember { mutableStateOf("") }
+    var grandeInput by remember { mutableStateOf("") }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Registro de bases por día", style = MaterialTheme.typography.titleMedium)
+        OutlinedTextField(
+            value = dateKey,
+            onValueChange = { dateKey = it },
+            label = { Text("Fecha (yyyy-MM-dd)") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = chicaInput,
+                onValueChange = { chicaInput = it.filter { c -> c.isDigit() } },
+                label = { Text("Bases chicas") },
+                modifier = Modifier.weight(1f),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true
+            )
+            OutlinedTextField(
+                value = medianaInput,
+                onValueChange = { medianaInput = it.filter { c -> c.isDigit() } },
+                label = { Text("Bases medianas") },
+                modifier = Modifier.weight(1f),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true
+            )
+            OutlinedTextField(
+                value = grandeInput,
+                onValueChange = { grandeInput = it.filter { c -> c.isDigit() } },
+                label = { Text("Bases grandes") },
+                modifier = Modifier.weight(1f),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true
+            )
+        }
+        Button(
+            onClick = {
+                val chica = chicaInput.toIntOrNull() ?: 0
+                val mediana = medianaInput.toIntOrNull() ?: 0
+                val grande = grandeInput.toIntOrNull() ?: 0
+                onAddInventory(dateKey.trim(), chica, mediana, grande)
+                chicaInput = ""
+                medianaInput = ""
+                grandeInput = ""
+            }
+        ) {
+            Text("Guardar bases")
+        }
+
+        Text("Historial", style = MaterialTheme.typography.titleMedium)
+        if (dailyInventory.isEmpty()) {
+            Text("No hay movimientos de inventario registrados.")
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(dailyInventory, key = { it.dateKey }) { day ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(day.displayDate, style = MaterialTheme.typography.titleSmall)
+                            Text("Chica: ${day.chica} | Mediana: ${day.mediana} | Grande: ${day.grande}")
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

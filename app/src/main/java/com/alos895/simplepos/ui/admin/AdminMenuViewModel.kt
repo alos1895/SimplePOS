@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.repository.AdminPizza
+import com.alos895.simplepos.data.repository.BaseInventoryRepository
+import com.alos895.simplepos.data.repository.DailyBaseInventory
 import com.alos895.simplepos.data.repository.MenuRepository
 import com.alos895.simplepos.data.repository.PizzaUpsert
 import com.alos895.simplepos.db.AppDatabase
@@ -16,6 +18,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 sealed class AdminActionEvent {
     data class Success(val message: String) : AdminActionEvent()
@@ -24,6 +28,7 @@ sealed class AdminActionEvent {
 
 class AdminMenuViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = MenuRepository(AppDatabase.getDatabase(application))
+    private val baseInventoryRepository = BaseInventoryRepository(AppDatabase.getDatabase(application))
     private val _events = MutableSharedFlow<AdminActionEvent>()
     val events = _events.asSharedFlow()
 
@@ -38,6 +43,8 @@ class AdminMenuViewModel(application: Application) : AndroidViewModel(applicatio
     val combos: StateFlow<List<PostreOrExtra>> = repository.getExtras(ExtraType.COMBO)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val bebidas: StateFlow<List<PostreOrExtra>> = repository.getExtras(ExtraType.BEBIDA)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val dailyInventory: StateFlow<List<DailyBaseInventory>> = baseInventoryRepository.observeDailySummary()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init {
@@ -94,6 +101,31 @@ class AdminMenuViewModel(application: Application) : AndroidViewModel(applicatio
         }
         launchAdminAction("$entityName eliminado: ${extra.nombre}") {
             repository.deleteExtra(extra, type)
+        }
+    }
+
+    fun addInventory(dateKey: String, chica: Int, mediana: Int, grande: Int) {
+        val normalizedDate = dateKey.trim()
+        val isValidDate = runCatching {
+            val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { isLenient = false }
+            formatter.parse(normalizedDate)
+        }.isSuccess
+
+        if (!isValidDate) {
+            viewModelScope.launch {
+                _events.emit(AdminActionEvent.Error("Fecha inválida. Usa formato yyyy-MM-dd"))
+            }
+            return
+        }
+
+        if (chica <= 0 && mediana <= 0 && grande <= 0) {
+            viewModelScope.launch {
+                _events.emit(AdminActionEvent.Error("Ingresa al menos una base a agregar"))
+            }
+            return
+        }
+        launchAdminAction("Inventario actualizado para $normalizedDate") {
+            baseInventoryRepository.addBases(normalizedDate, chica, mediana, grande)
         }
     }
 

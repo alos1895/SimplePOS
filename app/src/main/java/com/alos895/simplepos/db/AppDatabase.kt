@@ -11,6 +11,7 @@ import com.alos895.simplepos.db.entity.ExtraEntity
 import com.alos895.simplepos.db.entity.IngredientEntity
 import com.alos895.simplepos.db.entity.PizzaEntity
 import com.alos895.simplepos.db.entity.PizzaSizeEntity
+import com.alos895.simplepos.db.entity.BaseInventoryEntity
 
 @Database(
     entities = [
@@ -19,9 +20,10 @@ import com.alos895.simplepos.db.entity.PizzaSizeEntity
         IngredientEntity::class,
         PizzaEntity::class,
         PizzaSizeEntity::class,
-        ExtraEntity::class
+        ExtraEntity::class,
+        BaseInventoryEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -31,6 +33,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun ingredientDao(): IngredientDao
     abstract fun pizzaDao(): PizzaDao
     abstract fun extraDao(): ExtraDao
+    abstract fun baseInventoryDao(): BaseInventoryDao
 
     companion object {
         @Volatile
