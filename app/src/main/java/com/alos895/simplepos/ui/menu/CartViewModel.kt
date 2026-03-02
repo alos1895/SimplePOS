@@ -483,10 +483,12 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun markBasesAsUsedForCart(usedAt: Long) {
-        val neededBySize = _cartItems.value
-            .mapNotNull { normalizeBaseSize(it.sizeLabel) }
-            .groupingBy { it }
-            .eachCount()
+        val neededBySize = mutableMapOf<String, Int>()
+        _cartItems.value.forEach { item ->
+            val size = normalizeBaseSize(item.sizeLabel) ?: return@forEach
+            val current = neededBySize[size] ?: 0
+            neededBySize[size] = current + item.cantidad
+        }
 
         neededBySize.forEach { (size, count) ->
             if (count > 0) {
