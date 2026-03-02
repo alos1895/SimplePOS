@@ -1,5 +1,6 @@
 package com.alos895.simplepos.ui.admin
 
+import android.app.DatePickerDialog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,10 +15,6 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -26,7 +23,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -35,10 +31,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.alos895.simplepos.db.entity.PizzaBaseEntity
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -142,6 +140,7 @@ private fun InventoryScreen(
 ) {
     val bases by viewModel.pizzaBases.collectAsState(initial = emptyList())
     val snackbarHostState = remember { SnackbarHostState() }
+    var selectedDateMillis by remember { mutableStateOf(Calendar.getInstance().timeInMillis) }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -151,6 +150,13 @@ private fun InventoryScreen(
             }
         }
     }
+
+    val dailyBases = remember(bases, selectedDateMillis) {
+        bases.filter { it.createdAt.isSameDayAs(selectedDateMillis) }
+    }
+    val smallCount = dailyBases.count { it.size.equals("chica", ignoreCase = true) }
+    val mediumCount = dailyBases.count { it.size.equals("mediana", ignoreCase = true) }
+    val largeCount = dailyBases.count { it.size.equals("grande", ignoreCase = true) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -168,21 +174,27 @@ private fun InventoryScreen(
                 style = MaterialTheme.typography.titleLarge
             )
 
-            AddPizzaBaseForm(onAdd = viewModel::addPizzaBase)
-
-            Text(
-                text = "Bases registradas",
-                style = MaterialTheme.typography.titleMedium
+            AddPizzaBasesForm(
+                selectedDateMillis = selectedDateMillis,
+                onDateChange = { selectedDateMillis = it },
+                onSave = viewModel::addPizzaBasesForDate
             )
 
-            if (bases.isEmpty()) {
+            Text(
+                text = "Resumen del día ${selectedDateMillis.toUiDayDate()}",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(text = "Chicas: $smallCount")
+            Text(text = "Medianas: $mediumCount")
+            Text(text = "Grandes: $largeCount")
+
+            if (dailyBases.isNotEmpty()) {
                 Text(
-                    text = "No hay bases registradas todavía.",
-                    style = MaterialTheme.typography.bodyMedium
+                    text = "Registros del día",
+                    style = MaterialTheme.typography.titleMedium
                 )
-            } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(bases, key = { it.id }) { base ->
+                    items(dailyBases, key = { it.id }) { base ->
                         PizzaBaseItem(
                             base = base,
                             onMarkUsed = { viewModel.markAsUsed(base.id) }
@@ -194,54 +206,100 @@ private fun InventoryScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AddPizzaBaseForm(onAdd: (String) -> Unit) {
-    val sizeOptions = listOf("chica", "mediana", "grande")
-    var selectedSize by remember { mutableStateOf(sizeOptions.first()) }
-    var expanded by remember { mutableStateOf(false) }
+private fun AddPizzaBasesForm(
+    selectedDateMillis: Long,
+    onDateChange: (Long) -> Unit,
+    onSave: (Long, Int, Int, Int) -> Unit
+) {
+    var smallInput by remember { mutableStateOf("") }
+    var mediumInput by remember { mutableStateOf("") }
+    var largeInput by remember { mutableStateOf("") }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded }
-            ) {
-                OutlinedTextField(
-                    value = selectedSize,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Tamaño de base") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier
-                        .menuAnchor()
-                        .fillMaxWidth()
-                )
+            DateSelectorField(
+                selectedDateMillis = selectedDateMillis,
+                onDateSelected = onDateChange
+            )
 
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    sizeOptions.forEach { option ->
-                        DropdownMenuItem(
-                            text = { Text(option.replaceFirstChar { it.uppercase() }) },
-                            onClick = {
-                                selectedSize = option
-                                expanded = false
-                            }
-                        )
-                    }
-                }
-            }
+            OutlinedTextField(
+                value = smallInput,
+                onValueChange = { smallInput = it.filter(Char::isDigit) },
+                label = { Text("Cantidad bases chicas") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = mediumInput,
+                onValueChange = { mediumInput = it.filter(Char::isDigit) },
+                label = { Text("Cantidad bases medianas") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = largeInput,
+                onValueChange = { largeInput = it.filter(Char::isDigit) },
+                label = { Text("Cantidad bases grandes") },
+                modifier = Modifier.fillMaxWidth()
+            )
 
-            Button(onClick = { onAdd(selectedSize) }) {
-                Text("Guardar base")
+            Button(onClick = {
+                val small = smallInput.toIntOrNull() ?: 0
+                val medium = mediumInput.toIntOrNull() ?: 0
+                val large = largeInput.toIntOrNull() ?: 0
+                onSave(selectedDateMillis, small, medium, large)
+                smallInput = ""
+                mediumInput = ""
+                largeInput = ""
+            }) {
+                Text("Guardar")
             }
         }
     }
+}
+
+@Composable
+private fun DateSelectorField(
+    selectedDateMillis: Long,
+    onDateSelected: (Long) -> Unit
+) {
+    val context = LocalContext.current
+    val calendar = remember(selectedDateMillis) {
+        Calendar.getInstance().apply { timeInMillis = selectedDateMillis }
+    }
+
+    val dialog = remember(selectedDateMillis) {
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                val picked = Calendar.getInstance().apply {
+                    set(Calendar.YEAR, year)
+                    set(Calendar.MONTH, month)
+                    set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                    set(Calendar.HOUR_OF_DAY, 12)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                onDateSelected(picked.timeInMillis)
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+    }
+
+    OutlinedTextField(
+        value = selectedDateMillis.toUiDayDate(),
+        onValueChange = {},
+        readOnly = true,
+        label = { Text("Día de carga") },
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { dialog.show() }
+    )
 }
 
 @Composable
@@ -258,12 +316,8 @@ private fun PizzaBaseItem(
                 text = "Base ${base.size.replaceFirstChar { it.uppercase() }}",
                 style = MaterialTheme.typography.titleMedium
             )
-            Text(
-                text = "Creación: ${base.createdAt.toUiDate()}"
-            )
-            Text(
-                text = "Uso: ${base.usedAt?.toUiDate() ?: "Pendiente"}"
-            )
+            Text(text = "Creación: ${base.createdAt.toUiDate()}" )
+            Text(text = "Uso: ${base.usedAt?.toUiDate() ?: "Pendiente"}")
 
             if (base.usedAt == null) {
                 Row {
@@ -279,4 +333,16 @@ private fun PizzaBaseItem(
 private fun Long.toUiDate(): String {
     val formatter = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
     return formatter.format(Date(this))
+}
+
+private fun Long.toUiDayDate(): String {
+    val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    return formatter.format(Date(this))
+}
+
+private fun Long.isSameDayAs(other: Long): Boolean {
+    val c1 = Calendar.getInstance().apply { timeInMillis = this@isSameDayAs }
+    val c2 = Calendar.getInstance().apply { timeInMillis = other }
+    return c1.get(Calendar.YEAR) == c2.get(Calendar.YEAR) &&
+        c1.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR)
 }

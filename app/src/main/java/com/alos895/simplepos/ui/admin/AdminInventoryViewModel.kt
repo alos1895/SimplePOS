@@ -25,26 +25,43 @@ class AdminInventoryViewModel(application: Application) : AndroidViewModel(appli
     val pizzaBases: StateFlow<List<PizzaBaseEntity>> = pizzaBaseDao.getPizzaBases()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun addPizzaBase(size: String) {
-        val normalizedSize = size.trim().lowercase()
-        if (normalizedSize !in setOf("chica", "mediana", "grande")) {
+    fun addPizzaBasesForDate(
+        selectedDateMillis: Long,
+        smallCount: Int,
+        mediumCount: Int,
+        largeCount: Int
+    ) {
+        val total = smallCount + mediumCount + largeCount
+        if (total <= 0) {
             viewModelScope.launch {
-                _events.emit(AdminInventoryEvent.Error("Selecciona un tamaño válido"))
+                _events.emit(AdminInventoryEvent.Error("Captura al menos una base"))
             }
             return
         }
 
         viewModelScope.launch {
             runCatching {
-                pizzaBaseDao.insertPizzaBase(
-                    PizzaBaseEntity(size = normalizedSize)
-                )
+                repeat(smallCount) {
+                    pizzaBaseDao.insertPizzaBase(
+                        PizzaBaseEntity(size = "chica", createdAt = selectedDateMillis)
+                    )
+                }
+                repeat(mediumCount) {
+                    pizzaBaseDao.insertPizzaBase(
+                        PizzaBaseEntity(size = "mediana", createdAt = selectedDateMillis)
+                    )
+                }
+                repeat(largeCount) {
+                    pizzaBaseDao.insertPizzaBase(
+                        PizzaBaseEntity(size = "grande", createdAt = selectedDateMillis)
+                    )
+                }
             }.onSuccess {
-                _events.emit(AdminInventoryEvent.Success("Base $normalizedSize registrada"))
+                _events.emit(AdminInventoryEvent.Success("Se guardaron $total bases"))
             }.onFailure { error ->
                 _events.emit(
                     AdminInventoryEvent.Error(
-                        error.message ?: "No se pudo registrar la base"
+                        error.message ?: "No se pudieron guardar las bases"
                     )
                 )
             }
