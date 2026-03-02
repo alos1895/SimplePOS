@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.PizzeriaData
 import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.data.repository.OrderRepository
+import com.alos895.simplepos.db.AppDatabase
 import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.model.CartItemPortion
@@ -23,8 +24,10 @@ import com.alos895.simplepos.ui.common.CartItemFormatter
 import com.google.gson.Gson
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -39,6 +42,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     val dessertItems: StateFlow<List<CartItemPostre>> = _dessertItems
 
     private val orderRepository = OrderRepository(application)
+    private val pizzaBaseDao = AppDatabase.getDatabase(application).pizzaBaseDao()
 
     private val _selectedDelivery = MutableStateFlow<DeliveryService?>(null)
     val selectedDelivery: StateFlow<DeliveryService?> = _selectedDelivery
@@ -48,6 +52,9 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _comentarios = MutableStateFlow("")
     val comentarios: StateFlow<String> = _comentarios
+
+    private val _events = MutableSharedFlow<String>()
+    val events = _events.asSharedFlow()
 
     init {
         _selectedDelivery.value = MenuData.deliveryOptions.first()
@@ -84,16 +91,27 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addToCart(pizza: Pizza, tamano: TamanoPizza) {
-        updateCartItems { current ->
-            current.add(
-                CartItem(
-                    pizza = pizza,
-                    tamano = tamano,
-                    sizeName = tamano.nombre,
-                    unitPrice = tamano.precioBase,
-                    cantidad = 1
+        val normalizedSize = normalizeBaseSize(tamano.nombre)
+        if (normalizedSize == null) {
+            emitEvent("No se pudo identificar el tamaño de la base")
+            return
+        }
+        viewModelScope.launch {
+            if (!canReserveBaseForSize(normalizedSize)) {
+                emitEvent("No hay bases disponibles para pizza ${tamano.nombre.lowercase()}")
+                return@launch
+            }
+            updateCartItems { current ->
+                current.add(
+                    CartItem(
+                        pizza = pizza,
+                        tamano = tamano,
+                        sizeName = tamano.nombre,
+                        unitPrice = tamano.precioBase,
+                        cantidad = 1
+                    )
                 )
-            )
+            }
         }
     }
 
@@ -109,45 +127,68 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addComboToCart(sizeName: String, portions: List<CartItemPortion>) {
-        val normalizedSize = sizeName.trim()
-        updateCartItems { current ->
-            val price = calculateComboPrice(normalizedSize, portions)
-            current.add(
-                CartItem(
-                    sizeName = normalizedSize,
-                    unitPrice = price,
-                    portions = portions,
-                    cantidad = 1 // Combos are always added as new items with quantity 1
+        val normalizedSizeName = sizeName.trim()
+        val normalizedBaseSize = normalizeBaseSize(normalizedSizeName)
+        if (normalizedBaseSize == null) {
+            emitEvent("No se pudo identificar el tamaño de la base")
+            return
+        }
+        viewModelScope.launch {
+            if (!canReserveBaseForSize(normalizedBaseSize)) {
+                emitEvent("No hay bases disponibles para pizza ${normalizedSizeName.lowercase()}")
+                return@launch
+            }
+            updateCartItems { current ->
+                val price = calculateComboPrice(normalizedSizeName, portions)
+                current.add(
+                    CartItem(
+                        sizeName = normalizedSizeName,
+                        unitPrice = price,
+                        portions = portions,
+                        cantidad = 1 // Combos are always added as new items with quantity 1
+                    )
                 )
-            )
+            }
         }
     }
 
     fun incrementItem(itemId: String) {
-        updateCartItems { current ->
-            val index = current.indexOfFirst { it.id == itemId }
-            if (index != -1) {
-                val item = current[index]
-                if (item.isCombo) {
-                    // For combos, add a new instance with the same configuration
-                    val price = calculateComboPrice(item.sizeLabel, item.portions)
-                    current.add(
-                        CartItem(
-                            id = UUID.randomUUID().toString(), // Ensure new ID for distinct combo
-                            sizeName = item.sizeLabel,
-                            unitPrice = price,
-                            portions = item.portions,
-                            cantidad = 1,
-                            isGolden = item.isGolden
+        viewModelScope.launch {
+            val item = _cartItems.value.firstOrNull { it.id == itemId } ?: return@launch
+            val normalizedBaseSize = normalizeBaseSize(item.sizeLabel)
+            if (normalizedBaseSize == null) {
+                emitEvent("No se pudo identificar el tamaño de la base")
+                return@launch
+            }
+            if (!canReserveBaseForSize(normalizedBaseSize)) {
+                emitEvent("No hay bases disponibles para pizza ${item.sizeLabel.lowercase()}")
+                return@launch
+            }
+
+            updateCartItems { current ->
+                val index = current.indexOfFirst { it.id == itemId }
+                if (index != -1) {
+                    val currentItem = current[index]
+                    if (currentItem.isCombo) {
+                        val price = calculateComboPrice(currentItem.sizeLabel, currentItem.portions)
+                        current.add(
+                            CartItem(
+                                id = UUID.randomUUID().toString(),
+                                sizeName = currentItem.sizeLabel,
+                                unitPrice = price,
+                                portions = currentItem.portions,
+                                cantidad = 1,
+                                isGolden = currentItem.isGolden
+                            )
                         )
-                    )
-                } else {
-                    // For regular pizzas, increment quantity
-                    current[index] = item.copy(cantidad = item.cantidad + 1)
+                    } else {
+                        current[index] = currentItem.copy(cantidad = currentItem.cantidad + 1)
+                    }
                 }
             }
         }
     }
+
 
     fun decrementItem(itemId: String) {
         updateCartItems { current ->
@@ -403,7 +444,9 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             descuentoTOTODO = descuentoTOTODO
         )
 
-        return orderRepository.addOrder(orderEntity)
+        val savedOrder = orderRepository.addOrder(orderEntity)
+        markBasesAsUsedForCart(timestamp)
+        return savedOrder
     }
 
     private fun getDeliveryTypeLabel(type: DeliveryType): String {
@@ -423,6 +466,51 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
                 ?.precioBase
         }
         return candidates.maxOrNull() ?: 0.0
+    }
+
+
+    private suspend fun canReserveBaseForSize(normalizedSize: String): Boolean {
+        val available = pizzaBaseDao.countAvailableBasesBySize(normalizedSize)
+        val reservedInCart = currentReservedBasesBySize(normalizedSize)
+        return available > reservedInCart
+    }
+
+    private fun currentReservedBasesBySize(normalizedSize: String): Int {
+        return _cartItems.value.sumOf { item ->
+            val itemSize = normalizeBaseSize(item.sizeLabel) ?: return@sumOf 0
+            if (itemSize == normalizedSize) item.cantidad else 0
+        }
+    }
+
+    private suspend fun markBasesAsUsedForCart(usedAt: Long) {
+        val neededBySize = mutableMapOf<String, Int>()
+        _cartItems.value.forEach { item ->
+            val size = normalizeBaseSize(item.sizeLabel) ?: return@forEach
+            val current = neededBySize[size] ?: 0
+            neededBySize[size] = current + item.cantidad
+        }
+
+        neededBySize.forEach { (size, count) ->
+            if (count > 0) {
+                pizzaBaseDao.markOldestAvailableAsUsed(size = size, count = count, usedAt = usedAt)
+            }
+        }
+    }
+
+    private fun normalizeBaseSize(sizeLabel: String): String? {
+        return when (sizeLabel.trim().lowercase()) {
+            "chica" -> "chica"
+            "mediana" -> "mediana"
+            "grande" -> "extra grande"
+            "extra grande", "extragrande", "x grande", "xgrande" -> "extra grande"
+            else -> null
+        }
+    }
+
+    private fun emitEvent(message: String) {
+        viewModelScope.launch {
+            _events.emit(message)
+        }
     }
 
     private fun updateCartItems(block: (MutableList<CartItem>) -> Unit) {
