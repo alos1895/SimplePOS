@@ -37,7 +37,7 @@ import com.alos895.simplepos.ui.transaction.TransactionsScreen
 import com.alos895.simplepos.ui.caja.CajaViewModel
 import com.alos895.simplepos.ui.print.PrintTicketViewModel
 import com.alos895.simplepos.ui.transaction.TransactionViewModel
-import com.alos895.simplepos.ui.admin.AdminMenuScreen
+import com.alos895.simplepos.ui.admin.AdminScreen
 
 sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
     object Menu : BottomNavItem("menu", Icons.Filled.Home, "Menú")
@@ -149,7 +149,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable(BottomNavItem.Admin.route) {
-                            AdminMenuScreen()
+                            AdminScreen()
                         }
                     }
                 }
