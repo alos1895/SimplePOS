@@ -349,9 +349,22 @@ private fun DatePickerSelector(
             text = "Día de carga",
             style = MaterialTheme.typography.labelLarge
         )
-        Button(onClick = { dialog.show() }) {
-            Icon(imageVector = Icons.Filled.DateRange, contentDescription = "Seleccionar fecha")
-            Text(text = "  ${selectedDateMillis.toUiDayDate()}")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { dialog.show() }) {
+                Icon(imageVector = Icons.Filled.DateRange, contentDescription = "Seleccionar fecha")
+                Text(text = "  ${selectedDateMillis.toUiDayDate()}")
+            }
+            Button(onClick = {
+                val today = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, 12)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }.timeInMillis
+                onDateSelected(today)
+            }) {
+                Text("Hoy")
+            }
         }
     }
 }
