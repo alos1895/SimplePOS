@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -23,6 +25,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -142,6 +146,7 @@ private fun InventoryScreen(
     val bases by viewModel.pizzaBases.collectAsState(initial = emptyList())
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedDateMillis by remember { mutableStateOf(Calendar.getInstance().timeInMillis) }
+    var selectedTab by remember { mutableStateOf(0) }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -175,37 +180,52 @@ private fun InventoryScreen(
                 style = MaterialTheme.typography.titleLarge
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                AddPizzaBasesForm(
-                    selectedDateMillis = selectedDateMillis,
-                    onDateChange = { selectedDateMillis = it },
-                    onSave = viewModel::addPizzaBasesForDate,
-                    modifier = Modifier.weight(1f)
-                )
-
-                DailyTotalsCard(
-                    selectedDateMillis = selectedDateMillis,
-                    smallCount = smallCount,
-                    mediumCount = mediumCount,
-                    largeCount = largeCount,
-                    modifier = Modifier.weight(1f)
-                )
+            TabRow(selectedTabIndex = selectedTab) {
+                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Captura") })
+                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Registros del día") })
             }
 
-            if (dailyBases.isNotEmpty()) {
-                Text(
-                    text = "Registros del día",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(dailyBases, key = { it.id }) { base ->
-                        PizzaBaseItem(
-                            base = base,
-                            onMarkUsed = { viewModel.markAsUsed(base.id) }
+            if (selectedTab == 0) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        AddPizzaBasesForm(
+                            selectedDateMillis = selectedDateMillis,
+                            onDateChange = { selectedDateMillis = it },
+                            onSave = viewModel::addPizzaBasesForDate,
+                            modifier = Modifier.weight(1f)
                         )
+
+                        DailyTotalsCard(
+                            selectedDateMillis = selectedDateMillis,
+                            smallCount = smallCount,
+                            mediumCount = mediumCount,
+                            largeCount = largeCount,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            } else {
+                if (dailyBases.isEmpty()) {
+                    Text(
+                        text = "No hay registros para ${selectedDateMillis.toUiDayDate()}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(dailyBases, key = { it.id }) { base ->
+                            PizzaBaseItem(
+                                base = base,
+                                onMarkUsed = { viewModel.markAsUsed(base.id) }
+                            )
+                        }
                     }
                 }
             }
