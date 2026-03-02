@@ -202,8 +202,11 @@ private fun InventoryScreen(
                     ) {
                         AddPizzaBasesForm(
                             selectedDateMillis = selectedDateMillis,
+                            currentSmallCount = smallCount,
+                            currentMediumCount = mediumCount,
+                            currentLargeCount = largeCount,
                             onDateChange = { selectedDateMillis = it },
-                            onSave = viewModel::addPizzaBasesForDate,
+                            onSave = viewModel::replacePizzaBasesForDate,
                             modifier = Modifier.weight(1f)
                         )
 
@@ -247,13 +250,22 @@ private fun InventoryScreen(
 @Composable
 private fun AddPizzaBasesForm(
     selectedDateMillis: Long,
+    currentSmallCount: Int,
+    currentMediumCount: Int,
+    currentLargeCount: Int,
     onDateChange: (Long) -> Unit,
     onSave: (Long, Int, Int, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var smallInput by remember { mutableStateOf("") }
-    var mediumInput by remember { mutableStateOf("") }
-    var largeInput by remember { mutableStateOf("") }
+    var smallInput by remember(selectedDateMillis) { mutableStateOf(currentSmallCount.toString()) }
+    var mediumInput by remember(selectedDateMillis) { mutableStateOf(currentMediumCount.toString()) }
+    var largeInput by remember(selectedDateMillis) { mutableStateOf(currentLargeCount.toString()) }
+
+    LaunchedEffect(selectedDateMillis, currentSmallCount, currentMediumCount, currentLargeCount) {
+        smallInput = currentSmallCount.toString()
+        mediumInput = currentMediumCount.toString()
+        largeInput = currentLargeCount.toString()
+    }
 
     Card(modifier = modifier) {
         Column(
@@ -289,11 +301,8 @@ private fun AddPizzaBasesForm(
                 val medium = mediumInput.toIntOrNull() ?: 0
                 val large = largeInput.toIntOrNull() ?: 0
                 onSave(selectedDateMillis, small, medium, large)
-                smallInput = ""
-                mediumInput = ""
-                largeInput = ""
             }) {
-                Text("Guardar")
+                Text("Guardar cambios")
             }
         }
     }

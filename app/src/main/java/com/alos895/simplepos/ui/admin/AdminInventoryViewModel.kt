@@ -25,22 +25,28 @@ class AdminInventoryViewModel(application: Application) : AndroidViewModel(appli
     val pizzaBases: StateFlow<List<PizzaBaseEntity>> = pizzaBaseDao.getPizzaBases()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun addPizzaBasesForDate(
+    fun replacePizzaBasesForDate(
         selectedDateMillis: Long,
         smallCount: Int,
         mediumCount: Int,
         largeCount: Int
     ) {
         val total = smallCount + mediumCount + largeCount
-        if (total <= 0) {
-            viewModelScope.launch {
-                _events.emit(AdminInventoryEvent.Error("Captura al menos una base"))
-            }
-            return
-        }
 
         viewModelScope.launch {
             runCatching {
+                val dayCalendar = java.util.Calendar.getInstance().apply {
+                    timeInMillis = selectedDateMillis
+                    set(java.util.Calendar.HOUR_OF_DAY, 0)
+                    set(java.util.Calendar.MINUTE, 0)
+                    set(java.util.Calendar.SECOND, 0)
+                    set(java.util.Calendar.MILLISECOND, 0)
+                }
+                val startOfDay = dayCalendar.timeInMillis
+                val endOfDay = startOfDay + 86_399_999L
+
+                pizzaBaseDao.deleteByCreatedAtRange(startOfDay, endOfDay)
+
                 repeat(smallCount) {
                     pizzaBaseDao.insertPizzaBase(
                         PizzaBaseEntity(size = "chica", createdAt = selectedDateMillis)
@@ -57,16 +63,17 @@ class AdminInventoryViewModel(application: Application) : AndroidViewModel(appli
                     )
                 }
             }.onSuccess {
-                _events.emit(AdminInventoryEvent.Success("Se guardaron $total bases"))
+                _events.emit(AdminInventoryEvent.Success("Se actualizó el día con $total bases"))
             }.onFailure { error ->
                 _events.emit(
                     AdminInventoryEvent.Error(
-                        error.message ?: "No se pudieron guardar las bases"
+                        error.message ?: "No se pudieron actualizar las bases"
                     )
                 )
             }
         }
     }
+
 
     fun markAsUsed(baseId: Long) {
         viewModelScope.launch {

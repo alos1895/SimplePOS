@@ -20,4 +20,7 @@ interface PizzaBaseDao {
 
     @Query("UPDATE pizza_bases SET usedAt = :usedAt WHERE id = :baseId")
     suspend fun markAsUsed(baseId: Long, usedAt: Long = System.currentTimeMillis())
+
+    @Query("DELETE FROM pizza_bases WHERE createdAt BETWEEN :startOfDayMillis AND :endOfDayMillis")
+    suspend fun deleteByCreatedAtRange(startOfDayMillis: Long, endOfDayMillis: Long)
 }
