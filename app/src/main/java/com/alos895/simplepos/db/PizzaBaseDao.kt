@@ -24,7 +24,13 @@ interface PizzaBaseDao {
     @Query("DELETE FROM pizza_bases WHERE createdAt BETWEEN :startOfDayMillis AND :endOfDayMillis")
     suspend fun deleteByCreatedAtRange(startOfDayMillis: Long, endOfDayMillis: Long)
 
-    @Query("SELECT COUNT(*) FROM pizza_bases WHERE size = :size AND usedAt IS NULL")
+    @Query(
+        """
+        SELECT COUNT(*) FROM pizza_bases
+        WHERE (size = :size OR (:size = 'extra grande' AND size = 'grande'))
+          AND usedAt IS NULL
+        """
+    )
     suspend fun countAvailableBasesBySize(size: String): Int
 
     @Query(
@@ -33,7 +39,7 @@ interface PizzaBaseDao {
         SET usedAt = :usedAt
         WHERE id IN (
             SELECT id FROM pizza_bases
-            WHERE size = :size AND usedAt IS NULL
+            WHERE (size = :size OR (:size = 'extra grande' AND size = 'grande')) AND usedAt IS NULL
             ORDER BY createdAt ASC, id ASC
             LIMIT :count
         )

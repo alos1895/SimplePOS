@@ -162,7 +162,9 @@ private fun InventoryScreen(
     }
     val smallCount = dailyBases.count { it.size.equals("chica", ignoreCase = true) }
     val mediumCount = dailyBases.count { it.size.equals("mediana", ignoreCase = true) }
-    val largeCount = dailyBases.count { it.size.equals("grande", ignoreCase = true) }
+    val largeCount = dailyBases.count {
+        it.size.equals("extra grande", ignoreCase = true) || it.size.equals("grande", ignoreCase = true)
+    }
 
     val nowMillis = remember { Calendar.getInstance().timeInMillis }
     val usedToday = bases.count { used ->
@@ -171,7 +173,9 @@ private fun InventoryScreen(
 
     val totalSmallCount = bases.count { it.size.equals("chica", ignoreCase = true) }
     val totalMediumCount = bases.count { it.size.equals("mediana", ignoreCase = true) }
-    val totalLargeCount = bases.count { it.size.equals("grande", ignoreCase = true) }
+    val totalLargeCount = bases.count {
+        it.size.equals("extra grande", ignoreCase = true) || it.size.equals("grande", ignoreCase = true)
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -303,7 +307,7 @@ private fun AddPizzaBasesForm(
             OutlinedTextField(
                 value = largeInput,
                 onValueChange = { largeInput = it.filter(Char::isDigit) },
-                label = { Text("Cantidad bases grandes") },
+                label = { Text("Cantidad bases extra grandes") },
                 modifier = Modifier.fillMaxWidth()
             )
             Button(onClick = {
@@ -397,7 +401,7 @@ private fun DailyTotalsCard(
             )
             Text(text = "Chicas: $smallCount")
             Text(text = "Medianas: $mediumCount")
-            Text(text = "Grandes: $largeCount")
+            Text(text = "Extra grandes: $largeCount")
             Text(text = "Usadas hoy: $usedToday")
         }
     }
@@ -424,7 +428,7 @@ private fun TotalTotalsCard(
             )
             Text(text = "Chicas: $totalSmallCount")
             Text(text = "Medianas: $totalMediumCount")
-            Text(text = "Grandes: $totalLargeCount")
+            Text(text = "Extra grandes: $totalLargeCount")
         }
     }
 }
