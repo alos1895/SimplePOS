@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Settings
@@ -38,6 +39,8 @@ import com.alos895.simplepos.ui.caja.CajaViewModel
 import com.alos895.simplepos.ui.print.PrintTicketViewModel
 import com.alos895.simplepos.ui.transaction.TransactionViewModel
 import com.alos895.simplepos.ui.admin.AdminScreen
+import com.alos895.simplepos.ui.admin.AdminInventoryViewModel
+import com.alos895.simplepos.ui.metrics.MetricsScreen
 
 sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
     object Menu : BottomNavItem("menu", Icons.Filled.Home, "Menú")
@@ -45,6 +48,7 @@ sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: 
     object Transactions : BottomNavItem("transactions", Icons.Filled.Home, "Transacciones")
     object Caja : BottomNavItem("caja", Icons.Filled.Home, "Caja")
     object Print : BottomNavItem("print", Icons.Filled.Print, "Impresión")
+    object Metrics : BottomNavItem("metrics", Icons.Filled.BarChart, "Métricas")
     object Admin : BottomNavItem("admin", Icons.Filled.Settings, "Admin")
 }
 
@@ -74,6 +78,7 @@ class MainActivity : ComponentActivity() {
                     BottomNavItem.Transactions,
                     BottomNavItem.Caja,
                     BottomNavItem.Print,
+                    BottomNavItem.Metrics,
                     BottomNavItem.Admin
                     )
                 // ViewModel compartido a nivel de actividad
@@ -147,6 +152,11 @@ class MainActivity : ComponentActivity() {
                                 lastMessage = lastMessage,
                                 initialTicket = ticket
                             )
+                        }
+                        composable(BottomNavItem.Metrics.route) {
+                            val cajaViewModel: CajaViewModel = viewModel()
+                            val adminInventoryViewModel: AdminInventoryViewModel = viewModel()
+                            MetricsScreen(cajaViewModel, adminInventoryViewModel)
                         }
                         composable(BottomNavItem.Admin.route) {
                             AdminScreen()
