@@ -29,10 +29,9 @@ class AdminInventoryViewModel(application: Application) : AndroidViewModel(appli
         selectedDateMillis: Long,
         smallCount: Int,
         mediumCount: Int,
-        largeCount: Int,
-        extraLargeCount: Int
+        largeCount: Int
     ) {
-        val total = smallCount + mediumCount + largeCount + extraLargeCount
+        val total = smallCount + mediumCount + largeCount
 
         viewModelScope.launch {
             runCatching {
@@ -61,11 +60,6 @@ class AdminInventoryViewModel(application: Application) : AndroidViewModel(appli
                 repeat(largeCount) {
                     pizzaBaseDao.insertPizzaBase(
                         PizzaBaseEntity(size = "grande", createdAt = selectedDateMillis)
-                    )
-                }
-                repeat(extraLargeCount) {
-                    pizzaBaseDao.insertPizzaBase(
-                        PizzaBaseEntity(size = "extra grande", createdAt = selectedDateMillis)
                     )
                 }
             }.onSuccess {

@@ -500,7 +500,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             "chica" -> "chica"
             "mediana" -> "mediana"
             "grande" -> "grande"
-            "extra grande", "extragrande", "x grande", "xgrande" -> "extra grande"
+            "extra grande", "extragrande", "x grande", "xgrande" -> "grande"
             else -> null
         }
     }

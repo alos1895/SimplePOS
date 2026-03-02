@@ -163,7 +163,6 @@ private fun InventoryScreen(
     val smallCount = dailyBases.count { it.size.equals("chica", ignoreCase = true) }
     val mediumCount = dailyBases.count { it.size.equals("mediana", ignoreCase = true) }
     val largeCount = dailyBases.count { it.size.equals("grande", ignoreCase = true) }
-    val extraLargeCount = dailyBases.count { it.size.equals("extra grande", ignoreCase = true) }
 
     val nowMillis = remember { Calendar.getInstance().timeInMillis }
     val usedToday = bases.count { used ->
@@ -173,7 +172,6 @@ private fun InventoryScreen(
     val totalSmallCount = bases.count { it.size.equals("chica", ignoreCase = true) }
     val totalMediumCount = bases.count { it.size.equals("mediana", ignoreCase = true) }
     val totalLargeCount = bases.count { it.size.equals("grande", ignoreCase = true) }
-    val totalExtraLargeCount = bases.count { it.size.equals("extra grande", ignoreCase = true) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -212,7 +210,6 @@ private fun InventoryScreen(
                             currentSmallCount = smallCount,
                             currentMediumCount = mediumCount,
                             currentLargeCount = largeCount,
-                            currentExtraLargeCount = extraLargeCount,
                             onDateChange = { selectedDateMillis = it },
                             onSave = viewModel::replacePizzaBasesForDate,
                             modifier = Modifier.weight(1f)
@@ -227,7 +224,6 @@ private fun InventoryScreen(
                                 smallCount = smallCount,
                                 mediumCount = mediumCount,
                                 largeCount = largeCount,
-                                extraLargeCount = extraLargeCount,
                                 usedToday = usedToday,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -236,7 +232,6 @@ private fun InventoryScreen(
                                 totalSmallCount = totalSmallCount,
                                 totalMediumCount = totalMediumCount,
                                 totalLargeCount = totalLargeCount,
-                                totalExtraLargeCount = totalExtraLargeCount,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -269,21 +264,18 @@ private fun AddPizzaBasesForm(
     currentSmallCount: Int,
     currentMediumCount: Int,
     currentLargeCount: Int,
-    currentExtraLargeCount: Int,
     onDateChange: (Long) -> Unit,
-    onSave: (Long, Int, Int, Int, Int) -> Unit,
+    onSave: (Long, Int, Int, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var smallInput by remember(selectedDateMillis) { mutableStateOf(currentSmallCount.toString()) }
     var mediumInput by remember(selectedDateMillis) { mutableStateOf(currentMediumCount.toString()) }
     var largeInput by remember(selectedDateMillis) { mutableStateOf(currentLargeCount.toString()) }
-    var extraLargeInput by remember(selectedDateMillis) { mutableStateOf(currentExtraLargeCount.toString()) }
 
-    LaunchedEffect(selectedDateMillis, currentSmallCount, currentMediumCount, currentLargeCount, currentExtraLargeCount) {
+    LaunchedEffect(selectedDateMillis, currentSmallCount, currentMediumCount, currentLargeCount) {
         smallInput = currentSmallCount.toString()
         mediumInput = currentMediumCount.toString()
         largeInput = currentLargeCount.toString()
-        extraLargeInput = currentExtraLargeCount.toString()
     }
 
     Card(modifier = modifier) {
@@ -314,19 +306,11 @@ private fun AddPizzaBasesForm(
                 label = { Text("Cantidad bases grandes") },
                 modifier = Modifier.fillMaxWidth()
             )
-            OutlinedTextField(
-                value = extraLargeInput,
-                onValueChange = { extraLargeInput = it.filter(Char::isDigit) },
-                label = { Text("Cantidad bases extra grandes") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
             Button(onClick = {
                 val small = smallInput.toIntOrNull() ?: 0
                 val medium = mediumInput.toIntOrNull() ?: 0
                 val large = largeInput.toIntOrNull() ?: 0
-                val extraLarge = extraLargeInput.toIntOrNull() ?: 0
-                onSave(selectedDateMillis, small, medium, large, extraLarge)
+                onSave(selectedDateMillis, small, medium, large)
             }) {
                 Text("Guardar cambios")
             }
@@ -396,7 +380,6 @@ private fun DailyTotalsCard(
     smallCount: Int,
     mediumCount: Int,
     largeCount: Int,
-    extraLargeCount: Int,
     usedToday: Int,
     modifier: Modifier = Modifier
 ) {
@@ -415,7 +398,6 @@ private fun DailyTotalsCard(
             Text(text = "Chicas: $smallCount")
             Text(text = "Medianas: $mediumCount")
             Text(text = "Grandes: $largeCount")
-            Text(text = "Extra grandes: $extraLargeCount")
             Text(text = "Usadas hoy: $usedToday")
         }
     }
@@ -426,7 +408,6 @@ private fun TotalTotalsCard(
     totalSmallCount: Int,
     totalMediumCount: Int,
     totalLargeCount: Int,
-    totalExtraLargeCount: Int,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -444,7 +425,6 @@ private fun TotalTotalsCard(
             Text(text = "Chicas: $totalSmallCount")
             Text(text = "Medianas: $totalMediumCount")
             Text(text = "Grandes: $totalLargeCount")
-            Text(text = "Extra grandes: $totalExtraLargeCount")
         }
     }
 }
