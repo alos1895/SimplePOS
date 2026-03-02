@@ -8,13 +8,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
@@ -34,8 +38,8 @@ fun AdminScreen() {
             onOpenInventory = { selectedOption = AdminOption.INVENTORY }
         )
 
-        AdminOption.MENU -> AdminMenuScreen()
-        AdminOption.INVENTORY -> InventoryScreen()
+        AdminOption.MENU -> AdminMenuContainer(onBack = { selectedOption = AdminOption.HOME })
+        AdminOption.INVENTORY -> InventoryScreen(onBack = { selectedOption = AdminOption.HOME })
     }
 }
 
@@ -91,14 +95,38 @@ private fun AdminOptionCard(
     }
 }
 
+
 @Composable
-private fun InventoryScreen() {
+private fun AdminMenuContainer(onBack: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 8.dp)
+    ) {
+        BackButton(onBack = onBack)
+        AdminMenuScreen()
+    }
+}
+
+@Composable
+private fun BackButton(onBack: () -> Unit) {
+    TextButton(onClick = onBack) {
+        Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Regresar")
+        Text(text = "Regresar")
+    }
+}
+
+@Composable
+private fun InventoryScreen(
+    onBack: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        BackButton(onBack = onBack)
         Text(
             text = "Inventario",
             style = MaterialTheme.typography.titleLarge
