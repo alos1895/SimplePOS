@@ -1,0 +1,23 @@
+package com.alos895.simplepos.db
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.Query
+import androidx.room.Update
+import com.alos895.simplepos.db.entity.PizzaBaseEntity
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface PizzaBaseDao {
+    @Query("SELECT * FROM pizza_bases ORDER BY createdAt DESC")
+    fun getPizzaBases(): Flow<List<PizzaBaseEntity>>
+
+    @Insert
+    suspend fun insertPizzaBase(base: PizzaBaseEntity): Long
+
+    @Update
+    suspend fun updatePizzaBase(base: PizzaBaseEntity)
+
+    @Query("UPDATE pizza_bases SET usedAt = :usedAt WHERE id = :baseId")
+    suspend fun markAsUsed(baseId: Long, usedAt: Long = System.currentTimeMillis())
+}
