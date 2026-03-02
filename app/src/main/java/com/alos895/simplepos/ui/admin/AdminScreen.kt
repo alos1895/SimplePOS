@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -174,19 +175,25 @@ private fun InventoryScreen(
                 style = MaterialTheme.typography.titleLarge
             )
 
-            AddPizzaBasesForm(
-                selectedDateMillis = selectedDateMillis,
-                onDateChange = { selectedDateMillis = it },
-                onSave = viewModel::addPizzaBasesForDate
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                AddPizzaBasesForm(
+                    selectedDateMillis = selectedDateMillis,
+                    onDateChange = { selectedDateMillis = it },
+                    onSave = viewModel::addPizzaBasesForDate,
+                    modifier = Modifier.weight(1f)
+                )
 
-            Text(
-                text = "Resumen del día ${selectedDateMillis.toUiDayDate()}",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Text(text = "Chicas: $smallCount")
-            Text(text = "Medianas: $mediumCount")
-            Text(text = "Grandes: $largeCount")
+                DailyTotalsCard(
+                    selectedDateMillis = selectedDateMillis,
+                    smallCount = smallCount,
+                    mediumCount = mediumCount,
+                    largeCount = largeCount,
+                    modifier = Modifier.weight(1f)
+                )
+            }
 
             if (dailyBases.isNotEmpty()) {
                 Text(
@@ -210,18 +217,19 @@ private fun InventoryScreen(
 private fun AddPizzaBasesForm(
     selectedDateMillis: Long,
     onDateChange: (Long) -> Unit,
-    onSave: (Long, Int, Int, Int) -> Unit
+    onSave: (Long, Int, Int, Int) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var smallInput by remember { mutableStateOf("") }
     var mediumInput by remember { mutableStateOf("") }
     var largeInput by remember { mutableStateOf("") }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(modifier = modifier) {
         Column(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            DateSelectorField(
+            DatePickerSelector(
                 selectedDateMillis = selectedDateMillis,
                 onDateSelected = onDateChange
             )
@@ -261,7 +269,7 @@ private fun AddPizzaBasesForm(
 }
 
 @Composable
-private fun DateSelectorField(
+private fun DatePickerSelector(
     selectedDateMillis: Long,
     onDateSelected: (Long) -> Unit
 ) {
@@ -291,15 +299,43 @@ private fun DateSelectorField(
         )
     }
 
-    OutlinedTextField(
-        value = selectedDateMillis.toUiDayDate(),
-        onValueChange = {},
-        readOnly = true,
-        label = { Text("Día de carga") },
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { dialog.show() }
-    )
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = "Día de carga",
+            style = MaterialTheme.typography.labelLarge
+        )
+        Button(onClick = { dialog.show() }) {
+            Icon(imageVector = Icons.Filled.DateRange, contentDescription = "Seleccionar fecha")
+            Text(text = "  ${selectedDateMillis.toUiDayDate()}")
+        }
+    }
+}
+
+@Composable
+private fun DailyTotalsCard(
+    selectedDateMillis: Long,
+    smallCount: Int,
+    mediumCount: Int,
+    largeCount: Int,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Resumen del día ${selectedDateMillis.toUiDayDate()}",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(text = "Chicas: $smallCount")
+            Text(text = "Medianas: $mediumCount")
+            Text(text = "Grandes: $largeCount")
+        }
+    }
 }
 
 @Composable
