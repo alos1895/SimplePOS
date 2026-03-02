@@ -98,6 +98,12 @@ fun MenuScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
+    LaunchedEffect(Unit) {
+        cartViewModel.events.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
     if (priceEditorItem != null) {
         val normalizedInput = priceEditorInput.replace(",", ".")
         val parsedPrice = normalizedInput.toDoubleOrNull()
@@ -928,9 +934,6 @@ fun MenuScreen(
             onDismiss = { comboDialogConfig = null },
             onConfirm = { portions ->
                 cartViewModel.addComboToCart(config.sizeName, portions)
-                coroutineScope.launch {
-                    snackbarHostState.showSnackbar("Pizza combinada agregada al carrito")
-                }
             }
         )
     }
