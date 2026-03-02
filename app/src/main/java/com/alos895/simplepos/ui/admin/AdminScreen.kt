@@ -210,21 +210,26 @@ private fun InventoryScreen(
                             modifier = Modifier.weight(1f)
                         )
 
-                        DailyTotalsCard(
-                            selectedDateMillis = selectedDateMillis,
-                            smallCount = smallCount,
-                            mediumCount = mediumCount,
-                            largeCount = largeCount,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            DailyTotalsCard(
+                                selectedDateMillis = selectedDateMillis,
+                                smallCount = smallCount,
+                                mediumCount = mediumCount,
+                                largeCount = largeCount,
+                                modifier = Modifier.fillMaxWidth()
+                            )
 
-                    TotalTotalsCard(
-                        totalSmallCount = totalSmallCount,
-                        totalMediumCount = totalMediumCount,
-                        totalLargeCount = totalLargeCount,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                            TotalTotalsCard(
+                                totalSmallCount = totalSmallCount,
+                                totalMediumCount = totalMediumCount,
+                                totalLargeCount = totalLargeCount,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
                 }
             } else {
                 if (dailyBases.isEmpty()) {
