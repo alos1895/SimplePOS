@@ -23,7 +23,7 @@ import com.alos895.simplepos.db.entity.PizzaBaseEntity
         ExtraEntity::class,
         PizzaBaseEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
