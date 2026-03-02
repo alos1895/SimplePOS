@@ -164,6 +164,10 @@ private fun InventoryScreen(
     val mediumCount = dailyBases.count { it.size.equals("mediana", ignoreCase = true) }
     val largeCount = dailyBases.count { it.size.equals("grande", ignoreCase = true) }
 
+    val totalSmallCount = bases.count { it.size.equals("chica", ignoreCase = true) }
+    val totalMediumCount = bases.count { it.size.equals("mediana", ignoreCase = true) }
+    val totalLargeCount = bases.count { it.size.equals("grande", ignoreCase = true) }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
@@ -211,6 +215,13 @@ private fun InventoryScreen(
                             modifier = Modifier.weight(1f)
                         )
                     }
+
+                    TotalTotalsCard(
+                        totalSmallCount = totalSmallCount,
+                        totalMediumCount = totalMediumCount,
+                        totalLargeCount = totalLargeCount,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             } else {
                 if (dailyBases.isEmpty()) {
@@ -354,6 +365,32 @@ private fun DailyTotalsCard(
             Text(text = "Chicas: $smallCount")
             Text(text = "Medianas: $mediumCount")
             Text(text = "Grandes: $largeCount")
+        }
+    }
+}
+
+@Composable
+private fun TotalTotalsCard(
+    totalSmallCount: Int,
+    totalMediumCount: Int,
+    totalLargeCount: Int,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Resumen total",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(text = "Chicas: $totalSmallCount")
+            Text(text = "Medianas: $totalMediumCount")
+            Text(text = "Grandes: $totalLargeCount")
         }
     }
 }
