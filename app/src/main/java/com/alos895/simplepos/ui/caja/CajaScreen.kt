@@ -1,11 +1,13 @@
 package com.alos895.simplepos.ui.caja
 
-import android.app.DatePickerDialog // Importado
+import android.app.DatePickerDialog
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext // Importado
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.alos895.simplepos.ui.print.BluetoothPrinterViewModel
 import com.alos895.simplepos.ui.caja.CajaViewModel
@@ -23,14 +25,15 @@ fun CajaScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val dailyStats by cajaViewModel.dailyStats.collectAsState()
     val coroutineScope = rememberCoroutineScope()
-    val selectedDate by cajaViewModel.selectedDate.collectAsState() // This is a State<Date>
+    val selectedDate by cajaViewModel.selectedDate.collectAsState()
     val context = LocalContext.current
 
     val orders by cajaViewModel.ordersForDate.collectAsState()
     val transactions by cajaViewModel.transactionsForDate.collectAsState()
 
+    val scrollState = rememberScrollState()
+
     val calendar = Calendar.getInstance()
-    // selectedDate is State<Date>, so access its value. It's not nullable in CajaViewModel.
     calendar.time = selectedDate 
 
     val datePickerDialog = DatePickerDialog(
@@ -52,6 +55,7 @@ fun CajaScreen(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
+                .verticalScroll(scrollState)
                 .padding(16.dp)
         ) {
             Text("CAJA", style = MaterialTheme.typography.titleLarge)
@@ -65,7 +69,6 @@ fun CajaScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    // selectedDate.value is Date, not nullable.
                     text = "Mostrando datos de: ${SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(selectedDate)}",
                     style = MaterialTheme.typography.titleMedium
                 )
@@ -85,21 +88,21 @@ fun CajaScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text("Pizzas", style = MaterialTheme.typography.titleMedium)
                     Text("Chicas: ${dailyStats.pizzasChicas}")
                     Text("Medianas: ${dailyStats.pizzasMedianas}")
                     Text("Grandes: ${dailyStats.pizzasGrandes}")
                     Text("Total: ${dailyStats.pizzas}")
                 }
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text("Postres, Combos, Bebidas y Extras", style = MaterialTheme.typography.titleMedium)
                     Text("Postres: ${dailyStats.postres}")
                     Text("Combos: ${dailyStats.combos}")
                     Text("Bebidas: ${dailyStats.bebidas}")
                     Text("Extras: ${dailyStats.extras}")
                 }
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text("Órdenes y Envíos", style = MaterialTheme.typography.titleMedium)
                     Text("Órdenes: ${dailyStats.ordenes}")
                     Text("Envíos: ${dailyStats.envios}")
@@ -114,7 +117,7 @@ fun CajaScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 // Bloque 1: Órdenes y métodos de pago
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text("RESUMEN ÓRDENES", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(4.dp))
                     Text("Órdenes totales: ${dailyStats.ordenes}")
@@ -125,7 +128,7 @@ fun CajaScreen(
                 }
 
                 // Bloque 2: Ingresos por tipo de venta
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text("INGRESOS POR VENTAS", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(4.dp))
                     Text("Pizzas: $${"%.2f".format(dailyStats.ingresosPizzas)}")
@@ -137,12 +140,11 @@ fun CajaScreen(
                 }
 
                 // Bloque 3: Totales y movimientos manuales
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text("TOTALES", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(4.dp))
                     Text("Ingresos manuales: $${"%.2f".format(dailyStats.ingresosCapturados)}")
                     Text("Gastos manuales: $${"%.2f".format(dailyStats.egresosCapturados)}")
-                    //TODO: Mover este calculo al viewmodel
                     val totalEfectivoCaja = dailyStats.totalOrdenesEfectivo + dailyStats.ingresosCapturados - dailyStats.egresosCapturados - dailyStats.totalDescuentosTOTODO
                     Text(
                         "TOTAL EFECTIVO: $${"%.2f".format(totalEfectivoCaja)}",
@@ -159,7 +161,7 @@ fun CajaScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp) // espacio entre botones
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
                     onClick = {

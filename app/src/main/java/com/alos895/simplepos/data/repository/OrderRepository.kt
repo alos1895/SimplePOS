@@ -34,6 +34,10 @@ class OrderRepository(context: Context) {
         return orderDao.getOrdersByDate(date)
     }
 
+    suspend fun getOrdersByDateRange(start: Long, end: Long): List<OrderEntity> {
+        return orderDao.getOrdersForDateRange(start, end)
+    }
+
     suspend fun updatePaymentBreakdown(orderId: Long, paymentParts: List<PaymentPart>) {
         val gson = Gson()
         val paymentPartsJson = gson.toJson(paymentParts)

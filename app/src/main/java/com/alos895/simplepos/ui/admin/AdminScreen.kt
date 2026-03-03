@@ -40,6 +40,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.alos895.simplepos.db.entity.PizzaBaseEntity
+import com.alos895.simplepos.ui.metrics.MetricsScreen
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -48,7 +49,8 @@ import java.util.Locale
 private enum class AdminOption {
     HOME,
     MENU,
-    INVENTORY
+    INVENTORY,
+    METRICS
 }
 
 @Composable
@@ -58,18 +60,21 @@ fun AdminScreen() {
     when (selectedOption) {
         AdminOption.HOME -> AdminHome(
             onOpenMenuAdmin = { selectedOption = AdminOption.MENU },
-            onOpenInventory = { selectedOption = AdminOption.INVENTORY }
+            onOpenInventory = { selectedOption = AdminOption.INVENTORY },
+            onOpenMetrics = { selectedOption = AdminOption.METRICS }
         )
 
         AdminOption.MENU -> AdminMenuContainer(onBack = { selectedOption = AdminOption.HOME })
         AdminOption.INVENTORY -> InventoryScreen(onBack = { selectedOption = AdminOption.HOME })
+        AdminOption.METRICS -> MetricsScreen(onBack = { selectedOption = AdminOption.HOME })
     }
 }
 
 @Composable
 private fun AdminHome(
     onOpenMenuAdmin: () -> Unit,
-    onOpenInventory: () -> Unit
+    onOpenInventory: () -> Unit,
+    onOpenMetrics: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -92,6 +97,12 @@ private fun AdminHome(
             title = "Inventario",
             subtitle = "Registrar bases de pizza y controlar su uso.",
             onClick = onOpenInventory
+        )
+
+        AdminOptionCard(
+            title = "Métricas",
+            subtitle = "Analizar ventas e inventario por intervalos y días.",
+            onClick = onOpenMetrics
         )
     }
 }

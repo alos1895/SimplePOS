@@ -24,6 +24,12 @@ interface PizzaBaseDao {
     @Query("DELETE FROM pizza_bases WHERE createdAt BETWEEN :startOfDayMillis AND :endOfDayMillis")
     suspend fun deleteByCreatedAtRange(startOfDayMillis: Long, endOfDayMillis: Long)
 
+    @Query("SELECT * FROM pizza_bases WHERE createdAt >= :start AND createdAt < :end")
+    suspend fun getPizzaBasesByCreatedAtRange(start: Long, end: Long): List<PizzaBaseEntity>
+
+    @Query("SELECT * FROM pizza_bases WHERE usedAt IS NOT NULL AND usedAt >= :start AND usedAt < :end")
+    suspend fun getPizzaBasesByUsedAtRange(start: Long, end: Long): List<PizzaBaseEntity>
+
     @Query(
         """
         SELECT COUNT(*) FROM pizza_bases

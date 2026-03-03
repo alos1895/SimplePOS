@@ -20,6 +20,10 @@ interface OrderDao {
     suspend fun getMaxDailyOrderNumberForRange(start: Long, end: Long): Int?
 
 
+    @Query("SELECT * FROM orders WHERE timestamp >= :start AND timestamp < :end AND isDeleted = 0 ORDER BY timestamp DESC")
+    suspend fun getOrdersForDateRange(start: Long, end: Long): List<OrderEntity>
+
+
     @Query("UPDATE orders SET itemsJson = :itemsJson, total = :total, timestamp = :timestamp, dailyOrderNumber = :dailyOrderNumber, userJson = :userJson, deliveryServicePrice = :deliveryServicePrice, isDeliveried = :isDeliveried, isWalkingDelivery = :isWalkingDelivery, dessertsJson = :dessertsJson, comentarios = :comentarios, deliveryAddress = :deliveryAddress, pizzaStatus = :pizzaStatus, paymentBreakdownJson= :paymentBreakdownJson, isDeleted = :isDeleted, deliveryType = :deliveryType, isTOTODO = :isTOTODO, precioTOTODO = :precioTOTODO, descuentoTOTODO = :descuentoTOTODO WHERE id = :id")
     suspend fun updateOrder(
         id: Long,
