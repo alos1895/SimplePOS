@@ -77,7 +77,7 @@ fun MetricsScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         TextButton(onClick = onBack) { Text("← Regresar") }
-        Text("Métricas", style = MaterialTheme.typography.headlineSmall)
+        Text("Métricas avanzadas", style = MaterialTheme.typography.headlineSmall)
 
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -98,21 +98,35 @@ fun MetricsScreen(
         }
 
         Card(modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Resumen intervalo", style = MaterialTheme.typography.titleMedium)
                 Text("Órdenes: ${uiState.totalOrders}")
                 Text("Ventas netas: ${formatMoney(uiState.totalSales)}")
                 Text("Ticket promedio: ${formatMoney(uiState.avgTicket)}")
-                if (uiState.isLoading) {
-                    Text("Actualizando métricas...")
-                }
+                if (uiState.isLoading) Text("Actualizando métricas...")
             }
         }
 
+        AdvancedMetricsCard(uiState.advanced)
         MetricsTable(rows = uiState.rows)
+    }
+}
+
+@Composable
+private fun AdvancedMetricsCard(metrics: AdvancedMetrics) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Top y Bottom de ventas", style = MaterialTheme.typography.titleMedium)
+            Text("Pizza más vendida: ${metrics.topPizza.toLabel()}")
+            Text("Tamaño más vendido: ${metrics.topSize.toLabel()}")
+            Text("Tamaño + sabor más vendido: ${metrics.topPizzaBySize.toLabel()}")
+            Text("Tamaño + sabor menos vendido: ${metrics.leastPizzaBySize.toLabel()}")
+            Text("Bebida más vendida: ${metrics.topDrink.toLabel()}")
+            Text("Postre más vendido: ${metrics.topDessert.toLabel()}")
+            Text("Combo más vendido: ${metrics.topCombo.toLabel()}")
+            Text("Servicio entrega más usado: ${metrics.topDeliveryService.toLabel()}")
+            Text("Servicio entrega menos usado: ${metrics.bottomDeliveryService.toLabel()}")
+        }
     }
 }
 
@@ -156,3 +170,9 @@ private fun Long.toUiDate(): String =
     SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(this))
 
 private fun formatMoney(amount: Double): String = "$${"%,.2f".format(amount)}"
+
+private fun ItemMetric?.toLabel(): String =
+    this?.let { "${it.name} (${it.units})" } ?: "Sin datos"
+
+private fun PizzaMixMetric?.toLabel(): String =
+    this?.let { "${it.name} (${it.units})" } ?: "Sin datos"

@@ -3,15 +3,23 @@ package com.alos895.simplepos.ui.metrics
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.data.repository.OrderRepository
 import com.alos895.simplepos.data.repository.TransactionsRepository
 import com.alos895.simplepos.db.AppDatabase
+import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.db.entity.TransactionType
+import com.alos895.simplepos.model.CartItem
+import com.alos895.simplepos.model.CartItemPostre
+import com.alos895.simplepos.model.DeliveryType
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.Calendar
+import java.util.Locale
 
 data class MetricsDayRow(
     val dayMillis: Long,
@@ -23,10 +31,34 @@ data class MetricsDayRow(
     val basesUsed: Int = 0
 )
 
+data class ItemMetric(
+    val name: String,
+    val units: Int,
+    val revenue: Double
+)
+
+data class PizzaMixMetric(
+    val name: String,
+    val units: Int
+)
+
+data class AdvancedMetrics(
+    val topPizza: ItemMetric? = null,
+    val topSize: PizzaMixMetric? = null,
+    val topPizzaBySize: PizzaMixMetric? = null,
+    val leastPizzaBySize: PizzaMixMetric? = null,
+    val topDrink: ItemMetric? = null,
+    val topDessert: ItemMetric? = null,
+    val topCombo: ItemMetric? = null,
+    val topDeliveryService: PizzaMixMetric? = null,
+    val bottomDeliveryService: PizzaMixMetric? = null
+)
+
 data class MetricsUiState(
     val startDateMillis: Long,
     val endDateMillis: Long,
     val rows: List<MetricsDayRow> = emptyList(),
+    val advanced: AdvancedMetrics = AdvancedMetrics(),
     val isLoading: Boolean = false
 ) {
     val totalSales: Double = rows.sumOf { it.netSales }
@@ -35,9 +67,14 @@ data class MetricsUiState(
 }
 
 class MetricsViewModel(application: Application) : AndroidViewModel(application) {
+    private val gson = Gson()
     private val orderRepository = OrderRepository(application)
     private val transactionsRepository = TransactionsRepository(application)
     private val pizzaBaseDao = AppDatabase.getDatabase(application).pizzaBaseDao()
+
+    private val bebidaNames = MenuData.bebidaOptions
+        .map { it.nombre.trim().lowercase(Locale.getDefault()) }
+        .toSet()
 
     private val today = startOfDay(System.currentTimeMillis())
     private val initialState = MetricsUiState(
@@ -109,8 +146,110 @@ class MetricsViewModel(application: Application) : AndroidViewModel(application)
                 )
             }
 
-            _uiState.value = _uiState.value.copy(rows = rows, isLoading = false)
+            _uiState.value = _uiState.value.copy(
+                rows = rows,
+                advanced = calculateAdvancedMetrics(orders),
+                isLoading = false
+            )
         }
+    }
+
+    private fun calculateAdvancedMetrics(orders: List<OrderEntity>): AdvancedMetrics {
+        val pizzaByFlavor = mutableMapOf<String, Int>()
+        val pizzaBySize = mutableMapOf<String, Int>()
+        val pizzaBySizeAndFlavor = mutableMapOf<String, Int>()
+        val drinks = mutableMapOf<String, ItemMetric>()
+        val desserts = mutableMapOf<String, ItemMetric>()
+        val combos = mutableMapOf<String, ItemMetric>()
+        val deliveryServices = mutableMapOf<String, Int>()
+
+        orders.forEach { order ->
+            getCartItems(order).forEach { item ->
+                val size = item.sizeLabel().ifBlank { "Sin tamaño" }
+                val flavor = item.flavorLabel()
+                val units = item.cantidad
+                val subtotal = item.subtotal
+
+                pizzaByFlavor[flavor] = (pizzaByFlavor[flavor] ?: 0) + units
+                pizzaBySize[size] = (pizzaBySize[size] ?: 0) + units
+
+                val sizeFlavorKey = "$size • $flavor"
+                pizzaBySizeAndFlavor[sizeFlavorKey] = (pizzaBySizeAndFlavor[sizeFlavorKey] ?: 0) + units
+            }
+
+            getDessertItems(order).forEach { item ->
+                val name = item.postreOrExtra.nombre
+                val units = item.cantidad
+                val subtotal = item.subtotal
+                when {
+                    item.postreOrExtra.esCombo -> {
+                        combos[name] = (combos[name] ?: ItemMetric(name, 0, 0.0)).let {
+                            it.copy(units = it.units + units, revenue = it.revenue + subtotal)
+                        }
+                    }
+                    isBebidaItem(item) -> {
+                        drinks[name] = (drinks[name] ?: ItemMetric(name, 0, 0.0)).let {
+                            it.copy(units = it.units + units, revenue = it.revenue + subtotal)
+                        }
+                    }
+                    item.postreOrExtra.esPostre -> {
+                        desserts[name] = (desserts[name] ?: ItemMetric(name, 0, 0.0)).let {
+                            it.copy(units = it.units + units, revenue = it.revenue + subtotal)
+                        }
+                    }
+                }
+            }
+
+            val deliveryName = when (order.deliveryType) {
+                DeliveryType.PASAN -> "Pasan"
+                DeliveryType.CAMINANDO -> "Caminando"
+                DeliveryType.TOTODO -> "TOTODO"
+                DeliveryType.DOMICILIO -> "Domicilio"
+            }
+            deliveryServices[deliveryName] = (deliveryServices[deliveryName] ?: 0) + 1
+        }
+
+        return AdvancedMetrics(
+            topPizza = pizzaByFlavor.maxByOrNull { it.value }?.let { ItemMetric(it.key, it.value, 0.0) },
+            topSize = pizzaBySize.maxByOrNull { it.value }?.let { PizzaMixMetric(it.key, it.value) },
+            topPizzaBySize = pizzaBySizeAndFlavor.maxByOrNull { it.value }?.let { PizzaMixMetric(it.key, it.value) },
+            leastPizzaBySize = pizzaBySizeAndFlavor.minByOrNull { it.value }?.let { PizzaMixMetric(it.key, it.value) },
+            topDrink = drinks.maxByOrNull { it.value.units }?.value,
+            topDessert = desserts.maxByOrNull { it.value.units }?.value,
+            topCombo = combos.maxByOrNull { it.value.units }?.value,
+            topDeliveryService = deliveryServices.maxByOrNull { it.value }?.let { PizzaMixMetric(it.key, it.value) },
+            bottomDeliveryService = deliveryServices.minByOrNull { it.value }?.let { PizzaMixMetric(it.key, it.value) }
+        )
+    }
+
+    private fun getCartItems(order: OrderEntity): List<CartItem> = try {
+        gson.fromJson(order.itemsJson, object : TypeToken<List<CartItem>>() {}.type)
+    } catch (_: Exception) {
+        emptyList()
+    }
+
+    private fun getDessertItems(order: OrderEntity): List<CartItemPostre> = try {
+        gson.fromJson(order.dessertsJson, object : TypeToken<List<CartItemPostre>>() {}.type)
+    } catch (_: Exception) {
+        emptyList()
+    }
+
+    private fun isBebidaItem(item: CartItemPostre): Boolean {
+        if (item.postreOrExtra.esBebida) return true
+        val name = item.postreOrExtra.nombre.trim().lowercase(Locale.getDefault())
+        return name in bebidaNames
+    }
+
+    private fun CartItem.flavorLabel(): String {
+        return if (portions.isNotEmpty()) {
+            portions.joinToString(" + ") { "${it.fraction.label} ${it.pizzaName}" }
+        } else {
+            pizza?.nombre ?: "Pizza desconocida"
+        }
+    }
+
+    private fun CartItem.sizeLabel(): String {
+        return sizeName ?: tamano?.nombre ?: ""
     }
 
     private fun startOfDay(millis: Long): Long {
