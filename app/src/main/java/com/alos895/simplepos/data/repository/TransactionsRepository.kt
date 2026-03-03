@@ -25,6 +25,10 @@ class TransactionsRepository (context: Context) {
         return transactionDao.getTransactionsForDay(date)
     }
 
+    suspend fun getTransactionsByDateRange(start: Long, end: Long): List<TransactionEntity> {
+        return transactionDao.getTransactionsForDateRange(start, end)
+    }
+
     suspend fun deleteTransaction(transactionId: Long) {
         transactionDao.deleteTransaction(transactionId)
     }
