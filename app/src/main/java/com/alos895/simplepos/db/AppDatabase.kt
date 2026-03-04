@@ -5,8 +5,6 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
 import com.alos895.simplepos.db.entity.TransactionEntity
 import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.db.entity.ExtraEntity
@@ -38,26 +36,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun pizzaBaseDao(): PizzaBaseDao
 
     companion object {
-        private val MIGRATION_3_4 = object : Migration(3, 4) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
-                    """
-                    CREATE TABLE IF NOT EXISTS `pizza_bases` (
-                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                        `size` TEXT NOT NULL,
-                        `createdAt` INTEGER NOT NULL,
-                        `usedAt` INTEGER
-                    )
-                    """.trimIndent()
-                )
-            }
-        }
-
-        private val MIGRATION_4_5 = object : Migration(4, 5) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                // No schema change: keeps user data and aligns Room metadata/version.
-            }
-        }
+        private const val DB_NAME = "simplepos.db"
 
         @Volatile
         private var INSTANCE: AppDatabase? = null
@@ -67,9 +46,10 @@ abstract class AppDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "simple_pos_database"
+                    DB_NAME
                 )
-                    .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
+                    .fallbackToDestructiveMigration(true)
+                    .fallbackToDestructiveMigrationOnDowngrade(true)
                     .build()
 
                 INSTANCE = instance

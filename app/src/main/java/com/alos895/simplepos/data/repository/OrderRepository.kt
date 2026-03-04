@@ -1,7 +1,6 @@
 package com.alos895.simplepos.data.repository
 
 import android.content.Context
-import androidx.room.Room
 import androidx.room.withTransaction
 import com.alos895.simplepos.db.AppDatabase
 import com.alos895.simplepos.db.entity.OrderEntity
@@ -10,13 +9,7 @@ import com.google.gson.Gson
 import java.util.Calendar
 
 class OrderRepository(context: Context) {
-    private val db = Room.databaseBuilder(
-        context,
-        AppDatabase::class.java,
-        "simplepos.db"
-    )
-        .fallbackToDestructiveMigration(true)
-        .build()
+    private val db = AppDatabase.getDatabase(context.applicationContext)
 
     private val orderDao = db.orderDao()
 

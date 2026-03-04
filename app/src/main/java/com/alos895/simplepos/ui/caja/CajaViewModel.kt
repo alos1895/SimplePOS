@@ -28,6 +28,8 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
     private val orderRepository = OrderRepository(application)
     private val transactionsRepository = TransactionsRepository(application)
     private val gson = Gson()
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
     private val bebidaNames = MenuData.bebidaOptions
         .map { it.nombre.trim().lowercase(Locale.getDefault()) }
         .toSet()
@@ -54,9 +56,6 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         DailyStats()
     )
 
-    init {
-        loadDataForSelectedDate()
-    }
 
     fun setSelectedDate(date: Date) {
         _selectedDate.value = date
@@ -69,9 +68,14 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun loadDataForSelectedDate() {
         viewModelScope.launch {
-            val currentTime = _selectedDate.value.time
-            _ordersForDate.value = orderRepository.getOrdersByDate(currentTime)
-            _transactionsForDate.value = transactionsRepository.getTransactionsByDate(currentTime)
+            _isLoading.value = true
+            try {
+                val currentTime = _selectedDate.value.time
+                _ordersForDate.value = orderRepository.getOrdersByDate(currentTime)
+                _transactionsForDate.value = transactionsRepository.getTransactionsByDate(currentTime)
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 
@@ -156,8 +160,8 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
             // Calcular totales
             val postresTotal = desserts.filter { it.postreOrExtra.esPostre == true }
                 .sumOf { it.subtotal ?: 0.0 }
-            val envioTotal = order.deliveryServicePrice ?: 0.0
-            val total = order.total ?: 0.0
+            val envioTotal = order.deliveryServicePrice.toDouble()
+            val total = order.total
 
             sb.appendLine(
                 listOf(

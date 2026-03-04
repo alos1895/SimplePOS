@@ -26,12 +26,17 @@ fun CajaScreen(
     val dailyStats by cajaViewModel.dailyStats.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val selectedDate by cajaViewModel.selectedDate.collectAsState()
+    val isLoading by cajaViewModel.isLoading.collectAsState()
     val context = LocalContext.current
 
     val orders by cajaViewModel.ordersForDate.collectAsState()
     val transactions by cajaViewModel.transactionsForDate.collectAsState()
 
     val scrollState = rememberScrollState()
+
+    LaunchedEffect(Unit) {
+        cajaViewModel.refreshCajaData()
+    }
 
     val calendar = Calendar.getInstance()
     calendar.time = selectedDate 
@@ -60,6 +65,10 @@ fun CajaScreen(
         ) {
             Text("CAJA", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
+            if (isLoading) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                Spacer(modifier = Modifier.height(8.dp))
+            }
 
             // Selector de Fecha y Botón de Refresco
             Row(
