@@ -5,13 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.alos895.simplepos.db.entity.TransactionEntity
-import com.alos895.simplepos.db.entity.OrderEntity
-import com.alos895.simplepos.db.entity.ExtraEntity
-import com.alos895.simplepos.db.entity.IngredientEntity
-import com.alos895.simplepos.db.entity.PizzaEntity
-import com.alos895.simplepos.db.entity.PizzaSizeEntity
-import com.alos895.simplepos.db.entity.PizzaBaseEntity
+import com.alos895.simplepos.db.entity.*
 
 @Database(
     entities = [
@@ -21,9 +15,10 @@ import com.alos895.simplepos.db.entity.PizzaBaseEntity
         PizzaEntity::class,
         PizzaSizeEntity::class,
         ExtraEntity::class,
-        PizzaBaseEntity::class
+        PizzaBaseEntity::class,
+        OrderItemEntity::class // Nueva tabla
     ],
-    version = 5,
+    version = 6, // Incrementado de 5 a 6
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -34,6 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun pizzaDao(): PizzaDao
     abstract fun extraDao(): ExtraDao
     abstract fun pizzaBaseDao(): PizzaBaseDao
+    abstract fun orderItemDao(): OrderItemDao // Nuevo DAO
 
     companion object {
         private const val DB_NAME = "simplepos.db"
@@ -48,9 +44,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     DB_NAME
                 )
-                    .fallbackToDestructiveMigration(true)
-                    .fallbackToDestructiveMigrationOnDowngrade(true)
-                    .build()
+                // Se eliminó fallbackToDestructiveMigration para evitar pérdida de datos
+                .build()
 
                 INSTANCE = instance
                 instance
