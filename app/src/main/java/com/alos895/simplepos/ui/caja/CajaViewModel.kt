@@ -54,9 +54,6 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
         DailyStats()
     )
 
-    init {
-        loadDataForSelectedDate()
-    }
 
     fun setSelectedDate(date: Date) {
         _selectedDate.value = date
@@ -156,8 +153,8 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
             // Calcular totales
             val postresTotal = desserts.filter { it.postreOrExtra.esPostre == true }
                 .sumOf { it.subtotal ?: 0.0 }
-            val envioTotal = order.deliveryServicePrice ?: 0.0
-            val total = order.total ?: 0.0
+            val envioTotal = order.deliveryServicePrice.toDouble()
+            val total = order.total
 
             sb.appendLine(
                 listOf(

@@ -33,6 +33,10 @@ fun CajaScreen(
 
     val scrollState = rememberScrollState()
 
+    LaunchedEffect(Unit) {
+        cajaViewModel.refreshCajaData()
+    }
+
     val calendar = Calendar.getInstance()
     calendar.time = selectedDate 
 

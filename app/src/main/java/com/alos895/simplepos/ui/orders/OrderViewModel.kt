@@ -54,9 +54,6 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    init {
-        loadOrders()
-    }
 
     fun loadOrders() {
         viewModelScope.launch {
