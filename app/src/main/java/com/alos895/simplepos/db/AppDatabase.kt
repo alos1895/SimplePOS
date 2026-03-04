@@ -16,9 +16,9 @@ import com.alos895.simplepos.db.entity.*
         PizzaSizeEntity::class,
         ExtraEntity::class,
         PizzaBaseEntity::class,
-        OrderItemEntity::class // Nueva tabla
+        OrderItemEntity::class
     ],
-    version = 6, // Incrementado de 5 a 6
+    version = 1, // Reset a Versión 1 para lanzamiento
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -29,7 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun pizzaDao(): PizzaDao
     abstract fun extraDao(): ExtraDao
     abstract fun pizzaBaseDao(): PizzaBaseDao
-    abstract fun orderItemDao(): OrderItemDao // Nuevo DAO
+    abstract fun orderItemDao(): OrderItemDao
 
     companion object {
         private const val DB_NAME = "simplepos.db"
@@ -44,7 +44,9 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     DB_NAME
                 )
-                // Se eliminó fallbackToDestructiveMigration para evitar pérdida de datos
+                // Esto borrará versiones viejas de desarrollo (5, 6, etc.) y empezará de cero en la 1
+                .fallbackToDestructiveMigration(true)
+                .fallbackToDestructiveMigrationOnDowngrade(true)
                 .build()
 
                 INSTANCE = instance

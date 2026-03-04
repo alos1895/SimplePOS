@@ -3,18 +3,11 @@ package com.alos895.simplepos.ui.metrics
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.alos895.simplepos.data.datasource.MenuData
 import com.alos895.simplepos.data.repository.OrderRepository
 import com.alos895.simplepos.data.repository.TransactionsRepository
 import com.alos895.simplepos.db.AppDatabase
 import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.db.entity.TransactionType
-import com.alos895.simplepos.model.CartItem
-import com.alos895.simplepos.model.CartItemPostre
-import com.alos895.simplepos.model.DeliveryType
-import com.alos895.simplepos.model.sizeLabel
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -83,16 +76,11 @@ data class MetricsUiState(
 )
 
 class MetricsViewModel(application: Application) : AndroidViewModel(application) {
-    private val gson = Gson()
-    private val orderRepository = OrderRepository(application)
+    private val db = AppDatabase.getDatabase(application)
+    private val orderDao = db.orderDao()
+    private val orderItemDao = db.orderItemDao()
     private val transactionsRepository = TransactionsRepository(application)
-    private val pizzaBaseDao = AppDatabase.getDatabase(application).pizzaBaseDao()
-
-    private val bebidaNames = MenuData.bebidaOptions
-        .map { it.nombre.trim().lowercase(Locale.getDefault()) }
-        .toSet()
-
-    private val ingredientNameById = MenuData.ingredientes.associate { it.id to it.nombre }
+    private val pizzaBaseDao = db.pizzaBaseDao()
 
     private val today = startOfDay(System.currentTimeMillis())
     private val initialState = MetricsUiState(
@@ -131,24 +119,37 @@ class MetricsViewModel(application: Application) : AndroidViewModel(application)
 
         viewModelScope.launch {
             try {
-                val orders = orderRepository.getOrdersByDateRange(normalizedStart, normalizedEndExclusive)
+                val orders = orderDao.getOrdersForDateRange(normalizedStart, normalizedEndExclusive)
                 val txs = transactionsRepository.getTransactionsByDateRange(normalizedStart, normalizedEndExclusive)
                 val createdBases = pizzaBaseDao.getPizzaBasesByCreatedAtRange(normalizedStart, normalizedEndExclusive)
                 val usedBases = pizzaBaseDao.getPizzaBasesByUsedAtRange(normalizedStart, normalizedEndExclusive)
 
+                // Nuevas métricas desde la tabla normalizada
+                val productStats = orderItemDao.getProductRankingByDateRange(normalizedStart, normalizedEndExclusive)
+                
                 val trend = buildTrendRows(normalizedStart, normalizedEndExclusive, orders, txs, createdBases, usedBases)
 
                 val previousRange = getPreviousRange(normalizedStart, normalizedEndInclusive)
-                val previousOrders = orderRepository.getOrdersByDateRange(previousRange.first, previousRange.second)
+                val previousOrders = orderDao.getOrdersForDateRange(previousRange.first, previousRange.second)
 
-                val kpis = buildKpis(orders, previousOrders)
-                val categoryAll = buildCategoryMetrics(orders)
-                val tops = categoryAll.mapValues { it.value.sortedByDescending { item -> item.quantity }.take(15) }
-                    .filterValues { it.isNotEmpty() }
-                val bottoms = categoryAll
+                val kpis = buildKpis(orders, previousOrders, productStats)
+                
+                val tops = productStats.groupBy { it.type }
+                    .mapValues { (_, list) -> 
+                        list.map { TopItem(it.name, it.quantity, it.sales) }
+                            .sortedByDescending { it.quantity }
+                            .take(15)
+                    }
+
+                val bottoms = productStats.groupBy { it.type }
                     .filterValues { it.size >= 5 }
-                    .mapValues { (_, list) -> list.sortedBy { it.quantity }.take(5) }
-                val inventory = buildInventoryInsights(orders, createdBases, usedBases)
+                    .mapValues { (_, list) -> 
+                        list.map { TopItem(it.name, it.quantity, it.sales) }
+                            .sortedBy { it.quantity }
+                            .take(5)
+                    }
+
+                val inventory = buildInventoryInsights(productStats, createdBases, usedBases)
 
                 val status = when {
                     orders.isEmpty() -> MetricsStatus.EMPTY
@@ -209,7 +210,11 @@ class MetricsViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private fun buildKpis(currentOrders: List<OrderEntity>, previousOrders: List<OrderEntity>): List<KpiItem> {
+    private fun buildKpis(
+        currentOrders: List<OrderEntity>, 
+        previousOrders: List<OrderEntity>,
+        productStats: List<com.alos895.simplepos.db.ProductStats>
+    ): List<KpiItem> {
         val totalOrders = currentOrders.size
         val currentSales = currentOrders.sumOf { it.total - it.descuentoTOTODO }
         val previousSales = previousOrders.sumOf { it.total - it.descuentoTOTODO }
@@ -218,118 +223,28 @@ class MetricsViewModel(application: Application) : AndroidViewModel(application)
         val currentTicket = if (totalOrders > 0) currentSales / totalOrders else 0.0
         val previousTicket = if (previousCount > 0) previousSales / previousCount else 0.0
 
-        val currentPizzas = currentOrders.sumOf { order -> getCartItems(order).sumOf { it.cantidad } }
-        val previousPizzas = previousOrders.sumOf { order -> getCartItems(order).sumOf { it.cantidad } }
-        val currentPizzasPerOrder = if (totalOrders > 0) currentPizzas.toDouble() / totalOrders else 0.0
-        val previousPizzasPerOrder = if (previousCount > 0) previousPizzas.toDouble() / previousCount else 0.0
+        val totalPizzas = productStats.filter { it.type == "PIZZA" || it.type == "COMBINADA" }.sumOf { it.quantity }
+        val pizzasPerOrder = if (totalOrders > 0) totalPizzas.toDouble() / totalOrders else 0.0
 
         val currentDeliveryRev = currentOrders.sumOf { it.deliveryServicePrice.toDouble() }
-        val previousDeliveryRev = previousOrders.sumOf { it.deliveryServicePrice.toDouble() }
         
-        val currentDeliveryCount = currentOrders.count { it.deliveryType == DeliveryType.DOMICILIO }
-        val previousDeliveryCount = previousOrders.count { it.deliveryType == DeliveryType.DOMICILIO }
-        
-        val currentAvgDelivery = if (currentDeliveryCount > 0) currentDeliveryRev / currentDeliveryCount else 0.0
-        val previousAvgDelivery = if (previousDeliveryCount > 0) previousDeliveryRev / previousDeliveryCount else 0.0
-
         return listOf(
             KpiItem("Órdenes", totalOrders.toString(), percentDeltaLabel(totalOrders.toDouble(), previousCount.toDouble())),
             KpiItem("Ventas netas", formatMoney(currentSales), percentDeltaLabel(currentSales, previousSales), true),
             KpiItem("Ticket prom.", formatMoney(currentTicket), percentDeltaLabel(currentTicket, previousTicket), true),
-            KpiItem("Pizzas/Ticket", "%.1f".format(currentPizzasPerOrder), percentDeltaLabel(currentPizzasPerOrder, previousPizzasPerOrder)),
-            KpiItem("Envío prom.", formatMoney(currentAvgDelivery), percentDeltaLabel(currentAvgDelivery, previousAvgDelivery), true),
-            KpiItem("Ingreso Envío", formatMoney(currentDeliveryRev), percentDeltaLabel(currentDeliveryRev, previousDeliveryRev), true)
+            KpiItem("Pizzas/Ticket", "%.1f".format(pizzasPerOrder)),
+            KpiItem("Ingreso Envío", formatMoney(currentDeliveryRev), null, true)
         )
     }
 
-    private fun buildCategoryMetrics(orders: List<OrderEntity>): Map<String, List<TopItem>> {
-        val flavorMap = mutableMapOf<String, TopItem>()
-        val sizeMap = mutableMapOf<String, TopItem>()
-        val flavorSizeMap = mutableMapOf<String, TopItem>()
-        val combinedMap = mutableMapOf<String, TopItem>()
-        
-        val extrasMap = mutableMapOf<String, TopItem>()
-        val comboPromoMap = mutableMapOf<String, TopItem>()
-        val postreMap = mutableMapOf<String, TopItem>()
-        val bebidaMap = mutableMapOf<String, TopItem>()
-        val deliveryTypeMap = mutableMapOf<String, TopItem>()
-
-        orders.forEach { order ->
-            getCartItems(order).forEach { item ->
-                val flavor = item.flavorLabel()
-                val size = item.sizeLabel
-                val flavorSize = "$flavor ($size)"
-                
-                if (item.portions.size > 1) {
-                    combinedMap[flavor] = (combinedMap[flavor] ?: TopItem(flavor, 0, 0.0)).let {
-                        it.copy(quantity = it.quantity + item.cantidad, sales = it.sales + item.subtotal)
-                    }
-                } else {
-                    flavorMap[flavor] = (flavorMap[flavor] ?: TopItem(flavor, 0, 0.0)).let {
-                        it.copy(quantity = it.quantity + item.cantidad, sales = it.sales + item.subtotal)
-                    }
-                }
-                
-                sizeMap[size] = (sizeMap[size] ?: TopItem(size, 0, 0.0)).let {
-                    it.copy(quantity = it.quantity + item.cantidad, sales = it.sales + item.subtotal)
-                }
-
-                flavorSizeMap[flavorSize] = (flavorSizeMap[flavorSize] ?: TopItem(flavorSize, 0, 0.0)).let {
-                    it.copy(quantity = it.quantity + item.cantidad, sales = it.sales + item.subtotal)
-                }
-            }
-
-            getDessertItems(order).forEach { item ->
-                val name = item.postreOrExtra.nombre
-                val targetMap = when {
-                    item.postreOrExtra.esCombo -> comboPromoMap
-                    isBebidaItem(item) -> bebidaMap
-                    item.postreOrExtra.esPostre -> postreMap
-                    else -> extrasMap
-                }
-                targetMap[name] = (targetMap[name] ?: TopItem(name, 0, 0.0)).let {
-                    it.copy(quantity = it.quantity + item.cantidad, sales = it.sales + item.subtotal)
-                }
-            }
-
-            val dType = order.deliveryType.name
-            deliveryTypeMap[dType] = (deliveryTypeMap[dType] ?: TopItem(dType, 0, 0.0)).let {
-                it.copy(quantity = it.quantity + 1, sales = it.sales + order.deliveryServicePrice)
-            }
-        }
-
-        return linkedMapOf(
-            "Pizzas" to flavorMap.values.toList(),
-            "Combinadas" to combinedMap.values.toList(),
-            "Tamaños" to sizeMap.values.toList(),
-            "Sabor y Tamaño" to flavorSizeMap.values.toList(),
-            "Bebidas" to bebidaMap.values.toList(),
-            "Postres" to postreMap.values.toList(),
-            "Combos" to comboPromoMap.values.toList(),
-            "Extras" to extrasMap.values.toList(),
-            "Logística" to deliveryTypeMap.values.toList()
-        ).filterValues { it.isNotEmpty() }
-    }
-
     private fun buildInventoryInsights(
-        orders: List<OrderEntity>,
+        productStats: List<com.alos895.simplepos.db.ProductStats>,
         createdBases: List<com.alos895.simplepos.db.entity.PizzaBaseEntity>,
         usedBases: List<com.alos895.simplepos.db.entity.PizzaBaseEntity>
     ): InventoryInsightsData {
-        val ingredientUsage = mutableMapOf<String, TopItem>()
-
-        orders.forEach { order ->
-            getCartItems(order).forEach { item ->
-                item.pizza?.ingredientesBaseIds?.forEach { ingredientId ->
-                    val name = ingredientNameById[ingredientId] ?: "Ingrediente $ingredientId"
-                    val current = ingredientUsage[name] ?: TopItem(name, 0, 0.0)
-                    ingredientUsage[name] = current.copy(quantity = current.quantity + item.cantidad)
-                }
-            }
-        }
-
-        val topConsumption = ingredientUsage.values
-            .sortedByDescending { it.quantity }
+        // En un futuro podrías mapear ingredientes a productos aquí
+        val topPizzas = productStats.filter { it.type == "PIZZA" }
+            .map { TopItem(it.name, it.quantity, it.sales) }
             .take(5)
 
         val availableBySize = createdBases.groupBy { it.size.lowercase(Locale.getDefault()) }
@@ -338,48 +253,17 @@ class MetricsViewModel(application: Application) : AndroidViewModel(application)
         val stockAlerts = availableBySize
             .filterValues { it <= 5 }
             .map { (size, available) ->
-                val severity = when {
-                    available == 0 -> "alta"
-                    available <= 2 -> "media"
-                    else -> "baja"
-                }
                 InventoryAlert(
                     title = "Stock bajo de base ${size.uppercase()}",
                     detail = "Quedan $available unidades listas.",
-                    severity = severity
+                    severity = if (available <= 2) "media" else "baja"
                 )
             }
-            .ifEmpty {
-                listOf(InventoryAlert("Stock óptimo", "Todas las bases tienen inventario suficiente.", "baja"))
-            }
-
-        val unusedOldBases = createdBases.count {
-            it.usedAt == null && abs(today - startOfDay(it.createdAt)) > DAY_MS
-        }
-
-        val shrinkage = if (unusedOldBases > 0) {
-            listOf("$unusedOldBases bases preparadas ayer o antes aún no se han usado.")
-        } else {
-            listOf("Sin merma aparente en bases.")
-        }
-
-        val actions = mutableListOf<String>()
-        if (stockAlerts.any { it.severity == "alta" || it.severity == "media" }) {
-            actions += "Producir más bases de tamaño ${stockAlerts.filter { it.severity != "baja" }.joinToString { it.title.split(" ").last() }}."
-        }
-        if (topConsumption.isNotEmpty()) {
-            actions += "Revisar stock de: ${topConsumption.take(2).joinToString { it.name }}."
-        }
-        if (unusedOldBases > 5) {
-            actions += "Ajustar producción para reducir merma de bases."
-        }
-        if (actions.isEmpty()) actions += "Operación estable."
 
         return InventoryInsightsData(
-            consumptionTop5 = topConsumption,
+            consumptionTop5 = topPizzas,
             stockAlerts = stockAlerts,
-            shrinkageNotes = shrinkage,
-            recommendedActions = actions
+            recommendedActions = listOf("Operación normal basada en tabla normalizada.")
         )
     }
 
@@ -391,36 +275,10 @@ class MetricsViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun percentDeltaLabel(current: Double, previous: Double): String? {
-        if (previous == 0.0) return if (current > 0) "+100% vs ant." else null
+        if (previous == 0.0) return null
         val delta = ((current - previous) / previous) * 100.0
         val sign = if (delta >= 0) "+" else ""
         return "$sign${"%.1f".format(delta)}% vs ant."
-    }
-
-    private fun getCartItems(order: OrderEntity): List<CartItem> = try {
-        gson.fromJson(order.itemsJson, object : TypeToken<List<CartItem>>() {}.type)
-    } catch (_: Exception) {
-        emptyList()
-    }
-
-    private fun getDessertItems(order: OrderEntity): List<CartItemPostre> = try {
-        gson.fromJson(order.dessertsJson, object : TypeToken<List<CartItemPostre>>() {}.type)
-    } catch (_: Exception) {
-        emptyList()
-    }
-
-    private fun isBebidaItem(item: CartItemPostre): Boolean {
-        if (item.postreOrExtra.esBebida) return true
-        val name = item.postreOrExtra.nombre.trim().lowercase(Locale.getDefault())
-        return name in bebidaNames
-    }
-
-    private fun CartItem.flavorLabel(): String {
-        return if (portions.isNotEmpty()) {
-            portions.joinToString(" + ") { "${it.fraction.label} ${it.pizzaName}" }
-        } else {
-            pizza?.nombre ?: "Pizza"
-        }
     }
 
     private fun startOfDay(millis: Long): Long {
