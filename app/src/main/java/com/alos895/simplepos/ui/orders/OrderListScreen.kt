@@ -54,6 +54,7 @@ fun OrderListScreen(
 ) {
     val orders by orderViewModel.orders.collectAsState()
     val selectedDate by orderViewModel.selectedDate.collectAsState()
+    val isLoading by orderViewModel.isLoading.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     var isPrinting by remember { mutableStateOf(false) }
@@ -99,6 +100,11 @@ fun OrderListScreen(
                     .fillMaxHeight()
                     .padding(8.dp)
             ) {
+                if (isLoading) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

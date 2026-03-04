@@ -31,6 +31,8 @@ import java.util.Locale
 class OrderViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = OrderRepository(application)
     private val gson = Gson()
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
     // For storing the full list of orders fetched from the repository
     private val _rawOrders = MutableStateFlow<List<OrderEntity>>(emptyList())
 
@@ -57,8 +59,13 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadOrders() {
         viewModelScope.launch {
-            val currentDate : Long = _selectedDate.value.time
-            _rawOrders.value = repository.getOrdersByDate(currentDate)
+            _isLoading.value = true
+            try {
+                val currentDate : Long = _selectedDate.value.time
+                _rawOrders.value = repository.getOrdersByDate(currentDate)
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 

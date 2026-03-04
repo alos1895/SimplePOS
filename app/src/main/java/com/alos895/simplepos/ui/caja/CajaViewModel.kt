@@ -28,6 +28,8 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
     private val orderRepository = OrderRepository(application)
     private val transactionsRepository = TransactionsRepository(application)
     private val gson = Gson()
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
     private val bebidaNames = MenuData.bebidaOptions
         .map { it.nombre.trim().lowercase(Locale.getDefault()) }
         .toSet()
@@ -66,9 +68,14 @@ class CajaViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun loadDataForSelectedDate() {
         viewModelScope.launch {
-            val currentTime = _selectedDate.value.time
-            _ordersForDate.value = orderRepository.getOrdersByDate(currentTime)
-            _transactionsForDate.value = transactionsRepository.getTransactionsByDate(currentTime)
+            _isLoading.value = true
+            try {
+                val currentTime = _selectedDate.value.time
+                _ordersForDate.value = orderRepository.getOrdersByDate(currentTime)
+                _transactionsForDate.value = transactionsRepository.getTransactionsByDate(currentTime)
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 
