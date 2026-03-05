@@ -172,7 +172,7 @@ class OrderRepository(context: Context) {
 
 
     private suspend fun restoreBasesForOrder(order: OrderEntity) {
-        val needsBaseRestore = order.deliveryType != DeliveryType.TOTODO.name
+        val needsBaseRestore = order.deliveryType != DeliveryType.TOTODO
         if (!needsBaseRestore) return
 
         val type = object : TypeToken<List<CartItem>>() {}.type
