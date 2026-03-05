@@ -254,6 +254,13 @@ private fun InventoryScreen(
                             )
                         }
                     }
+
+                    RemoveBrokenBaseCard(
+                        onRemoveSmall = { viewModel.discardOneUnusedBase("chica") },
+                        onRemoveMedium = { viewModel.discardOneUnusedBase("mediana") },
+                        onRemoveLarge = { viewModel.discardOneUnusedBase("grande") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             } else {
                 if (dailyBases.isEmpty()) {
@@ -376,6 +383,32 @@ private fun AddPizzaBasesForm(
         )
     }
 
+}
+
+
+@Composable
+private fun RemoveBrokenBaseCard(
+    onRemoveSmall: () -> Unit,
+    onRemoveMedium: () -> Unit,
+    onRemoveLarge: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(modifier = modifier) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Descartar base dañada (no usada)",
+                style = MaterialTheme.typography.titleSmall
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onRemoveSmall) { Text("-1 Chica") }
+                Button(onClick = onRemoveMedium) { Text("-1 Mediana") }
+                Button(onClick = onRemoveLarge) { Text("-1 Grande") }
+            }
+        }
+    }
 }
 
 @Composable
