@@ -7,36 +7,30 @@ import com.alos895.simplepos.model.sizeLabel
 import com.alos895.simplepos.model.unitPriceSingle
 import com.alos895.simplepos.model.displayName
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AttachMoney
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Comment
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Icecream
-import androidx.compose.material.icons.filled.LocalDrink
-import androidx.compose.material.icons.filled.LocalPizza
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PieChart
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.alos895.simplepos.ui.print.BluetoothPrinterViewModel
 import com.alos895.simplepos.data.datasource.MenuData
@@ -69,7 +63,6 @@ fun MenuScreen(
     var deliveryMenuExpanded by remember { mutableStateOf(false) }
     var selectedSection by remember { mutableStateOf(MenuSection.PIZZAS) }
     
-    // Cambiamos el orden para que 2 mitades sea el primero (por defecto)
     val largeComboPatterns = remember {
         listOf(
             FractionPattern("halves", "2 mitades (1/2)", List(2) { PizzaFractionType.HALF }),
@@ -87,8 +80,7 @@ fun MenuScreen(
 
     val total by remember(cartItems, dessertItems, selectedDelivery) {
         derivedStateOf {
-            cartItems.sumOf { it.subtotal } + dessertItems.sumOf { it.subtotal } + (selectedDelivery?.price
-                ?: 0)
+            cartItems.sumOf { it.subtotal } + dessertItems.sumOf { it.subtotal } + (selectedDelivery?.price ?: 0)
         }
     }
 
@@ -106,6 +98,7 @@ fun MenuScreen(
         }
     }
 
+    // Modal de edición de precio (estilizado)
     if (priceEditorItem != null) {
         val normalizedInput = priceEditorInput.replace(",", ".")
         val parsedPrice = normalizedInput.toDoubleOrNull()
@@ -114,21 +107,23 @@ fun MenuScreen(
                 priceEditorItem = null
                 priceEditorInput = ""
             },
-            title = { Text("Editar precio de pizza") },
+            title = { Text("Editar Precio", fontWeight = FontWeight.Bold) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(priceEditorItem?.displayName ?: "Pizza")
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(priceEditorItem?.displayName ?: "Producto", style = MaterialTheme.typography.bodyLarge)
                     OutlinedTextField(
                         value = priceEditorInput,
                         onValueChange = { priceEditorInput = it },
                         label = { Text("Precio unitario") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         val item = priceEditorItem
                         if (item != null && parsedPrice != null && parsedPrice >= 0) {
@@ -137,456 +132,124 @@ fun MenuScreen(
                         priceEditorItem = null
                         priceEditorInput = ""
                     },
-                    enabled = parsedPrice != null && parsedPrice >= 0
-                ) {
-                    Text("Guardar")
-                }
+                    enabled = parsedPrice != null && parsedPrice >= 0,
+                    shape = RoundedCornerShape(12.dp)
+                ) { Text("Guardar") }
             },
             dismissButton = {
                 TextButton(onClick = {
                     priceEditorItem = null
                     priceEditorInput = ""
-                }) {
-                    Text("Cancelar")
-                }
+                }) { Text("Cancelar") }
             }
         )
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Punto de Venta", fontWeight = FontWeight.ExtraBold) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.primary
+                )
+            )
+        }
     ) { innerPadding ->
-        Row(modifier = Modifier
-            .fillMaxSize()
-            .padding(8.dp)) {
-            // Menú (izquierda)
-            Column(modifier = Modifier
-                .weight(1f)
-                .padding(8.dp)) {
-                Text("Menú", style = MaterialTheme.typography.titleLarge)
-                Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+        ) {
+            // --- COLUMNA IZQUIERDA: MENÚ ---
+            Column(
+                modifier = Modifier
+                    .weight(1.3f)
+                    .fillMaxHeight()
+                    .padding(horizontal = 16.dp)
+            ) {
+                // Selector de secciones (Segmented Buttons)
                 val sections = remember { MenuSection.values().toList() }
                 SingleChoiceSegmentedButtonRow(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp)
                 ) {
                     sections.forEachIndexed { index, section ->
                         SegmentedButton(
                             selected = selectedSection == section,
                             onClick = { selectedSection = section },
                             shape = SegmentedButtonDefaults.itemShape(index, sections.size),
-                            icon = {
-                                Icon(section.icon, contentDescription = section.label)
-                            },
-                            label = {
-                                Text(section.label)
-                            }
+                            icon = { Icon(section.icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                            label = { Text(section.label, fontSize = 12.sp, maxLines = 1) }
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
                 LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(bottom = 24.dp)
                 ) {
                     when (selectedSection) {
                         MenuSection.PIZZAS -> {
                             item {
-                                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                                    Column(
-                                        modifier = Modifier.padding(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Filled.LocalPizza,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
-                                            Text(
-                                                "Selecciona tu pizza",
-                                                style = MaterialTheme.typography.titleLarge,
-                                                modifier = Modifier.weight(1f)
-                                            )
-                                        }
-
-                                        if (pizzas.isEmpty()) {
-                                            Text(
-                                                "No hay pizzas disponibles en este momento.",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        } else {
-                                            var pizzaMenuExpanded by remember { mutableStateOf(false) }
-                                            var selectedPizza by remember(pizzas) {
-                                                mutableStateOf(pizzas.firstOrNull())
-                                            }
-                                            var sizeMenuExpanded by remember { mutableStateOf(false) }
-                                            var selectedTamano by remember(selectedPizza) {
-                                                mutableStateOf(selectedPizza?.tamanos?.firstOrNull())
-                                            }
-
-                                            ExposedDropdownMenuBox(
-                                                expanded = pizzaMenuExpanded,
-                                                onExpandedChange = { pizzaMenuExpanded = it }
-                                            ) {
-                                                TextField(
-                                                    value = selectedPizza?.nombre ?: "",
-                                                    onValueChange = {},
-                                                    readOnly = true,
-                                                    label = { Text("Especialidad") },
-                                                    placeholder = { Text("Elige una especialidad") },
-                                                    trailingIcon = {
-                                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = pizzaMenuExpanded)
-                                                    },
-                                                    modifier = Modifier
-                                                        .menuAnchor()
-                                                        .fillMaxWidth()
-                                                )
-                                                ExposedDropdownMenu(
-                                                    expanded = pizzaMenuExpanded,
-                                                    onDismissRequest = { pizzaMenuExpanded = false }
-                                                ) {
-                                                    pizzas.forEach { pizza ->
-                                                        DropdownMenuItem(
-                                                            text = { Text(pizza.nombre) },
-                                                            onClick = {
-                                                                selectedPizza = pizza
-                                                                selectedTamano = pizza.tamanos.firstOrNull()
-                                                                pizzaMenuExpanded = false
-                                                                sizeMenuExpanded = false
-                                                            }
-                                                        )
-                                                    }
-                                                }
-                                            }
-
-                                            val availableSizes = selectedPizza?.tamanos.orEmpty()
-
-                                            ExposedDropdownMenuBox(
-                                                expanded = sizeMenuExpanded,
-                                                onExpandedChange = { sizeMenuExpanded = it && availableSizes.isNotEmpty() }
-                                            ) {
-                                                val selectedSizeLabel = selectedTamano?.let { tamano ->
-                                                    "${tamano.nombre} - $${"%.2f".format(tamano.precioBase)}"
-                                                } ?: ""
-                                                TextField(
-                                                    value = selectedSizeLabel,
-                                                    onValueChange = {},
-                                                    readOnly = true,
-                                                    label = { Text("Tamaño") },
-                                                    placeholder = { Text("Selecciona el tamaño") },
-                                                    trailingIcon = {
-                                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = sizeMenuExpanded)
-                                                    },
-                                                    enabled = availableSizes.isNotEmpty(),
-                                                    modifier = Modifier
-                                                        .menuAnchor()
-                                                        .fillMaxWidth()
-                                                )
-                                                ExposedDropdownMenu(
-                                                    expanded = sizeMenuExpanded,
-                                                    onDismissRequest = { sizeMenuExpanded = false }
-                                                ) {
-                                                    availableSizes.forEach { tamano ->
-                                                        DropdownMenuItem(
-                                                            text = { Text("${tamano.nombre} - $${"%.2f".format(tamano.precioBase)}") },
-                                                            onClick = {
-                                                                selectedTamano = tamano
-                                                                sizeMenuExpanded = false
-                                                            }
-                                                        )
-                                                    }
-                                                }
-                                            }
-
-                                            selectedPizza?.let { pizza ->
-                                                val ingredientNames = pizza.ingredientesBaseIds
-                                                    .mapNotNull { id -> ingredientes.find { it.id == id }?.nombre }
-
-                                                if (ingredientNames.isNotEmpty()) {
-                                                    Text(
-                                                        "Ingredientes: ${ingredientNames.joinToString(", ")}",
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
-                                                }
-                                            }
-
-                                            selectedTamano?.let { tamano ->
-                                                AssistChip(
-                                                    onClick = {},
-                                                    enabled = false,
-                                                    label = {
-                                                        Text("$${"%.2f".format(tamano.precioBase)}")
-                                                    },
-                                                    leadingIcon = {
-                                                        Icon(Icons.Filled.AttachMoney, contentDescription = null)
-                                                    }
-                                                )
-                                            }
-
-                                            val canAddToCart = selectedPizza != null && selectedTamano != null
-
-                                            Button(
-                                                onClick = {
-                                                    val pizza = selectedPizza
-                                                    val tamano = selectedTamano
-                                                    if (pizza != null && tamano != null) {
-                                                        cartViewModel.addToCart(pizza, tamano)
-                                                    }
-                                                },
-                                                modifier = Modifier.align(Alignment.End),
-                                                enabled = canAddToCart
-                                            ) {
-                                                Text("Agregar")
-                                            }
-                                        }
-                                    }
-                                }
+                                PizzaSelectionCard(
+                                    pizzas = pizzas,
+                                    ingredientes = ingredientes,
+                                    onAdd = { p, t -> cartViewModel.addToCart(p, t) }
+                                )
                             }
                         }
                         MenuSection.PIZZAS_COMBINADAS -> {
                             item {
-                                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                                    Column(
-                                        modifier = Modifier.padding(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Filled.PieChart,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Text("Pizzas combinadas", style = MaterialTheme.typography.titleLarge)
-                                        }
-                                        Text(
-                                            "Arma pizzas grandes o medianas con varias especialidades.",
-                                            style = MaterialTheme.typography.bodyMedium
+                                CombinedPizzaCard(
+                                    combinablePizzas = combinablePizzas,
+                                    onOpenLarge = {
+                                        comboDialogConfig = ComboDialogConfig(
+                                            title = "Pizza Grande Combinada",
+                                            sizeName = "Extra Grande",
+                                            patterns = largeComboPatterns
                                         )
-                                        if (combinablePizzas.isEmpty()) {
-                                            Text(
-                                                "No hay pizzas combinables disponibles en este momento.",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        } else {
-                                            FilledTonalButton(
-                                                onClick = {
-                                                    comboDialogConfig = ComboDialogConfig(
-                                                        title = "Arma tu pizza grande combinada",
-                                                        sizeName = "Extra Grande",
-                                                        patterns = largeComboPatterns
-                                                    )
-                                                },
-                                                modifier = Modifier.fillMaxWidth(),
-                                                enabled = combinablePizzas.isNotEmpty()
-                                            ) {
-                                                Text("Pizza grande combinada")
-                                            }
-                                            FilledTonalButton(
-                                                onClick = {
-                                                    comboDialogConfig = ComboDialogConfig(
-                                                        title = "Arma tu pizza mediana 1/2 y 1/2",
-                                                        sizeName = "Mediana",
-                                                        patterns = mediumComboPatterns
-                                                    )
-                                                },
-                                                modifier = Modifier.fillMaxWidth(),
-                                                enabled = combinablePizzas.isNotEmpty()
-                                            ) {
-                                                Text("Pizza mediana 1/2 y 1/2")
-                                            }
-                                        }
+                                    },
+                                    onOpenMedium = {
+                                        comboDialogConfig = ComboDialogConfig(
+                                            title = "Pizza Mediana 1/2 y 1/2",
+                                            sizeName = "Mediana",
+                                            patterns = mediumComboPatterns
+                                        )
                                     }
-                                }
+                                )
                             }
                         }
-                        MenuSection.POSTRES -> {
-                            if (desserts.isEmpty()) {
+                        else -> {
+                            // Renderizado genérico para Bebidas, Postres, Combos, Extras
+                            val itemsToShow = when (selectedSection) {
+                                MenuSection.POSTRES -> desserts
+                                MenuSection.COMBOS -> combos
+                                MenuSection.BEBIDAS -> bebidas
+                                MenuSection.EXTRAS -> extras
+                                else -> emptyList()
+                            }
+                            
+                            if (itemsToShow.isEmpty() && selectedSection != MenuSection.COMENTARIOS) {
                                 item {
-                                    Text(
-                                        "No hay postres disponibles en este momento.",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(16.dp)
-                                    )
+                                    EmptySectionPlaceholder(selectedSection.label)
+                                }
+                            } else if (selectedSection == MenuSection.COMENTARIOS) {
+                                item {
+                                    CommentsCard(comentarios) { cartViewModel.setComentarios(it) }
                                 }
                             } else {
-                                items(desserts) { dessert ->
-                                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                                        ListItem(
-                                            headlineContent = { Text(dessert.nombre) },
-                                            supportingContent = {
-                                                Text("$${"%.2f".format(dessert.precio)}")
-                                            },
-                                            leadingContent = {
-                                                Icon(
-                                                    imageVector = Icons.Filled.Icecream,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                            },
-                                            trailingContent = {
-                                                Button(onClick = { cartViewModel.addDessertToCart(dessert) }) {
-                                                    Text("Agregar")
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        MenuSection.COMBOS -> {
-                            if (combos.isEmpty()) {
-                                item {
-                                    Text(
-                                        "No hay combos disponibles en este momento.",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                items(itemsToShow) { item ->
+                                    MenuProductItem(
+                                        name = item.nombre,
+                                        price = item.precio,
+                                        icon = selectedSection.icon,
+                                        onAdd = { cartViewModel.addDessertToCart(item) }
                                     )
-                                }
-                            } else {
-                                items(combos) { combo ->
-                                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                                        ListItem(
-                                            headlineContent = { Text(combo.nombre) },
-                                            supportingContent = {
-                                                Text("$${"%.2f".format(combo.precio)}")
-                                            },
-                                            trailingContent = {
-                                                Button(onClick = { cartViewModel.addDessertToCart(combo) }) {
-                                                    Text("Agregar")
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        MenuSection.BEBIDAS -> {
-                            if (bebidas.isEmpty()) {
-                                item {
-                                    Text(
-                                        "No hay bebidas disponibles en este momento.",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(16.dp)
-                                    )
-                                }
-                            } else {
-                                items(bebidas) { bebida ->
-                                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                                        ListItem(
-                                            headlineContent = { Text(bebida.nombre) },
-                                            supportingContent = {
-                                                Text("$${"%.2f".format(bebida.precio)}")
-                                            },
-                                            leadingContent = {
-                                                Icon(
-                                                    imageVector = Icons.Filled.LocalDrink,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                            },
-                                            trailingContent = {
-                                                Button(onClick = { cartViewModel.addDessertToCart(bebida) }) {
-                                                    Text("Agregar")
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        MenuSection.EXTRAS -> {
-                            if (extras.isEmpty()) {
-                                item {
-                                    Text(
-                                        "No hay extras disponibles en este momento.",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(16.dp)
-                                    )
-                                }
-                            } else {
-                                items(extras) { extra ->
-                                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                                        ListItem(
-                                            headlineContent = { Text(extra.nombre) },
-                                            supportingContent = {
-                                                Text("$${"%.2f".format(extra.precio)}")
-                                            },
-                                            leadingContent = {
-                                                Icon(
-                                                    imageVector = Icons.Filled.AttachMoney,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                            },
-                                            trailingContent = {
-                                                Button(onClick = { cartViewModel.addDessertToCart(extra) }) {
-                                                    Text("Agregar")
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        MenuSection.COMENTARIOS -> {
-                            item {
-                                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                                    Column(
-                                        modifier = Modifier.padding(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Filled.Comment,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Text(
-                                                "Comentarios de la orden",
-                                                style = MaterialTheme.typography.titleLarge
-                                            )
-                                        }
-
-                                        OutlinedTextField(
-                                            value = comentarios,
-                                            onValueChange = { cartViewModel.setComentarios(it) },
-                                            label = { Text("Escribe aquí los comentarios de la orden") },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            minLines = 5,
-                                            maxLines = 8,
-                                            colors = OutlinedTextFieldDefaults.colors(
-                                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                                            )
-                                        )
-
-                                        if (comentarios.isNotEmpty()) {
-                                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                Text(
-                                                    "Comentarios actuales:",
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    color = MaterialTheme.colorScheme.primary
-                                                )
-                                                Text(
-                                                    comentarios,
-                                                    style = MaterialTheme.typography.bodyMedium
-                                                )
-                                            }
-                                        }
-                                    }
                                 }
                             }
                         }
@@ -594,339 +257,115 @@ fun MenuScreen(
                 }
             }
 
-            // Carrito (derecha)
-            Column(
+            // --- COLUMNA DERECHA: CARRITO ---
+            Surface(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(8.dp)
+                    .fillMaxHeight(),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                tonalElevation = 1.dp
             ) {
-                var cartExpanded by remember { mutableStateOf(true) }
-                var customerExpanded by remember { mutableStateOf(true) }
-                val totalItems = cartItems.sumOf { it.cantidad } + dessertItems.sumOf { it.cantidad }
-                val rightScrollState = rememberScrollState()
-
                 Column(
                     modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .verticalScroll(rightScrollState),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                        .fillMaxSize()
+                        .padding(16.dp)
                 ) {
-                    ElevatedCard {
-                        Column {
-                            ListItem(
-                                leadingContent = {
-                                    Icon(
-                                        imageVector = Icons.Filled.ShoppingCart,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                },
-                                headlineContent = { Text("Resumen del carrito") },
-                                trailingContent = {
-                                    IconButton(onClick = { cartExpanded = !cartExpanded }) {
-                                        Icon(
-                                            imageVector = if (cartExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                                            contentDescription = if (cartExpanded) "Contraer" else "Expandir"
-                                        )
-                                    }
-                                }
-                            )
-                            AnimatedVisibility(visible = cartExpanded) {
-                                if (cartItems.isEmpty() && dessertItems.isEmpty()) {
-                                    Text(
-                                        "Tu carrito está vacío",
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                } else {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        cartItems.forEach { item ->
-                                            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                                                Column(
-                                                    modifier = Modifier.padding(12.dp),
-                                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                                ) {
-                                                    Row(
-                                                        modifier = Modifier.fillMaxWidth(),
-                                                        verticalAlignment = Alignment.CenterVertically
-                                                    ) {
-                                                        Column(modifier = Modifier.weight(1f)) {
-                                                            Text(
-                                                                if (item.isCombo) {
-                                                                    if (item.sizeLabel.isBlank()) "Pizza combinada"
-                                                                    else "Pizza ${item.sizeLabel} combinada"
-                                                                } else {
-                                                                    item.pizza?.nombre ?: "Pizza"
-                                                                },
-                                                                style = MaterialTheme.typography.titleMedium
-                                                            )
-                                                            if (!item.isCombo && item.sizeLabel.isNotBlank()) {
-                                                                Text(item.sizeLabel, style = MaterialTheme.typography.bodySmall)
-                                                            }
-                                                            if (item.isCombo) {
-                                                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                                    item.portions.forEach { portion ->
-                                                                        Text(
-                                                                            "- ${portion.fraction.label}: ${portion.pizzaName}",
-                                                                            style = MaterialTheme.typography.bodySmall
-                                                                        )
-                                                                    }
-                                                                }
-                                                            } else {
-                                                                Text(
-                                                                    item.pizza?.ingredientesBaseIds
-                                                                        ?.mapNotNull { id -> ingredientes.find { it.id == id }?.nombre }
-                                                                        ?.joinToString(", ") ?: "",
-                                                                    style = MaterialTheme.typography.bodySmall
-                                                                )
-                                                            }
-                                                        }
-                                                        Row(
-                                                            verticalAlignment = Alignment.CenterVertically,
-                                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                                        ) {
-                                                            Text(
-                                                                "$${String.format(Locale.getDefault(), "%.2f", item.unitPriceSingle)}",
-                                                                style = MaterialTheme.typography.titleMedium
-                                                            )
-                                                            IconButton(
-                                                                onClick = {
-                                                                    priceEditorItem = item
-                                                                    priceEditorInput = String.format(
-                                                                        Locale.getDefault(),
-                                                                        "%.2f",
-                                                                        item.unitPriceSingle
-                                                                    )
-                                                                }
-                                                            ) {
-                                                                Icon(
-                                                                    imageVector = Icons.Filled.Edit,
-                                                                    contentDescription = "Editar precio"
-                                                                )
-                                                            }
-                                                        }
-                                                    }
-                                                    Row(
-                                                        modifier = Modifier.fillMaxWidth(),
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.SpaceBetween
-                                                    ) {
-                                                        FilterChip(
-                                                            selected = item.isGolden,
-                                                            onClick = { cartViewModel.toggleGolden(item.id) },
-                                                            label = { Text("Doradita") },
-                                                            leadingIcon = if (item.isGolden) {
-                                                                { Icon(Icons.Filled.Check, contentDescription = null) }
-                                                            } else null
-                                                        )
-                                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                            OutlinedIconButton(onClick = { cartViewModel.decrementItem(item.id) }) {
-                                                                Icon(Icons.Filled.Remove, contentDescription = "Disminuir")
-                                                            }
-                                                            Text(
-                                                                "x${item.cantidad}",
-                                                                modifier = Modifier.padding(horizontal = 12.dp),
-                                                                style = MaterialTheme.typography.titleMedium
-                                                            )
-                                                            FilledIconButton(onClick = { cartViewModel.incrementItem(item.id) }) {
-                                                                Icon(Icons.Filled.Add, contentDescription = "Incrementar")
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        dessertItems.forEach { item ->
-                                            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                                                ListItem(
-                                                    headlineContent = { Text(item.postreOrExtra.nombre) },
-                                                    supportingContent = {
-                                                        Text("$${String.format(Locale.getDefault(), "%.2f", item.postreOrExtra.precio)} c/u")
-                                                    },
-                                                    trailingContent = {
-                                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                                OutlinedIconButton(onClick = { cartViewModel.removeDessertFromCart(item.postreOrExtra) }) {
-                                                                    Icon(Icons.Filled.Remove, contentDescription = "Restar postre")
-                                                                }
-                                                                Text("x${item.cantidad}", modifier = Modifier.padding(horizontal = 12.dp))
-                                                                FilledIconButton(onClick = { cartViewModel.addDessertToCart(item.postreOrExtra) }) {
-                                                                    Icon(Icons.Filled.Add, contentDescription = "Agregar postre")
-                                                                }
-                                                            }
-                                                            Text(
-                                                                "$${String.format(Locale.getDefault(), "%.2f", item.subtotal)}",
-                                                                style = MaterialTheme.typography.bodySmall
-                                                            )
-                                                        }
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    Text(
+                        "Resumen de Orden",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
 
-                    ElevatedCard {
-                        Column {
-                            ListItem(
-                                leadingContent = {
-                                    Icon(
-                                        imageVector = Icons.Filled.Person,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                },
-                                headlineContent = { Text("Datos del cliente") },
-                                trailingContent = {
-                                    IconButton(onClick = { customerExpanded = !customerExpanded }) {
-                                        Icon(
-                                            imageVector = if (customerExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                                            contentDescription = if (customerExpanded) "Contraer" else "Expandir"
-                                        )
-                                    }
-                                }
-                            )
-                            AnimatedVisibility(visible = customerExpanded) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                                ) {
-                                    OutlinedTextField(
-                                        value = nombre,
-                                        onValueChange = { nombre = it },
-                                        label = { Text("Nombre del cliente") },
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text(
-                                            "Servicio a domicilio",
-                                            style = MaterialTheme.typography.titleMedium
-                                        )
-                                        ExposedDropdownMenuBox(
-                                            expanded = deliveryMenuExpanded,
-                                            onExpandedChange = { deliveryMenuExpanded = it },
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            TextField(
-                                                value = selectedDelivery?.let { "${it.zona} - $${it.price}" } ?: "Sin entrega",
-                                                onValueChange = {},
-                                                readOnly = true,
-                                                label = { Text("Precio de domicilio") },
-                                                trailingIcon = {
-                                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = deliveryMenuExpanded)
-                                                },
-                                                modifier = Modifier.menuAnchor().fillMaxWidth()
-                                            )
-                                            ExposedDropdownMenu(
-                                                expanded = deliveryMenuExpanded,
-                                                onDismissRequest = { deliveryMenuExpanded = false }
-                                            ) {
-                                                deliveryOptions.forEach { deliveryOption ->
-                                                    DropdownMenuItem(
-                                                        text = { Text("${deliveryOption.zona} - $${deliveryOption.price}") },
-                                                        onClick = {
-                                                            cartViewModel.setDeliveryService(deliveryOption)
-                                                            deliveryMenuExpanded = false
-                                                        }
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    val requiresAddress = selectedDelivery?.type == DeliveryType.DOMICILIO ||
-                                        selectedDelivery?.type == DeliveryType.CAMINANDO
-                                    if (requiresAddress) {
-                                        OutlinedTextField(
-                                            value = deliveryAddress,
-                                            onValueChange = { deliveryAddress = it },
-                                            label = { Text("Dirección de entrega") },
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    tonalElevation = 4.dp,
-                    shape = MaterialTheme.shapes.large,
-                    shadowElevation = 2.dp
-                ) {
-                    Row(
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Total a pagar", style = MaterialTheme.typography.labelLarge)
-                            Text(
-                                "$${"%.2f".format(total)} · $totalItems ${if (totalItems == 1) "artículo" else "artículos"}",
-                                style = MaterialTheme.typography.titleMedium
+                        // Lista de Pizzas en el Carrito
+                        cartItems.forEach { item ->
+                            CartPizzaItem(
+                                item = item,
+                                ingredientes = ingredientes,
+                                onIncrement = { cartViewModel.incrementItem(item.id) },
+                                onDecrement = { cartViewModel.decrementItem(item.id) },
+                                onToggleGolden = { cartViewModel.toggleGolden(item.id) },
+                                onEditPrice = {
+                                    priceEditorItem = item
+                                    priceEditorInput = String.format(Locale.getDefault(), "%.2f", item.unitPriceSingle)
+                                }
                             )
                         }
-                        Button(
-                            onClick = {
-                                coroutineScope.launch {
-                                    val orderTimestamp = System.currentTimeMillis()
-                                    val user = User(
-                                        id = orderTimestamp,
-                                        nombre = nombre,
-                                        telefono = telefono
-                                    )
-                                    val deliveryForTicket = selectedDelivery
-                                    val savedOrder = cartViewModel.saveOrder(user, deliveryAddress, orderTimestamp)
-                                    val cocinaTicket = cartViewModel.buildCocinaTicket(
-                                        user = user,
-                                        deliveryAddress = deliveryAddress,
-                                        deliveryService = deliveryForTicket,
-                                        timestamp = orderTimestamp,
-                                        dailyOrderNumber = savedOrder.dailyOrderNumber
-                                    )
 
-                                    bluetoothPrinterViewModel.print(cocinaTicket) { _, message ->
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar(message)
-                                        }
-                                    }
-
-                                    cartViewModel.clearCart()
-                                    nombre = ""
-                                    telefono = ""
-                                    deliveryAddress = ""
-                                    cartViewModel.setComentarios("")
-                                    cartViewModel.setDeliveryService(MenuData.deliveryOptions.first())
-                                    snackbarHostState.showSnackbar("Orden guardada exitosamente")
-                                }
-                            },
-                            enabled = cartItems.isNotEmpty() || dessertItems.isNotEmpty()
-                        ) {
-                            Text("Guardar orden")
+                        // Lista de Otros Productos (Postres, etc)
+                        dessertItems.forEach { item ->
+                            CartGenericItem(
+                                item = item,
+                                onIncrement = { cartViewModel.addDessertToCart(item.postreOrExtra) },
+                                onDecrement = { cartViewModel.removeDessertFromCart(item.postreOrExtra) }
+                            )
                         }
+
+                        if (cartItems.isEmpty() && dessertItems.isEmpty()) {
+                            Box(Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                                Text("Carrito vacío", color = MaterialTheme.colorScheme.outline)
+                            }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                        // Datos del Cliente
+                        CustomerDataSection(
+                            nombre = nombre,
+                            onNombreChange = { nombre = it },
+                            deliveryAddress = deliveryAddress,
+                            onAddressChange = { deliveryAddress = it },
+                            selectedDelivery = selectedDelivery,
+                            deliveryOptions = deliveryOptions,
+                            onDeliverySelect = { cartViewModel.setDeliveryService(it) }
+                        )
                     }
+
+                    // BOTÓN DE PAGO / GUARDAR
+                    Spacer(Modifier.height(16.dp))
+                    OrderFooter(
+                        total = total,
+                        totalItems = cartItems.sumOf { it.cantidad } + dessertItems.sumOf { it.cantidad },
+                        onSave = {
+                            coroutineScope.launch {
+                                val orderTimestamp = System.currentTimeMillis()
+                                val user = User(id = orderTimestamp, nombre = nombre, telefono = telefono)
+                                val deliveryForTicket = selectedDelivery
+                                val savedOrder = cartViewModel.saveOrder(user, deliveryAddress, orderTimestamp)
+                                val cocinaTicket = cartViewModel.buildCocinaTicket(
+                                    user = user,
+                                    deliveryAddress = deliveryAddress,
+                                    deliveryService = deliveryForTicket,
+                                    timestamp = orderTimestamp,
+                                    dailyOrderNumber = savedOrder.dailyOrderNumber
+                                )
+
+                                bluetoothPrinterViewModel.print(cocinaTicket) { _, message ->
+                                    coroutineScope.launch { snackbarHostState.showSnackbar(message) }
+                                }
+
+                                // Reset UI
+                                cartViewModel.clearCart()
+                                nombre = ""; telefono = ""; deliveryAddress = ""
+                                cartViewModel.setComentarios("")
+                                cartViewModel.setDeliveryService(MenuData.deliveryOptions.first())
+                                snackbarHostState.showSnackbar("Orden guardada exitosamente")
+                            }
+                        },
+                        enabled = cartItems.isNotEmpty() || dessertItems.isNotEmpty()
+                    )
                 }
             }
         }
     }
+
+    // Dialogs de combinación
     comboDialogConfig?.let { config ->
         ComboPizzaDialog(
             title = config.title,
@@ -934,25 +373,327 @@ fun MenuScreen(
             patterns = config.patterns,
             pizzas = combinablePizzas,
             onDismiss = { comboDialogConfig = null },
-            onConfirm = { portions ->
-                cartViewModel.addComboToCart(config.sizeName, portions)
+            onConfirm = { portions -> cartViewModel.addComboToCart(config.sizeName, portions) }
+        )
+    }
+}
+
+// --- SUB-COMPONENTES ESTILIZADOS ---
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PizzaSelectionCard(
+    pizzas: List<com.alos895.simplepos.model.Pizza>,
+    ingredientes: List<com.alos895.simplepos.model.Ingrediente>,
+    onAdd: (com.alos895.simplepos.model.Pizza, com.alos895.simplepos.model.TamanoPizza) -> Unit
+) {
+    var pizzaMenuExpanded by remember { mutableStateOf(false) }
+    var selectedPizza by remember(pizzas) { mutableStateOf(pizzas.firstOrNull()) }
+    var sizeMenuExpanded by remember { mutableStateOf(false) }
+    var selectedTamano by remember(selectedPizza) { mutableStateOf(selectedPizza?.tamanos?.firstOrNull()) }
+
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text("Selecciona Especialidad", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            
+            ExposedDropdownMenuBox(expanded = pizzaMenuExpanded, onExpandedChange = { pizzaMenuExpanded = it }) {
+                OutlinedTextField(
+                    value = selectedPizza?.nombre ?: "",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Pizza") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = pizzaMenuExpanded) },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(expanded = pizzaMenuExpanded, onDismissRequest = { pizzaMenuExpanded = false }) {
+                    pizzas.forEach { pizza ->
+                        DropdownMenuItem(
+                            text = { Text(pizza.nombre) },
+                            onClick = {
+                                selectedPizza = pizza
+                                selectedTamano = pizza.tamanos.firstOrNull()
+                                pizzaMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            ExposedDropdownMenuBox(expanded = sizeMenuExpanded, onExpandedChange = { sizeMenuExpanded = it }) {
+                OutlinedTextField(
+                    value = selectedTamano?.let { "${it.nombre} ($${it.precioBase})" } ?: "",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Tamaño") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = sizeMenuExpanded) },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(expanded = sizeMenuExpanded, onDismissRequest = { sizeMenuExpanded = false }) {
+                    selectedPizza?.tamanos?.forEach { tamano ->
+                        DropdownMenuItem(
+                            text = { Text("${tamano.nombre} - $${tamano.precioBase}") },
+                            onClick = {
+                                selectedTamano = tamano
+                                sizeMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            selectedPizza?.let { pizza ->
+                val names = pizza.ingredientesBaseIds.mapNotNull { id -> ingredientes.find { it.id == id }?.nombre }
+                Text("Incluye: ${names.joinToString(", ")}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
+
+            Button(
+                onClick = { selectedPizza?.let { p -> selectedTamano?.let { t -> onAdd(p, t) } } },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                enabled = selectedPizza != null && selectedTamano != null
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Agregar al Carrito")
+            }
+        }
+    }
+}
+
+@Composable
+private fun CombinedPizzaCard(
+    combinablePizzas: List<com.alos895.simplepos.model.Pizza>,
+    onOpenLarge: () -> Unit,
+    onOpenMedium: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.PieChart, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(12.dp))
+                Text("Armar Combinada", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+            Text("Crea una pizza con diferentes especialidades por mitad o cuartos.", style = MaterialTheme.typography.bodySmall)
+            
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(onClick = onOpenMedium, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+                    Text("Mediana 1/2", fontSize = 12.sp)
+                }
+                Button(onClick = onOpenLarge, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+                    Text("Grande Multi", fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MenuProductItem(name: String, price: Double, icon: ImageVector, onAdd: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        ListItem(
+            headlineContent = { Text(name, fontWeight = FontWeight.Bold) },
+            supportingContent = { Text("$${String.format("%.2f", price)}", color = MaterialTheme.colorScheme.primary) },
+            leadingContent = {
+                Box(Modifier.size(40.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape), contentAlignment = Alignment.Center) {
+                    Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
+            },
+            trailingContent = {
+                IconButton(onClick = onAdd, colors = IconButtonDefaults.filledIconButtonColors()) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                }
             }
         )
     }
 }
 
-private enum class MenuSection(val label: String, val icon: ImageVector) {
-    PIZZAS("Pizzas", Icons.Filled.LocalPizza),
-    PIZZAS_COMBINADAS("Combinadas", Icons.Filled.PieChart),
-    COMBOS("Combos", Icons.Filled.LocalDrink),
-    BEBIDAS("Bebidas", Icons.Filled.LocalDrink),
-    POSTRES("Postres", Icons.Filled.Icecream),
-    EXTRAS("Extras", Icons.Filled.AttachMoney),
-    COMENTARIOS("Notas", Icons.Filled.Comment)
+@Composable
+private fun CartPizzaItem(
+    item: CartItem,
+    ingredientes: List<com.alos895.simplepos.model.Ingrediente>,
+    onIncrement: () -> Unit,
+    onDecrement: () -> Unit,
+    onToggleGolden: () -> Unit,
+    onEditPrice: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(item.displayName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
+                    Text(item.sizeLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                }
+                Text("$${String.format("%.2f", item.unitPriceSingle)}", fontWeight = FontWeight.Bold)
+                IconButton(onClick = onEditPrice) { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp)) }
+            }
+            
+            if (item.isCombo) {
+                item.portions.forEach { Text("• ${it.fraction.label} ${it.pizzaName}", style = MaterialTheme.typography.labelSmall) }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                FilterChip(
+                    selected = item.isGolden,
+                    onClick = onToggleGolden,
+                    label = { Text("Doradita", fontSize = 10.sp) },
+                    leadingIcon = if (item.isGolden) { { Icon(Icons.Default.Check, null, Modifier.size(12.dp)) } } else null,
+                    shape = RoundedCornerShape(8.dp)
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onDecrement, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.RemoveCircleOutline, null) }
+                    Text("${item.cantidad}", modifier = Modifier.padding(horizontal = 8.dp), fontWeight = FontWeight.Bold)
+                    IconButton(onClick = onIncrement, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.AddCircle, null, tint = MaterialTheme.colorScheme.primary) }
+                }
+            }
+        }
+    }
 }
 
-private data class ComboDialogConfig(
-    val title: String,
-    val sizeName: String,
-    val patterns: List<FractionPattern>
-)
+@Composable
+private fun CartGenericItem(item: com.alos895.simplepos.model.CartItemPostre, onIncrement: () -> Unit, onDecrement: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(item.postreOrExtra.nombre, fontWeight = FontWeight.Bold)
+                Text("$${String.format("%.2f", item.postreOrExtra.precio)} c/u", style = MaterialTheme.typography.labelSmall)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onDecrement, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.RemoveCircleOutline, null) }
+                Text("${item.cantidad}", modifier = Modifier.padding(horizontal = 8.dp), fontWeight = FontWeight.Bold)
+                IconButton(onClick = onIncrement, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.AddCircle, null, tint = MaterialTheme.colorScheme.primary) }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CustomerDataSection(
+    nombre: String, onNombreChange: (String) -> Unit,
+    deliveryAddress: String, onAddressChange: (String) -> Unit,
+    selectedDelivery: com.alos895.simplepos.model.DeliveryService?,
+    deliveryOptions: List<com.alos895.simplepos.model.DeliveryService>,
+    onDeliverySelect: (com.alos895.simplepos.model.DeliveryService) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedTextField(
+            value = nombre, onValueChange = onNombreChange,
+            label = { Text("Nombre del Cliente") },
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+            leadingIcon = { Icon(Icons.Default.Person, null) }
+        )
+
+        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+            OutlinedTextField(
+                value = selectedDelivery?.let { "${it.zona} ($${it.price})" } ?: "Seleccionar Entrega",
+                onValueChange = {}, readOnly = true,
+                label = { Text("Método de Entrega") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.menuAnchor().fillMaxWidth()
+            )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                deliveryOptions.forEach { option ->
+                    DropdownMenuItem(text = { Text("${option.zona} - $${option.price}") }, onClick = { onDeliverySelect(option); expanded = false })
+                }
+            }
+        }
+
+        if (selectedDelivery?.type == DeliveryType.DOMICILIO || selectedDelivery?.type == DeliveryType.CAMINANDO) {
+            OutlinedTextField(
+                value = deliveryAddress, onValueChange = onAddressChange,
+                label = { Text("Dirección de Entrega") },
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+                leadingIcon = { Icon(Icons.Default.LocationOn, null) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun CommentsCard(current: String, onValueChange: (String) -> Unit) {
+    Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Notas de la Orden", fontWeight = FontWeight.Bold)
+            OutlinedTextField(
+                value = current, onValueChange = onValueChange,
+                placeholder = { Text("Ej: Sin cebolla, tocar timbre fuerte...") },
+                modifier = Modifier.fillMaxWidth().height(120.dp),
+                shape = RoundedCornerShape(12.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun OrderFooter(total: Double, totalItems: Int, onSave: () -> Unit, enabled: Boolean) {
+    Surface(
+        color = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Column {
+                Text("Total a Pagar", style = MaterialTheme.typography.labelSmall)
+                Text("$${String.format("%.2f", total)}", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+                Text("$totalItems productos", style = MaterialTheme.typography.labelSmall)
+            }
+            Button(
+                onClick = onSave,
+                enabled = enabled,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onPrimary, contentColor = MaterialTheme.colorScheme.primary),
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+            ) {
+                Text("CONFIRMAR", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptySectionPlaceholder(label: String) {
+    Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
+        Text("No hay $label disponibles", color = MaterialTheme.colorScheme.outline)
+    }
+}
+
+private enum class MenuSection(val label: String, val icon: ImageVector) {
+    PIZZAS("Pizzas", Icons.Default.LocalPizza),
+    PIZZAS_COMBINADAS("Combinadas", Icons.Default.PieChart),
+    COMBOS("Combos", Icons.Default.Fastfood),
+    BEBIDAS("Bebidas", Icons.Default.LocalDrink),
+    POSTRES("Postres", Icons.Default.Icecream),
+    EXTRAS("Extras", Icons.Default.AddCircle),
+    COMENTARIOS("Notas", Icons.Default.Comment)
+}
+
+private data class ComboDialogConfig(val title: String, val sizeName: String, val patterns: List<FractionPattern>)
