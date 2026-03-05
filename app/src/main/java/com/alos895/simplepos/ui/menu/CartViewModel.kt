@@ -501,8 +501,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         return when (sizeLabel.trim().lowercase()) {
             "chica" -> "chica"
             "mediana" -> "mediana"
-            "grande" -> "extra grande"
-            "extra grande", "extragrande", "x grande", "xgrande" -> "extra grande"
+            "grande", "extra grande", "extragrande", "x grande", "xgrande" -> "grande"
             else -> null
         }
     }

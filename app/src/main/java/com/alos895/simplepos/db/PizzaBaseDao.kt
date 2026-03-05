@@ -33,7 +33,7 @@ interface PizzaBaseDao {
     @Query(
         """
         SELECT COUNT(*) FROM pizza_bases
-        WHERE (size = :size OR (:size = 'extra grande' AND size = 'grande'))
+        WHERE (size = :size OR (:size = 'extra grande' AND size = 'grande') OR (:size = 'grande' AND size = 'extra grande'))
           AND usedAt IS NULL
         """
     )
@@ -45,11 +45,41 @@ interface PizzaBaseDao {
         SET usedAt = :usedAt
         WHERE id IN (
             SELECT id FROM pizza_bases
-            WHERE (size = :size OR (:size = 'extra grande' AND size = 'grande')) AND usedAt IS NULL
+            WHERE (size = :size OR (:size = 'extra grande' AND size = 'grande') OR (:size = 'grande' AND size = 'extra grande')) AND usedAt IS NULL
             ORDER BY createdAt ASC, id ASC
             LIMIT :count
         )
         """
     )
     suspend fun markOldestAvailableAsUsed(size: String, count: Int, usedAt: Long): Int
+
+    @Query(
+        """
+        UPDATE pizza_bases
+        SET usedAt = NULL
+        WHERE id IN (
+            SELECT id FROM pizza_bases
+            WHERE (size = :size OR (:size = 'extra grande' AND size = 'grande') OR (:size = 'grande' AND size = 'extra grande'))
+              AND usedAt = :usedAt
+            ORDER BY createdAt DESC, id DESC
+            LIMIT :count
+        )
+        """
+    )
+    suspend fun restoreUsedBasesByTimestamp(size: String, count: Int, usedAt: Long): Int
+
+    @Query(
+        """
+        DELETE FROM pizza_bases
+        WHERE id IN (
+            SELECT id FROM pizza_bases
+            WHERE (size = :size OR (:size = 'extra grande' AND size = 'grande') OR (:size = 'grande' AND size = 'extra grande'))
+              AND usedAt IS NULL
+            ORDER BY createdAt DESC, id DESC
+            LIMIT 1
+        )
+        """
+    )
+    suspend fun deleteOneUnusedBaseBySize(size: String): Int
+
 }

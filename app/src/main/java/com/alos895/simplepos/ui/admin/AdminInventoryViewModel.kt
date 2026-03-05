@@ -59,7 +59,7 @@ class AdminInventoryViewModel(application: Application) : AndroidViewModel(appli
                 }
                 repeat(largeCount) {
                     pizzaBaseDao.insertPizzaBase(
-                        PizzaBaseEntity(size = "extra grande", createdAt = selectedDateMillis)
+                        PizzaBaseEntity(size = "grande", createdAt = selectedDateMillis)
                     )
                 }
             }.onSuccess {
@@ -74,6 +74,22 @@ class AdminInventoryViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
+
+    fun discardOneUnusedBase(size: String) {
+        viewModelScope.launch {
+            runCatching { pizzaBaseDao.deleteOneUnusedBaseBySize(size) }
+                .onSuccess { deletedRows ->
+                    if (deletedRows > 0) {
+                        _events.emit(AdminInventoryEvent.Success("Se eliminó 1 base $size no usada"))
+                    } else {
+                        _events.emit(AdminInventoryEvent.Error("No hay bases $size disponibles para eliminar"))
+                    }
+                }
+                .onFailure {
+                    _events.emit(AdminInventoryEvent.Error("No se pudo eliminar la base $size"))
+                }
+        }
+    }
 
     fun markAsUsed(baseId: Long) {
         viewModelScope.launch {

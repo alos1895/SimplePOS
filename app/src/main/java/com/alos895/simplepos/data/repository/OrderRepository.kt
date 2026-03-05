@@ -5,6 +5,7 @@ import androidx.room.withTransaction
 import com.alos895.simplepos.db.AppDatabase
 import com.alos895.simplepos.db.entity.OrderEntity
 import com.alos895.simplepos.db.entity.OrderItemEntity
+import com.alos895.simplepos.model.DeliveryType
 import com.alos895.simplepos.model.CartItem
 import com.alos895.simplepos.model.CartItemPostre
 import com.alos895.simplepos.model.PaymentPart
@@ -17,6 +18,7 @@ class OrderRepository(context: Context) {
     private val db = AppDatabase.getDatabase(context.applicationContext)
     private val orderDao = db.orderDao()
     private val orderItemDao = db.orderItemDao()
+    private val pizzaBaseDao = db.pizzaBaseDao()
     private val gson = Gson()
 
     suspend fun addOrder(order: OrderEntity): OrderEntity {
@@ -103,10 +105,33 @@ class OrderRepository(context: Context) {
     }
 
     suspend fun deleteOrderLogical(orderId: Long) {
-        val (order, _) = getOrderById(orderId)
-        if (order != null) {
-            val updatedOrder = order.copy(isDeleted = true)
-            updateOrder(updatedOrder)
+        db.withTransaction {
+            val order = orderDao.getOrderById(orderId) ?: return@withTransaction
+            if (order.isDeleted) return@withTransaction
+
+            restoreBasesForOrder(order)
+
+            orderDao.updateOrder(
+                id = order.id,
+                itemsJson = order.itemsJson,
+                total = order.total,
+                timestamp = order.timestamp,
+                dailyOrderNumber = order.dailyOrderNumber,
+                userJson = order.userJson,
+                deliveryServicePrice = order.deliveryServicePrice,
+                isDeliveried = order.isDeliveried,
+                isWalkingDelivery = order.isWalkingDelivery,
+                dessertsJson = order.dessertsJson,
+                comentarios = order.comentarios,
+                deliveryAddress = order.deliveryAddress,
+                pizzaStatus = order.pizzaStatus,
+                isDeleted = true,
+                paymentBreakdownJson = order.paymentBreakdownJson,
+                deliveryType = order.deliveryType,
+                isTOTODO = order.isTOTODO,
+                precioTOTODO = order.precioTOTODO,
+                descuentoTOTODO = order.descuentoTOTODO
+            )
         }
     }
 
@@ -142,6 +167,43 @@ class OrderRepository(context: Context) {
                 descuentoTOTODO = order.descuentoTOTODO
             )
             // Nota: Aquí se podría re-sincronizar order_items si los items cambiaron
+        }
+    }
+
+
+    private suspend fun restoreBasesForOrder(order: OrderEntity) {
+        val needsBaseRestore = order.deliveryType != DeliveryType.TOTODO
+        if (!needsBaseRestore) return
+
+        val type = object : TypeToken<List<CartItem>>() {}.type
+        val items: List<CartItem> = try {
+            gson.fromJson(order.itemsJson, type) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        val groupedBySize = items.mapNotNull { item ->
+            val size = normalizeBaseSize(item.sizeLabel) ?: return@mapNotNull null
+            size to item.cantidad
+        }.groupBy({ it.first }, { it.second })
+            .mapValues { (_, counts) -> counts.sum() }
+
+        groupedBySize.forEach { (size, count) ->
+            if (count <= 0) return@forEach
+            pizzaBaseDao.restoreUsedBasesByTimestamp(
+                size = size,
+                count = count,
+                usedAt = order.timestamp
+            )
+        }
+    }
+
+    private fun normalizeBaseSize(sizeLabel: String): String? {
+        return when (sizeLabel.trim().lowercase()) {
+            "chica" -> "chica"
+            "mediana" -> "mediana"
+            "grande", "extra grande", "extragrande", "x grande", "xgrande" -> "grande"
+            else -> null
         }
     }
 
