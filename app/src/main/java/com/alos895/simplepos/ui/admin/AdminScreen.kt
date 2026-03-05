@@ -184,10 +184,16 @@ private fun InventoryScreen(
         used.usedAt?.isSameDayAs(nowMillis) == true
     }
 
-    val totalSmallCount = bases.count { it.size.equals("chica", ignoreCase = true) }
-    val totalMediumCount = bases.count { it.size.equals("mediana", ignoreCase = true) }
-    val totalLargeCount = bases.count {
-        it.size.equals("extra grande", ignoreCase = true) || it.size.equals("grande", ignoreCase = true)
+    val availableSmallCount = bases.count {
+        it.usedAt == null && it.size.equals("chica", ignoreCase = true)
+    }
+    val availableMediumCount = bases.count {
+        it.usedAt == null && it.size.equals("mediana", ignoreCase = true)
+    }
+    val availableLargeCount = bases.count {
+        it.usedAt == null && (
+            it.size.equals("extra grande", ignoreCase = true) || it.size.equals("grande", ignoreCase = true)
+        )
     }
 
     Scaffold(
@@ -247,9 +253,9 @@ private fun InventoryScreen(
                             )
 
                             TotalTotalsCard(
-                                totalSmallCount = totalSmallCount,
-                                totalMediumCount = totalMediumCount,
-                                totalLargeCount = totalLargeCount,
+                                availableSmallCount = availableSmallCount,
+                                availableMediumCount = availableMediumCount,
+                                availableLargeCount = availableLargeCount,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -498,9 +504,9 @@ private fun DailyTotalsCard(
 
 @Composable
 private fun TotalTotalsCard(
-    totalSmallCount: Int,
-    totalMediumCount: Int,
-    totalLargeCount: Int,
+    availableSmallCount: Int,
+    availableMediumCount: Int,
+    availableLargeCount: Int,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -512,12 +518,12 @@ private fun TotalTotalsCard(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "Resumen total",
+                text = "Bases disponibles",
                 style = MaterialTheme.typography.titleMedium
             )
-            Text(text = "Chicas: $totalSmallCount")
-            Text(text = "Medianas: $totalMediumCount")
-            Text(text = "Extra grandes: $totalLargeCount")
+            Text(text = "Chicas: $availableSmallCount")
+            Text(text = "Medianas: $availableMediumCount")
+            Text(text = "Grandes: $availableLargeCount")
         }
     }
 }
