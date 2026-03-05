@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -171,6 +172,7 @@ private fun InventoryScreen(
     val dailyBases = remember(bases, selectedDateMillis) {
         bases.filter { it.createdAt.isSameDayAs(selectedDateMillis) }
     }
+    val isDateLocked = dailyBases.isNotEmpty()
     val smallCount = dailyBases.count { it.size.equals("chica", ignoreCase = true) }
     val mediumCount = dailyBases.count { it.size.equals("mediana", ignoreCase = true) }
     val largeCount = dailyBases.count {
@@ -227,6 +229,7 @@ private fun InventoryScreen(
                             currentLargeCount = largeCount,
                             onDateChange = { selectedDateMillis = it },
                             onSave = viewModel::replacePizzaBasesForDate,
+                            isLocked = isDateLocked,
                             modifier = Modifier.weight(1f)
                         )
 
@@ -281,11 +284,13 @@ private fun AddPizzaBasesForm(
     currentLargeCount: Int,
     onDateChange: (Long) -> Unit,
     onSave: (Long, Int, Int, Int) -> Unit,
+    isLocked: Boolean,
     modifier: Modifier = Modifier
 ) {
     var smallInput by remember(selectedDateMillis) { mutableStateOf(currentSmallCount.toString()) }
     var mediumInput by remember(selectedDateMillis) { mutableStateOf(currentMediumCount.toString()) }
     var largeInput by remember(selectedDateMillis) { mutableStateOf(currentLargeCount.toString()) }
+    var showConfirmDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(selectedDateMillis, currentSmallCount, currentMediumCount, currentLargeCount) {
         smallInput = currentSmallCount.toString()
@@ -307,30 +312,70 @@ private fun AddPizzaBasesForm(
                 value = smallInput,
                 onValueChange = { smallInput = it.filter(Char::isDigit) },
                 label = { Text("Cantidad bases chicas") },
+                enabled = !isLocked,
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
                 value = mediumInput,
                 onValueChange = { mediumInput = it.filter(Char::isDigit) },
                 label = { Text("Cantidad bases medianas") },
+                enabled = !isLocked,
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
                 value = largeInput,
                 onValueChange = { largeInput = it.filter(Char::isDigit) },
-                label = { Text("Cantidad bases extra grandes") },
+                label = { Text("Cantidad bases grandes") },
+                enabled = !isLocked,
                 modifier = Modifier.fillMaxWidth()
             )
-            Button(onClick = {
-                val small = smallInput.toIntOrNull() ?: 0
-                val medium = mediumInput.toIntOrNull() ?: 0
-                val large = largeInput.toIntOrNull() ?: 0
-                onSave(selectedDateMillis, small, medium, large)
-            }) {
+
+            if (isLocked) {
+                Text(
+                    text = "Las bases de este día ya fueron capturadas y no se pueden modificar.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            Button(
+                onClick = { showConfirmDialog = true },
+                enabled = !isLocked
+            ) {
                 Text("Guardar cambios")
             }
         }
     }
+
+    if (showConfirmDialog) {
+        val small = smallInput.toIntOrNull() ?: 0
+        val medium = mediumInput.toIntOrNull() ?: 0
+        val large = largeInput.toIntOrNull() ?: 0
+
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            title = { Text("Confirmar captura") },
+            text = {
+                Text(
+                    "Las bases quedarán así para este día: $small chicas, $medium medianas y $large grandes. " +
+                        "Una vez capturadas no se podrán modificar. ¿Deseas confirmar?"
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onSave(selectedDateMillis, small, medium, large)
+                    showConfirmDialog = false
+                }) {
+                    Text("Confirmar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
 }
 
 @Composable
