@@ -68,11 +68,13 @@ fun MenuScreen(
 
     var deliveryMenuExpanded by remember { mutableStateOf(false) }
     var selectedSection by remember { mutableStateOf(MenuSection.PIZZAS) }
+    
+    // Cambiamos el orden para que 2 mitades sea el primero (por defecto)
     val largeComboPatterns = remember {
         listOf(
+            FractionPattern("halves", "2 mitades (1/2)", List(2) { PizzaFractionType.HALF }),
             FractionPattern("quarters", "4 cuartos (1/4)", List(4) { PizzaFractionType.QUARTER }),
-            FractionPattern("thirds", "3 tercios (1/3)", List(3) { PizzaFractionType.THIRD }),
-            FractionPattern("halves", "2 mitades (1/2)", List(2) { PizzaFractionType.HALF })
+            FractionPattern("thirds", "3 tercios (1/3)", List(3) { PizzaFractionType.THIRD })
         )
     }
     val mediumComboPatterns = remember {
