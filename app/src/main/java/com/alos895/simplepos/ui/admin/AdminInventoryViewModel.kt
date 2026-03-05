@@ -59,7 +59,7 @@ class AdminInventoryViewModel(application: Application) : AndroidViewModel(appli
                 }
                 repeat(largeCount) {
                     pizzaBaseDao.insertPizzaBase(
-                        PizzaBaseEntity(size = "extra grande", createdAt = selectedDateMillis)
+                        PizzaBaseEntity(size = "grande", createdAt = selectedDateMillis)
                     )
                 }
             }.onSuccess {
