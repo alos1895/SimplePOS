@@ -359,32 +359,11 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         if (desserts.isNotEmpty()) {
-            val postres = desserts.filter { it.postreOrExtra.esPostre }
-            val combos = desserts.filter { it.postreOrExtra.esCombo }
-            val bebidas = desserts.filter { it.postreOrExtra.esBebida }
             val extras = desserts.filter {
                 !it.postreOrExtra.esPostre && !it.postreOrExtra.esCombo && !it.postreOrExtra.esBebida
             }
-            sb.appendLine("-------------------------------")
-            if (postres.isNotEmpty()) {
-                sb.appendLine("Postres:")
-                postres.forEach { item ->
-                    sb.appendLine("${item.cantidad}x ${item.postreOrExtra.nombre}")
-                }
-            }
-            if (combos.isNotEmpty()) {
-                sb.appendLine("Combos:")
-                combos.forEach { item ->
-                    sb.appendLine("${item.cantidad}x ${item.postreOrExtra.nombre}")
-                }
-            }
-            if (bebidas.isNotEmpty()) {
-                sb.appendLine("Bebidas:")
-                bebidas.forEach { item ->
-                    sb.appendLine("${item.cantidad}x ${item.postreOrExtra.nombre}")
-                }
-            }
             if (extras.isNotEmpty()) {
+                sb.appendLine("-------------------------------")
                 sb.appendLine("Extras:")
                 extras.forEach { item ->
                     sb.appendLine("${item.cantidad}x ${item.postreOrExtra.nombre}")
