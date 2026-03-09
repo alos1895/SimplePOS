@@ -37,7 +37,7 @@ android {
         applicationId "com.alos895.simplepos"
         minSdk 24
         targetSdk 35
-        versionCode 7
+        versionCode 8
         versionName "1.5"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
