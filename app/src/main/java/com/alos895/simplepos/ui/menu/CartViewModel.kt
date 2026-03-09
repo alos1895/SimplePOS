@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.alos895.simplepos.data.PizzeriaData
 import com.alos895.simplepos.data.datasource.MenuData
+import com.alos895.simplepos.data.repository.MenuRepository
 import com.alos895.simplepos.data.repository.OrderRepository
 import com.alos895.simplepos.db.AppDatabase
 import com.alos895.simplepos.db.entity.OrderEntity
@@ -42,7 +43,9 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     val dessertItems: StateFlow<List<CartItemPostre>> = _dessertItems
 
     private val orderRepository = OrderRepository(application)
+    private val menuRepository = MenuRepository(AppDatabase.getDatabase(application))
     private val pizzaBaseDao = AppDatabase.getDatabase(application).pizzaBaseDao()
+    private val _currentPizzas = MutableStateFlow<List<Pizza>>(emptyList())
 
     private val _selectedDelivery = MutableStateFlow<DeliveryService?>(null)
     val selectedDelivery: StateFlow<DeliveryService?> = _selectedDelivery
@@ -78,6 +81,11 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
                 val deliveryPrice = _selectedDelivery.value?.price ?: 0
                 val pizzasTotal = _cartItems.value.sumOf { item -> item.subtotal }
                 _total.value = pizzasTotal + desserts.sumOf { it.subtotal } + deliveryPrice
+            }
+        }
+        viewModelScope.launch {
+            menuRepository.getPizzas().collect { pizzas ->
+                _currentPizzas.value = pizzas
             }
         }
     }
@@ -459,8 +467,9 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun calculateComboPrice(sizeName: String, portions: List<CartItemPortion>): Double {
+        val sourcePizzas = _currentPizzas.value.ifEmpty { MenuData.pizzas }
         val candidates = portions.mapNotNull { portion ->
-            MenuData.pizzas.firstOrNull { it.nombre == portion.pizzaName }
+            sourcePizzas.firstOrNull { it.nombre == portion.pizzaName }
                 ?.tamanos
                 ?.firstOrNull { it.nombre.equals(sizeName, ignoreCase = true) }
                 ?.precioBase
