@@ -5,17 +5,19 @@
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Preservar firmas genéricas para Gson
+-keepattributes Signature
+-keepattributes *Annotation*
+-keepattributes EnclosingMethod
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Reglas específicas para Gson
+-keep class com.google.gson.reflect.TypeToken
+-keep class * extends com.google.gson.reflect.TypeToken
+-keep public class * implements java.lang.reflect.Type
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Preservar tus modelos para que Gson pueda usarlos (ajusta el paquete si es necesario)
+-keep class com.alos895.simplepos.model.** { *; }
+-keep class com.alos895.simplepos.db.entity.** { *; }
+
+# Si usas Room, también es bueno mantener sus entidades
+-keep class androidx.room.Entity
